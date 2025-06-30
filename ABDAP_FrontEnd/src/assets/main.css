@@ -1,33 +1,41 @@
 @import './base.css';
 
-#app {
+/* 移除所有会影响布局的默认样式 */
+
+/* 只为非全屏页面（如about等静态页面）应用容器样式 */
+.container {
   max-width: 1280px;
   margin: 0 auto;
   padding: 2rem;
   font-weight: normal;
 }
 
-a,
-.green {
+/* 重置链接样式，使用更通用的颜色 */
+a {
   text-decoration: none;
+  color: #409eff;
+  transition: color 0.3s ease;
+}
+
+a:hover {
+  color: #66b1ff;
+}
+
+/* 移除会干扰登录页面和管理界面的全局样式 */
+/* 移除以下样式以避免冲突：
+   - body的flex布局
+   - #app的grid布局
+   - 固定的padding和margin
+*/
+
+/* 为特定的绿色主题元素保留样式 */
+.green {
   color: hsla(160, 100%, 37%, 1);
-  transition: 0.4s;
-  padding: 3px;
 }
 
-@media (hover: hover) {
-  a:hover {
-    background-color: hsla(160, 100%, 37%, 0.2);
-  }
-}
-
+/* 只在特定情况下应用响应式布局 */
 @media (min-width: 1024px) {
-  body {
-    display: flex;
-    place-items: center;
-  }
-
-  #app {
+  .static-page {
     display: grid;
     grid-template-columns: 1fr 1fr;
     padding: 0 2rem;
