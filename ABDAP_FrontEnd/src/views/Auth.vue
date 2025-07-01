@@ -1,249 +1,3 @@
-<template>
-  <div class="auth-container">
-    <div class="auth-background">
-      <div class="bg-decoration">
-        <div class="decoration-circle circle-1"></div>
-        <div class="decoration-circle circle-2"></div>
-        <div class="decoration-circle circle-3"></div>
-      </div>
-    </div>
-
-    <div class="auth-content">
-      <!-- 左侧信息展示 -->
-      <div class="auth-info">
-        <div class="info-content">
-          <h1>汽车大数据分析平台</h1>
-          <h2>ABDAP - Automotive Big Data Analysis Platform</h2>
-          <p class="description">基于先进的大数据技术，为汽车行业提供全面的数据分析和洞察服务</p>
-          <div class="features">
-            <div class="feature-item">
-              <el-icon><TrendCharts /></el-icon>
-              <span>销售数据分析</span>
-            </div>
-            <div class="feature-item">
-              <el-icon><Operation /></el-icon>
-              <span>车型热度排行</span>
-            </div>
-            <div class="feature-item">
-              <el-icon><DataAnalysis /></el-icon>
-              <span>市场趋势预测</span>
-            </div>
-            <div class="feature-item">
-              <el-icon><Monitor /></el-icon>
-              <span>定时数据监控</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 右侧登录注册表单 -->
-      <div class="auth-form-container">
-        <el-card class="auth-card" shadow="always">
-          <template #header>
-            <div class="auth-header">
-              <el-icon :size="40" color="#409EFF">
-                <Operation />
-              </el-icon>
-              <h3>{{ isLogin ? '登录系统' : '注册账号' }}</h3>
-              <p>{{ isLogin ? '欢迎回来！请输入您的账号信息' : '创建新账号开始使用' }}</p>
-            </div>
-          </template>
-
-          <!-- 切换登录/注册 -->
-          <div class="auth-switch">
-            <el-button
-              :type="isLogin ? 'primary' : 'default'"
-              @click="switchToLogin"
-              class="switch-btn"
-            >
-              登录
-            </el-button>
-            <el-button
-              :type="!isLogin ? 'primary' : 'default'"
-              @click="switchToRegister"
-              class="switch-btn"
-            >
-              注册
-            </el-button>
-          </div>
-
-          <!-- 登录表单 -->
-          <el-form
-            v-if="isLogin"
-            ref="loginFormRef"
-            :model="loginForm"
-            :rules="loginRules"
-            class="auth-form"
-          >
-            <el-form-item prop="username">
-              <el-input
-                v-model="loginForm.username"
-                placeholder="请输入用户名"
-                size="large"
-                :prefix-icon="User"
-                clearable
-              />
-            </el-form-item>
-
-            <el-form-item prop="password">
-              <el-input
-                v-model="loginForm.password"
-                type="password"
-                placeholder="请输入密码"
-                size="large"
-                :prefix-icon="Lock"
-                show-password
-                clearable
-                @keyup.enter="handleLogin"
-              />
-            </el-form-item>
-
-            <el-form-item>
-              <div class="form-options">
-                <el-checkbox v-model="rememberMe">记住我</el-checkbox>
-                <el-link type="primary" @click="showForgotPassword">忘记密码？</el-link>
-              </div>
-            </el-form-item>
-
-            <el-form-item>
-              <el-button
-                type="primary"
-                size="large"
-                class="auth-submit-btn"
-                :loading="loading"
-                @click="handleLogin"
-              >
-                <el-icon v-if="!loading"><Right /></el-icon>
-                {{ loading ? '登录中...' : '立即登录' }}
-              </el-button>
-            </el-form-item>
-          </el-form>
-
-          <!-- 注册表单 -->
-          <el-form
-            v-else
-            ref="registerFormRef"
-            :model="registerForm"
-            :rules="registerRules"
-            class="auth-form"
-          >
-            <el-form-item prop="username">
-              <el-input
-                v-model="registerForm.username"
-                placeholder="请输入用户名"
-                size="large"
-                :prefix-icon="User"
-                clearable
-              />
-            </el-form-item>
-
-            <el-form-item prop="password">
-              <el-input
-                v-model="registerForm.password"
-                type="password"
-                placeholder="请输入密码"
-                size="large"
-                :prefix-icon="Lock"
-                show-password
-                clearable
-              />
-            </el-form-item>
-
-            <el-form-item prop="confirmPassword">
-              <el-input
-                v-model="registerForm.confirmPassword"
-                type="password"
-                placeholder="请确认密码"
-                size="large"
-                :prefix-icon="Lock"
-                show-password
-                clearable
-              />
-            </el-form-item>
-
-            <el-form-item prop="role">
-              <el-select
-                v-model="registerForm.role"
-                placeholder="请选择角色"
-                size="large"
-                style="width: 100%"
-              >
-                <el-option label="销售经理" value="SalesManager">
-                  <div class="role-option">
-                    <span>销售经理</span>
-                    <small>可查看销售总览、车型排行等销售数据</small>
-                  </div>
-                </el-option>
-                <el-option label="消费者" value="Customer">
-                  <div class="role-option">
-                    <span>消费者</span>
-                    <small>可查看热门车型、购车推荐等信息</small>
-                  </div>
-                </el-option>
-                <el-option label="产品经理" value="ProductManager">
-                  <div class="role-option">
-                    <span>产品经理</span>
-                    <small>可查看产品配置、对比分析等功能</small>
-                  </div>
-                </el-option>
-              </el-select>
-            </el-form-item>
-
-            <el-form-item>
-              <div class="form-options">
-                <el-checkbox v-model="agreeTerms">
-                  我已阅读并同意
-                  <el-link type="primary" @click="showTerms">《用户协议》</el-link>
-                </el-checkbox>
-              </div>
-            </el-form-item>
-
-            <el-form-item>
-              <el-button
-                type="primary"
-                size="large"
-                class="auth-submit-btn"
-                :loading="loading"
-                :disabled="!agreeTerms"
-                @click="handleRegister"
-              >
-                <el-icon v-if="!loading"><Right /></el-icon>
-                {{ loading ? '注册中...' : '立即注册' }}
-              </el-button>
-            </el-form-item>
-          </el-form>
-
-          <!-- 演示账号信息 -->
-          <div class="demo-accounts">
-            <el-divider>演示账号</el-divider>
-            <div class="demo-item" @click="quickLogin('DB', '123', 'SalesManager')">
-              <el-icon><Avatar /></el-icon>
-              <div>
-                <p><strong>DB</strong> - 销售经理</p>
-                <small>可查看销售总览数据</small>
-              </div>
-            </div>
-            <div class="demo-item" @click="quickLogin('LJJ', '1234', 'Customer')">
-              <el-icon><Avatar /></el-icon>
-              <div>
-                <p><strong>LJJ</strong> - 消费者</p>
-                <small>可查看热门车型排行</small>
-              </div>
-            </div>
-            <div class="demo-item" @click="quickLogin('PM', '123456', 'ProductManager')">
-              <el-icon><Avatar /></el-icon>
-              <div>
-                <p><strong>PM</strong> - 产品经理</p>
-                <small>可查看产品配置分析</small>
-              </div>
-            </div>
-          </div>
-        </el-card>
-      </div>
-    </div>
-  </div>
-</template>
-
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
@@ -578,6 +332,258 @@ const showTerms = () => {
   )
 }
 </script>
+
+
+
+
+
+<template>
+  <div class="auth-container">
+    <div class="auth-background">
+      <div class="bg-decoration">
+        <div class="decoration-circle circle-1"></div>
+        <div class="decoration-circle circle-2"></div>
+        <div class="decoration-circle circle-3"></div>
+      </div>
+    </div>
+
+    <div class="auth-content">
+      <!-- 左侧信息展示 -->
+      <div class="auth-info">
+        <div class="info-content">
+          <h1>汽车大数据分析平台</h1>
+          <h2>ABDAP - Automotive Big Data Analysis Platform</h2>
+          <p class="description">基于先进的大数据技术，为汽车行业提供全面的数据分析和洞察服务</p>
+          <div class="features">
+            <div class="feature-item">
+              <el-icon><TrendCharts /></el-icon>
+              <span>销售数据分析</span>
+            </div>
+            <div class="feature-item">
+              <el-icon><Operation /></el-icon>
+              <span>车型热度排行</span>
+            </div>
+            <div class="feature-item">
+              <el-icon><DataAnalysis /></el-icon>
+              <span>市场趋势预测</span>
+            </div>
+            <div class="feature-item">
+              <el-icon><Monitor /></el-icon>
+              <span>定时数据监控</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 右侧登录注册表单 -->
+      <div class="auth-form-container">
+        <el-card class="auth-card" shadow="always">
+          <template #header>
+            <div class="auth-header">
+              <el-icon :size="40" color="#409EFF">
+                <Operation />
+              </el-icon>
+              <h3>{{ isLogin ? '登录系统' : '注册账号' }}</h3>
+              <p>{{ isLogin ? '欢迎回来！请输入您的账号信息' : '创建新账号开始使用' }}</p>
+            </div>
+          </template>
+
+          <!-- 切换登录/注册 -->
+          <div class="auth-switch">
+            <el-button
+              :type="isLogin ? 'primary' : 'default'"
+              @click="switchToLogin"
+              class="switch-btn"
+            >
+              登录
+            </el-button>
+            <el-button
+              :type="!isLogin ? 'primary' : 'default'"
+              @click="switchToRegister"
+              class="switch-btn"
+            >
+              注册
+            </el-button>
+          </div>
+
+          <!-- 登录表单 -->
+          <el-form
+            v-if="isLogin"
+            ref="loginFormRef"
+            :model="loginForm"
+            :rules="loginRules"
+            class="auth-form"
+          >
+            <el-form-item prop="username">
+              <el-input
+                v-model="loginForm.username"
+                placeholder="请输入用户名"
+                size="large"
+                :prefix-icon="User"
+                clearable
+              />
+            </el-form-item>
+
+            <el-form-item prop="password">
+              <el-input
+                v-model="loginForm.password"
+                type="password"
+                placeholder="请输入密码"
+                size="large"
+                :prefix-icon="Lock"
+                show-password
+                clearable
+                @keyup.enter="handleLogin"
+              />
+            </el-form-item>
+
+            <el-form-item>
+              <div class="form-options">
+                <el-checkbox v-model="rememberMe">记住我</el-checkbox>
+                <el-link type="primary" @click="showForgotPassword">忘记密码？</el-link>
+              </div>
+            </el-form-item>
+
+            <el-form-item>
+              <el-button
+                type="primary"
+                size="large"
+                class="auth-submit-btn"
+                :loading="loading"
+                @click="handleLogin"
+              >
+                <el-icon v-if="!loading"><Right /></el-icon>
+                {{ loading ? '登录中...' : '立即登录' }}
+              </el-button>
+            </el-form-item>
+          </el-form>
+
+          <!-- 注册表单 -->
+          <el-form
+            v-else
+            ref="registerFormRef"
+            :model="registerForm"
+            :rules="registerRules"
+            class="auth-form"
+          >
+            <el-form-item prop="username">
+              <el-input
+                v-model="registerForm.username"
+                placeholder="请输入用户名"
+                size="large"
+                :prefix-icon="User"
+                clearable
+              />
+            </el-form-item>
+
+            <el-form-item prop="password">
+              <el-input
+                v-model="registerForm.password"
+                type="password"
+                placeholder="请输入密码"
+                size="large"
+                :prefix-icon="Lock"
+                show-password
+                clearable
+              />
+            </el-form-item>
+
+            <el-form-item prop="confirmPassword">
+              <el-input
+                v-model="registerForm.confirmPassword"
+                type="password"
+                placeholder="请确认密码"
+                size="large"
+                :prefix-icon="Lock"
+                show-password
+                clearable
+              />
+            </el-form-item>
+
+            <el-form-item prop="role">
+              <el-select
+                v-model="registerForm.role"
+                placeholder="请选择角色"
+                size="large"
+                style="width: 100%"
+              >
+                <el-option label="销售经理" value="SalesManager">
+                  <div class="role-option">
+                    <span>销售经理</span>
+                    <small>可查看销售总览、车型排行等销售数据</small>
+                  </div>
+                </el-option>
+                <el-option label="消费者" value="Customer">
+                  <div class="role-option">
+                    <span>消费者</span>
+                    <small>可查看热门车型、购车推荐等信息</small>
+                  </div>
+                </el-option>
+                <el-option label="产品经理" value="ProductManager">
+                  <div class="role-option">
+                    <span>产品经理</span>
+                    <small>可查看产品配置、对比分析等功能</small>
+                  </div>
+                </el-option>
+              </el-select>
+            </el-form-item>
+
+            <el-form-item>
+              <div class="form-options">
+                <el-checkbox v-model="agreeTerms">
+                  我已阅读并同意
+                  <el-link type="primary" @click="showTerms">《用户协议》</el-link>
+                </el-checkbox>
+              </div>
+            </el-form-item>
+
+            <el-form-item>
+              <el-button
+                type="primary"
+                size="large"
+                class="auth-submit-btn"
+                :loading="loading"
+                :disabled="!agreeTerms"
+                @click="handleRegister"
+              >
+                <el-icon v-if="!loading"><Right /></el-icon>
+                {{ loading ? '注册中...' : '立即注册' }}
+              </el-button>
+            </el-form-item>
+          </el-form>
+
+          <!-- 演示账号信息 -->
+          <div class="demo-accounts">
+            <el-divider>演示账号</el-divider>
+            <div class="demo-item" @click="quickLogin('DB', '123', 'SalesManager')">
+              <el-icon><Avatar /></el-icon>
+              <div>
+                <p><strong>DB</strong> - 销售经理</p>
+                <small>可查看销售总览数据</small>
+              </div>
+            </div>
+            <div class="demo-item" @click="quickLogin('LJJ', '1234', 'Customer')">
+              <el-icon><Avatar /></el-icon>
+              <div>
+                <p><strong>LJJ</strong> - 消费者</p>
+                <small>可查看热门车型排行</small>
+              </div>
+            </div>
+            <div class="demo-item" @click="quickLogin('PM', '123456', 'ProductManager')">
+              <el-icon><Avatar /></el-icon>
+              <div>
+                <p><strong>PM</strong> - 产品经理</p>
+                <small>可查看产品配置分析</small>
+              </div>
+            </div>
+          </div>
+        </el-card>
+      </div>
+    </div>
+  </div>
+</template>
+
+
 
 <style scoped>
 .auth-container {
