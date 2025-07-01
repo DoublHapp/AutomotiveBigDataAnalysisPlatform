@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { ElMessage } from 'element-plus'
 import {
   Refresh,
@@ -17,6 +17,7 @@ const totalVehicles = ref(4521)
 const avgPrice = ref(33.8)
 const dealerCount = ref(156)
 const chartTimeRange = ref('6m')
+const chartPowerType = ref('all')
 const rankingType = ref('volume')
 
 // 排行榜数据
@@ -27,6 +28,50 @@ const rankingData = ref([
   { model: 'Model X', sales: 432, revenue: 3888.0, growth: 12.9, marketShare: 9.6 },
   { model: 'Cybertruck', sales: 321, revenue: 1926.0, growth: 45.2, marketShare: 7.1 },
 ])
+
+const PieOption = {
+  tooltip: {
+    trigger: 'item'
+  },
+  legend: {
+    top: '5%',
+    left: 'center'
+  },
+  series: [
+    {
+      name: 'Access From',
+      type: 'pie',
+      radius: ['40%', '70%'],
+      avoidLabelOverlap: false,
+      itemStyle: {
+        borderRadius: 10,
+        borderColor: '#fff',
+        borderWidth: 2
+      },
+      label: {
+        show: false,
+        position: 'center'
+      },
+      emphasis: {
+        label: {
+          show: true,
+          fontSize: 40,
+          fontWeight: 'bold'
+        }
+      },
+      labelLine: {
+        show: false
+      },
+      data: [
+        { value: 1048, name: '宝马' },
+        { value: 735, name: '丰田' },
+        { value: 580, name: '大众' },
+        { value: 484, name: 'DB' },
+        { value: 300, name: 'AP' }
+      ]
+    }
+  ]
+};
 
 // 格式化数字
 const formatNumber = (num: number) => {
@@ -47,6 +92,11 @@ const exportData = () => {
 
 onMounted(() => {
   ElMessage.success('欢迎使用销售总览页面！')
+
+})
+
+onBeforeUnmount(() => {
+
 })
 </script>
 
@@ -135,6 +185,11 @@ onMounted(() => {
           <template #header>
             <div class="card-header">
               <span>月度销售趋势</span>
+              <el-radio-group v-model="chartPowerType" size="small">
+                <el-radio-button value="all">所有</el-radio-button>
+                <el-radio-button value="fuel">油车</el-radio-button>
+                <el-radio-button value="electricity">新能源车</el-radio-button>
+              </el-radio-group>
               <el-radio-group v-model="chartTimeRange" size="small">
                 <el-radio-button value="6m">近6个月</el-radio-button>
                 <el-radio-button value="1y">近1年</el-radio-button>
@@ -154,9 +209,8 @@ onMounted(() => {
           <template #header>
             <span>车型销售占比</span>
           </template>
-          <div class="chart-placeholder">
-            <el-icon :size="48" color="#dcdfe6"><DataAnalysis /></el-icon>
-            <p>车型占比饼图</p>
+          <div class="ring-pie-chart" style="width: 340px; height: 340px;">
+            <VChart :option="PieOption"/> 
           </div>
         </el-card>
       </el-col>
@@ -199,6 +253,10 @@ onMounted(() => {
 </template>
 
 <style scoped>
+.el-card__body {
+  height: 100%;
+}
+
 .sale-total-view {
   padding: 0;
 }

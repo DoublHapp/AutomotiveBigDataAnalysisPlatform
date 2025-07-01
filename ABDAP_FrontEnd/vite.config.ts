@@ -20,7 +20,14 @@ export default defineConfig({
       resolvers: [ElementPlusResolver()],
     }),
     Components({
-      resolvers: [ElementPlusResolver()],
+      resolvers: [
+        ElementPlusResolver(),
+        (name) => {
+          if (name === 'VChart') {
+            return { name: 'default', from: 'vue-echarts' };
+          }
+        }
+      ],
     }),
   ],
   resolve: {
