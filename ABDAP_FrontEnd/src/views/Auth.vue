@@ -329,12 +329,24 @@ const registerRules = {
 
 // 角色权限映射
 const rolePermissions = {
-  SalesManager: ['SaleTotal:view', 'TopCarModelList:view', 'SalesForecast:view'],
-  Customer: ['TopCarModelList:view', 'Recommendation:view', 'CarPurchasesHeatMap:view'],
+  SalesManager: [
+    'SaleTotal:view',
+    'CarPurchasesHeatMap:view',
+    'TimeSeries:view',
+    'SalesForecast:view',
+    'ModelSalesForcast:view',
+    'RegionSalesForcast:view'
+  ],
+  Customer: [
+    'TopCarModelList:view',
+    'VehicleModelCompAnalysis:view',
+    'Recommendation:view',
+    'FuelConsList:view',
+    'Evaluative:view'
+  ],
   ProductManager: [
     'VehicleConfiguration:view',
-    'VehicleModelCompAnalysis:view',
-    'FuelConsList:view',
+    'VehicleModelCompAnalysis:view'
   ],
 }
 

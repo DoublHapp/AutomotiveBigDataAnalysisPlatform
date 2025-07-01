@@ -40,34 +40,15 @@ const router = createRouter({
         requiresAuth: true,
       },
       children: [
+        // 销售经理 (SalesManager) 页面
         {
           path: 'SaleTotal',
           name: 'SaleTotal',
           component: () => import('../views/SaleTotal.vue'),
           meta: {
-            title: '销售总览',
+            title: '销售统计总览',
             requiresAuth: true,
             roles: ['SalesManager'],
-          },
-        },
-        {
-          path: 'TopCarModelList',
-          name: 'TopCarModelList',
-          component: () => import('../views/TopCarModelList.vue'),
-          meta: {
-            title: '热门车型',
-            requiresAuth: true,
-            roles: ['Customer'],
-          },
-        },
-        {
-          path: 'VehicleConfiguration',
-          name: 'VehicleConfiguration',
-          component: () => import('../views/VehicleConfiguration.vue'),
-          meta: {
-            title: '车辆配置',
-            requiresAuth: true,
-            roles: ['ProductManager'],
           },
         },
         {
@@ -75,18 +56,58 @@ const router = createRouter({
           name: 'CarPurchasesHeatMap',
           component: () => import('../views/CarPurchasesHeatMap.vue'),
           meta: {
-            title: '购车热力图',
+            title: '购车热区地图',
             requiresAuth: true,
             roles: ['SalesManager'],
           },
         },
-
         {
-          path: 'Recommendation',
-          name: 'Recommendation',
-          component: () => import('../views/Recommendation.vue'),
+          path: 'TimeSeries',
+          name: 'TimeSeries',
+          component: () => import('../views/TimeSeries.vue'),
           meta: {
-            title: '购车推荐',
+            title: '时间序列可视化',
+            requiresAuth: true,
+            roles: ['SalesManager'],
+          },
+        },
+        {
+          path: 'SalesForecast',
+          name: 'SalesForecast',
+          component: () => import('../views/SalesForecast.vue'),
+          meta: {
+            title: '多维度销售预测',
+            requiresAuth: true,
+            roles: ['SalesManager'],
+          },
+        },
+        {
+          path: 'ModelSalesForcast',
+          name: 'ModelSalesForcast',
+          component: () => import('../views/ModelSalesForecast.vue'),
+          meta: {
+            title: '车型销售预测',
+            requiresAuth: true,
+            roles: ['SalesManager'],
+          },
+        },
+        {
+          path: 'RegionSalesForcast',
+          name: 'RegionSalesForcast',
+          component: () => import('../views/RegionSalesForecast.vue'),
+          meta: {
+            title: '区域销售预测',
+            requiresAuth: true,
+            roles: ['SalesManager'],
+          },
+        },
+        // 消费者 (Customer) 页面
+           {
+          path: 'TopCarModelList',
+          name: 'TopCarModelList',
+          component: () => import('../views/TopCarModelList.vue'),
+          meta: {
+            title: '热门车型排行榜',
             requiresAuth: true,
             roles: ['Customer'],
           },
@@ -98,6 +119,16 @@ const router = createRouter({
           meta: {
             title: '车型对比分析',
             requiresAuth: true,
+            roles: ['Customer', 'ProductManager'],
+          },
+        },
+        {
+          path: 'Recommendation',
+          name: 'Recommendation',
+          component: () => import('../views/Recommendation.vue'),
+          meta: {
+            title: '购车推荐分析',
+            requiresAuth: true,
             roles: ['Customer'],
           },
         },
@@ -106,9 +137,30 @@ const router = createRouter({
           name: 'FuelConsList',
           component: () => import('../views/FuelConsList.vue'),
           meta: {
-            title: '油耗排行',
+            title: '油耗榜单',
             requiresAuth: true,
             roles: ['Customer'],
+          },
+        },
+        {
+          path: 'Evaluative',
+          name: 'Evaluative',
+          component: () => import('../views/Evaluative.vue'),
+          meta: {
+            title: '口碑聚合分析',
+            requiresAuth: true,
+            roles: ['Customer'],
+          },
+        },
+        // 产品经理 (ProductManager) 页面
+         {
+          path: 'VehicleConfiguration',
+          name: 'VehicleConfiguration',
+          component: () => import('../views/VehicleConfiguration.vue'),
+          meta: {
+            title: '车辆配置热度分析',
+            requiresAuth: true,
+            roles: ['ProductManager'],
           },
         },
       ],
