@@ -67,7 +67,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Fold, Expand, ArrowDown, Operation } from '@element-plus/icons-vue'
@@ -82,6 +82,17 @@ const permissionStore = usePermissionStore()
 
 const isCollapse = ref(false)
 const userAvatar = ref('https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png')
+
+// 初始化
+onMounted(() => {
+  // 从 localStorage 初始化用户信息
+  userStore.initFromStorage()
+
+  // 如果用户已登录，生成菜单
+  if (userStore.isLoggedIn && userStore.userRole) {
+    permissionStore.generateMenus(userStore.userRole)
+  }
+})
 
 const menuRoutes = computed(() => permissionStore.menuRoutes)
 const activeMenu = computed(() => route.path)

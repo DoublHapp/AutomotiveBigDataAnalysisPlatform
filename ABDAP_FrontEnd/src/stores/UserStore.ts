@@ -2,9 +2,9 @@ import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
 
 export interface UserInfo {
-  id: number
+  user_id: number // 改为匹配后端响应
   username: string
-  roles: string[]
+  role: string // 改为单个角色字符串
   permissions: string[]
 }
 
@@ -12,47 +12,41 @@ export const useUserStore = defineStore('user', () => {
   const userInfo = ref<UserInfo | null>(null)
   const token = ref<string>('')
 
-  const isLoggedIn = computed(() => !!token.value)
-  const userRoles = computed(() => userInfo.value?.roles || [])
+  const isLoggedIn = computed(() => !!userInfo.value && !!token.value)
+  const userRole = computed(() => userInfo.value?.role || '')
   const userPermissions = computed(() => userInfo.value?.permissions || [])
 
-  // 模拟登录
-  const login = async (username: string, password: string) => {
-    // 模拟API调用
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+  // 从 localStorage 初始化用户信息
+  const initFromStorage = () => {
+    const storedUserInfo = localStorage.getItem('userInfo')
+    const storedIsLoggedIn = localStorage.getItem('isLoggedIn')
 
-    // 验证用户凭据并返回用户信息
-    let mockUser: UserInfo | null = null
-
-    if (username === 'DB' && password === '123') {
-      mockUser = {
-        id: 1,
-        username: 'DB',
-        roles: ['SalesManager'],
-        permissions: ['Auth:view', 'SaleTotal:view'],
-      }
-    } else if (username === 'LJJ' && password === '1234') {
-      mockUser = {
-        id: 2,
-        username: 'LJJ',
-        roles: ['Customer'],
-        permissions: ['Auth:view', 'TopCarModelList:view'],
-      }
+    if (storedUserInfo && storedIsLoggedIn === 'true') {
+      userInfo.value = JSON.parse(storedUserInfo)
+      token.value = `token-${userInfo.value?.username}-${Date.now()}`
     }
-
-    if (!mockUser) {
-      throw new Error('用户名或密码错误')
-    }
-
-    userInfo.value = mockUser
-    token.value = `mock-token-${mockUser.username}-${Date.now()}`
-
-    return mockUser
   }
 
+  // 登录
+  const login = async (userData: UserInfo) => {
+    userInfo.value = userData
+    token.value = `token-${userData.username}-${Date.now()}`
+
+    // 同步到 localStorage
+    localStorage.setItem('userInfo', JSON.stringify(userData))
+    localStorage.setItem('isLoggedIn', 'true')
+
+    return userData
+  }
+
+  // 登出
   const logout = () => {
     userInfo.value = null
     token.value = ''
+
+    // 清除 localStorage
+    localStorage.removeItem('userInfo')
+    localStorage.removeItem('isLoggedIn')
   }
 
   const hasPermission = (permission: string) => {
@@ -60,15 +54,16 @@ export const useUserStore = defineStore('user', () => {
   }
 
   const hasRole = (role: string) => {
-    return userRoles.value.includes(role)
+    return userRole.value === role
   }
 
   return {
     userInfo,
     token,
     isLoggedIn,
-    userRoles,
+    userRole,
     userPermissions,
+    initFromStorage,
     login,
     logout,
     hasPermission,

@@ -33,21 +33,21 @@ public class UserController {
             User user = new User();
             user.setUsername(request.getUsername());
             user.setPassword(request.getPassword());
-            user.setEmail(request.getEmail());
-            user.setMobile(request.getMobile());
+            // user.setEmail(request.getEmail());
+            // user.setMobile(request.getMobile());
             
             // 角色处理：验证并设置角色
             String role = request.getRole();
             if (role == null || role.trim().isEmpty()) {
                 // 如果未指定角色，默认设置为普通用户
-                user.setRole("USER");
+                user.setRole("Customer");
             } else {
-                // 验证角色是否合法（可以根据业务需求调整）
+                // 验证角色是否合法
                 if (isValidRole(role)) {
-                    user.setRole(role.toUpperCase()); // 统一转换为大写
+                    user.setRole(role); 
                 } else {
-                    response.put("success", false);
-                    response.put("message", "无效的用户角色：" + role);
+                    response.put("status", 0);
+                    response.put("msg", "无效的用户角色：" + role);
                     return ResponseEntity.badRequest().body(response);
                 }
             }
@@ -56,22 +56,22 @@ public class UserController {
             User createdUser = userService.createUser(user);
             
             // 构建成功响应（不返回密码）
-            response.put("success", true);
-            response.put("message", "注册成功");
+            response.put("status", 1);
+            response.put("msg", "注册成功");
             response.put("data", createUserResponse(createdUser));
             
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
             
         } catch (RuntimeException e) {
-            // 处理业务异常
-            response.put("success", false);
-            response.put("message", e.getMessage());
+            // 处理业务异常(用户名已存在等)
+            response.put("status", 0);
+            response.put("msg", e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
             
         } catch (Exception e) {
             // 处理系统异常
-            response.put("success", false);
-            response.put("message", "注册失败，请稍后重试");
+            response.put("status",0);
+            response.put("msg", "注册失败，请稍后重试");
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
@@ -84,29 +84,42 @@ public class UserController {
         Map<String, Object> response = new HashMap<>();
         
         try {
+            // 添加调试日志
+            System.out.println("收到登录请求: " + request.getUsername());
+
             // 调用Service层进行用户认证
-            User user = userService.authenticateUser(request.getCredential(), request.getPassword());
+            User user = userService.authenticateUser(request.getUsername(), request.getPassword());
             
             // 构建成功响应（不返回密码）
-            response.put("success", true);
-            response.put("message", "登录成功");
-            response.put("data", createUserResponse(user));
+            response.put("status", 1);
+            response.put("msg", "登录成功");
+    
             
             // 在实际项目中，这里还应该生成JWT token或session
             // response.put("token", jwtService.generateToken(user));
+
+             // 构建用户数据，包含权限信息
+            Map<String, Object> userData = createUserResponse(user);
+            // 添加权限列表
+            userData.put("permissions", getRolePermissions(user.getRole()));
             
+            response.put("data", userData);
+
+            System.out.println("登录成功，返回数据: " + response);
             return ResponseEntity.ok(response);
             
         } catch (RuntimeException e) {
             // 处理认证失败
-            response.put("success", false);
-            response.put("message", e.getMessage());
+            System.out.println("登录失败: " + e.getMessage());
+            response.put("status",0);
+            response.put("msg", e.getMessage());
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
             
         } catch (Exception e) {
             // 处理系统异常
-            response.put("success", false);
-            response.put("message", "登录失败，请稍后重试");
+            System.out.println("登录异常: " + e.getMessage());
+            response.put("status",0);
+            response.put("msg", "登录失败，请稍后重试");
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
@@ -116,24 +129,45 @@ public class UserController {
      */
     private Map<String, Object> createUserResponse(User user) {
         Map<String, Object> userResponse = new HashMap<>();
-        userResponse.put("userId", user.getUserId());
+        userResponse.put("user_id", user.getUserId());
         userResponse.put("username", user.getUsername());
-        userResponse.put("email", user.getEmail());
-        userResponse.put("mobile", user.getMobile());
+        // userResponse.put("email", user.getEmail());
+        // userResponse.put("mobile", user.getMobile());
         userResponse.put("role", user.getRole());
         userResponse.put("regTime", user.getRegTime());
         // 注意：不返回密码等敏感信息
         return userResponse;
     }
+
+
+      /**
+     * 根据角色获取权限列表
+     */
+    private String[] getRolePermissions(String role) {
+        switch (role) {
+            case "SalesManager":
+                return new String[]{"SaleTotal:view", "TopCarModelList:view", "SalesForecast:view"};
+            case "Customer":
+                return new String[]{"TopCarModelList:view", "Recommendation:view", "CarPurchasesHeatMap:view"};
+            case "ProductManager":
+                return new String[]{"VehicleConfiguration:view", "VehicleModelCompAnalysis:view", "FuelConsList:view"};
+            default:
+                return new String[]{"TopCarModelList:view"};
+        }
+    }
+    
+
+
+
       /**
      * 注册请求DTO
      */
     public static class RegisterRequest {
         private String username;
         private String password;
-        private String email;
-        private String mobile;
-        private String role; // 用户角色，可选字段
+        // private String email;
+        // private String mobile;
+        private String role; // 用户角色，SalesManager, Customer, ProductManager
         
         // Getters and Setters
         public String getUsername() {
@@ -152,21 +186,21 @@ public class UserController {
             this.password = password;
         }
         
-        public String getEmail() {
-            return email;
-        }
+        // public String getEmail() {
+        //     return email;
+        // }
         
-        public void setEmail(String email) {
-            this.email = email;
-        }
+        // public void setEmail(String email) {
+        //     this.email = email;
+        // }
         
-        public String getMobile() {
-            return mobile;
-        }
+        // public String getMobile() {
+        //     return mobile;
+        // }
         
-        public void setMobile(String mobile) {
-            this.mobile = mobile;
-        }
+        // public void setMobile(String mobile) {
+        //     this.mobile = mobile;
+        // }
         
         public String getRole() {
             return role;
@@ -181,16 +215,16 @@ public class UserController {
      * 登录请求DTO
      */
     public static class LoginRequest {
-        private String credential; // 用户名或邮箱
+        private String username; 
         private String password;
         
         // Getters and Setters
-        public String getCredential() {
-            return credential;
+        public String getUsername() {
+            return username;
         }
         
-        public void setCredential(String credential) {
-            this.credential = credential;
+        public void setUsername(String username) {
+            this.username = username;
         }
         
         public String getPassword() {
@@ -209,11 +243,9 @@ public class UserController {
         if (role == null) {
             return false;
         }
-        String upperRole = role.toUpperCase();
-        // 定义允许的角色列表（可以根据业务需求调整）
-        return "USER".equals(upperRole) || 
-               "ADMIN".equals(upperRole) || 
-               "MANAGER".equals(upperRole) ||
-               "ANALYST".equals(upperRole);
+        // 定义允许的角色列表
+        return "SalesManager".equals(role) || 
+               "Customer".equals(role) || 
+               "ProductManager".equals(role);
     }
 }

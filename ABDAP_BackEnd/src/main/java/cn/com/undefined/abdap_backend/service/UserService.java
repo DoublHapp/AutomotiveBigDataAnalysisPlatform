@@ -245,15 +245,29 @@ public class UserService {
      * 用户登录验证
      */
     @Transactional(readOnly = true)
-    public User authenticateUser(String credential, String password) {        Optional<User> userOpt = userRepository.findByUsernameOrEmail(credential);
-        if (userOpt.isPresent()) {
-            User user = userOpt.get();
-            if (passwordEncoder.matches(password, user.getPassword())) {
-                return user;
-            }
+    public User authenticateUser(String username, String password) {
+          System.out.println("开始验证用户: " + username);
+    
+    // 先尝试根据用户名查找
+    Optional<User> userOpt = userRepository.findByUsername(username);
+    
+    if (userOpt.isPresent()) {
+        User user = userOpt.get();
+        System.out.println("找到用户: " + user.getUsername() + ", 角色: " + user.getRole());
+        
+        // 验证密码
+        if (passwordEncoder.matches(password, user.getPassword())) {
+            System.out.println("密码验证成功");
+            return user;
+        } else {
+            System.out.println("密码验证失败");
+            throw new RuntimeException("密码错误");
         }
-        throw new RuntimeException("用户名/邮箱或密码错误");
+    } else {
+        System.out.println("用户不存在: " + username);
+        throw new RuntimeException("该账号不存在，请注册");
     }
+ }
     
     /**
      * 检查用户名是否可用

@@ -248,6 +248,8 @@
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox, type FormInstance } from 'element-plus'
+import { useUserStore } from '@/stores/UserStore'
+import { usePermissionStore } from '@/stores/RouterPermissionManagement'
 import {
   User,
   Lock,
@@ -261,6 +263,8 @@ import {
 import axios from 'axios'
 
 const router = useRouter()
+const userStore = useUserStore()
+const permissionStore = usePermissionStore()
 
 // 表单引用
 const loginFormRef = ref<FormInstance>()
@@ -305,7 +309,7 @@ const registerRules = {
   ],
   password: [
     { required: true, message: '请输入密码', trigger: 'blur' },
-    { min: 6, message: '密码长度至少 6 个字符', trigger: 'blur' },
+    { min: 3, message: '密码长度至少 3 个字符', trigger: 'blur' },
   ],
   confirmPassword: [
     { required: true, message: '请确认密码', trigger: 'blur' },
@@ -336,9 +340,9 @@ const rolePermissions = {
 
 // 角色默认路由
 const roleDefaultRoutes = {
-  SalesManager: '/SaleTotal',
-  Customer: '/TopCarModelList',
-  ProductManager: '/VehicleConfiguration',
+  SalesManager: '/app/SaleTotal',
+  Customer: '/app/TopCarModelList',
+  ProductManager: '/app/VehicleConfiguration',
 }
 
 // 登录处理
@@ -349,33 +353,71 @@ const handleLogin = async () => {
     if (valid) {
       loading.value = true
       try {
+        console.log('发送登录请求:', {
+          username: loginForm.username,
+          password: loginForm.password,
+        })
+
         // 调用登录API
         const response = await axios.post('/api/auth/login', {
           username: loginForm.username,
           password: loginForm.password,
         })
 
+        console.log('登录响应完整数据:', response.data)
+
         if (response.data.status === 1) {
           // 登录成功
-          ElMessage.success(response.data.msg)
+          ElMessage.success(response.data.msg || '登录成功')
 
           // 存储用户信息
           const userInfo = response.data.data
-          localStorage.setItem('userInfo', JSON.stringify(userInfo))
-          localStorage.setItem('isLoggedIn', 'true')
+
+          console.log('用户信息:', userInfo)
+
+          // 确认用户信息包含必要字段
+          if (!userInfo || !userInfo.role) {
+            console.error('用户信息缺失必要字段:', userInfo)
+            ElMessage.error('登录响应数据异常')
+            return
+          }
+
+          // 使用 Store 管理用户状态
+          await userStore.login(userInfo)
+
+          // 生成菜单
+          permissionStore.generateMenus(userInfo.role)
 
           // 根据角色跳转到对应页面
-          const defaultRoute =
-            roleDefaultRoutes[userInfo.role as keyof typeof roleDefaultRoutes] || '/TopCarModelList'
-          router.push(defaultRoute)
+          const defaultRoute = roleDefaultRoutes[userInfo.role as keyof typeof roleDefaultRoutes]
+          await router.push(defaultRoute)
+          console.log('准备跳转到:', defaultRoute, '用户角色:', userInfo.role)
+
+          // 使用 setTimeout 确保状态更新完成
+          setTimeout(async () => {
+            try {
+              await router.push(defaultRoute)
+              console.log('跳转完成到:', defaultRoute)
+            } catch (routerError) {
+              console.error('路由跳转失败:', routerError)
+              ElMessage.error('页面跳转失败')
+            }
+          }, 100)
         } else {
           // 登录失败
-          ElMessage.error(response.data.msg)
+          console.error('登录失败，服务器返回:', response.data)
+          ElMessage.error(response.data.msg || '登录失败')
         }
       } catch (error: any) {
-        console.error('登录API调用失败，使用模拟登录:', error)
-        // API调用失败时使用模拟登录
-        await mockLogin()
+        console.error('登录API调用失败:', error)
+        if (error.response) {
+          console.error('错误响应:', error.response.data)
+          ElMessage.error(error.response.data.msg || '登录失败')
+        } else {
+          console.error('网络错误，使用模拟登录:', error)
+          // 网络错误时使用模拟登录
+          await mockLogin()
+        }
       } finally {
         loading.value = false
       }
@@ -389,8 +431,8 @@ const mockLogin = async () => {
 
   // 模拟用户数据
   const mockUsers = {
-    DB: { password: '123', role: 'SalesManager', user_id: 1 },
-    LJJ: { password: '1234', role: 'Customer', user_id: 2 },
+    DB: { password: '123456', role: 'SalesManager', user_id: 1 },
+    LJJ: { password: '123456', role: 'Customer', user_id: 2 },
     PM: { password: '123456', role: 'ProductManager', user_id: 3 },
   }
 
