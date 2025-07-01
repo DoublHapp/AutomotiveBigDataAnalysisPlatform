@@ -8,7 +8,7 @@
         </el-icon>
         <span v-show="!isCollapse" class="logo-text">ABDAP</span>
       </div>
-      
+
       <el-menu
         :default-active="activeMenu"
         class="sidebar-menu"
@@ -32,22 +32,14 @@
       <!-- 头部 -->
       <el-header class="header">
         <div class="header-left">
-          <el-button 
-            type="text" 
-            :icon="isCollapse ? Expand : Fold"
-            @click="toggleSidebar"
-          />
+          <el-button type="default" :icon="isCollapse ? Expand : Fold" @click="toggleSidebar" />
           <el-breadcrumb separator="/">
-            <el-breadcrumb-item
-              v-for="item in breadcrumbs"
-              :key="item.path"
-              :to="item.path"
-            >
+            <el-breadcrumb-item v-for="item in breadcrumbs" :key="item.path" :to="item.path">
               {{ item.title }}
             </el-breadcrumb-item>
           </el-breadcrumb>
         </div>
-        
+
         <div class="header-right">
           <el-dropdown @command="handleCommand">
             <span class="user-dropdown">
@@ -96,10 +88,10 @@ const activeMenu = computed(() => route.path)
 
 // 面包屑导航
 const breadcrumbs = computed(() => {
-  const matched = route.matched.filter(item => item.meta && item.meta.title)
-  return matched.map(item => ({
+  const matched = route.matched.filter((item) => item.meta && item.meta.title)
+  return matched.map((item) => ({
     path: item.path,
-    title: item.meta?.title || ''
+    title: item.meta?.title || '',
   }))
 })
 
@@ -125,15 +117,17 @@ const handleLogout = () => {
   ElMessageBox.confirm('确定要退出登录吗？', '提示', {
     confirmButtonText: '确定',
     cancelButtonText: '取消',
-    type: 'warning'
-  }).then(() => {
-    userStore.logout()
-    permissionStore.resetRoutes()
-    router.push('/Auth')
-    ElMessage.success('已退出登录')
-  }).catch(() => {
-    // 取消退出
+    type: 'warning',
   })
+    .then(() => {
+      userStore.logout()
+      permissionStore.resetRoutes()
+      router.push('/Auth')
+      ElMessage.success('已退出登录')
+    })
+    .catch(() => {
+      // 取消退出
+    })
 }
 </script>
 
