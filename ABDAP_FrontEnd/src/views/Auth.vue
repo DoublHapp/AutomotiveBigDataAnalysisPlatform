@@ -1,3 +1,75 @@
+<script setup lang="ts">
+import { ref, reactive } from 'vue'
+import { useRouter } from 'vue-router'
+import { ElMessage, type FormInstance } from 'element-plus'
+import { User, Lock, Operation } from '@element-plus/icons-vue'
+import { useUserStore } from '@/stores/UserStore'
+import { usePermissionStore } from '@/stores/RouterPermissionManagement'
+
+// 使用 Operation 图标替代 Car（或者使用其他合适的图标）
+const CarButton = Operation
+
+const router = useRouter()
+const userStore = useUserStore()
+const permissionStore = usePermissionStore()
+
+const loginFormRef = ref<FormInstance>()
+const loading = ref(false)
+
+const loginForm = reactive({
+  username: 'DB',
+  password: '123',
+})
+
+const loginRules = {
+  username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
+  password: [{ required: true, message: '请输入密码', trigger: 'blur' }],
+}
+
+const handleLogin = async () => {
+  if (!loginFormRef.value) return
+
+  await loginFormRef.value.validate(async (valid) => {
+    if (valid) {
+      loading.value = true
+      try {
+        // 登录
+        const userInfo = await userStore.login(loginForm.username, loginForm.password)
+
+        // 生成动态路由
+        const accessRoutes = permissionStore.generateRoutes(userInfo.permissions, userInfo.roles)
+
+        // 动态添加路由
+        accessRoutes.forEach((route) => {
+          router.addRoute(route)
+        })
+
+        // 添加404路由到最后
+        router.addRoute({
+          path: '/:pathMatch(.*)*',
+          redirect: '/404',
+        })
+
+        ElMessage.success('登录成功')
+
+        // 根据用户权限跳转到合适的页面
+        if (userInfo.permissions.includes('SaleTotal:view')) {
+          router.push('/SaleTotal')
+        } else if (userInfo.permissions.includes('TopCarModelList:view')) {
+          router.push('/TopCarModelList')
+        } else {
+          router.push('/')
+        }
+      } catch (error) {
+        ElMessage.error('登录失败，请检查用户名和密码')
+      } finally {
+        loading.value = false
+      }
+    }
+  })
+}
+</script>
+
 <template>
   <div class="auth-container">
     <div class="auth-background">
