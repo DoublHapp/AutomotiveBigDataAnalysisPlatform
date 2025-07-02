@@ -36,7 +36,8 @@
         <el-card shadow="never" class="chart-card">
           <template #header>
             <div class="card-header">
-              <span>总销量趋势</span>
+              <span style="margin-right: 20px;">总销量趋势</span>
+              <span :title="salesTrendAnalysis.salesTrendAnalysisData">{{ salesTrendAnalysis.sales }}</span>
               <el-radio-group v-model="timeRange" size="small" @change="handleTimeRangeChange">
                 <el-radio-button value="month">月</el-radio-button>
                 <el-radio-button value="quarter">季度</el-radio-button>
@@ -52,7 +53,8 @@
       <el-col :xs="24" :lg="12">
         <el-card shadow="never" class="chart-card">
           <template #header>
-            <span>销售额变化</span>
+            <span style="margin-right: 20px;">销售额变化</span>
+            <span :title="salesAmountAnalysis.salesAmountAnalysisData">{{ salesAmountAnalysis.sales }}</span>
           </template>
           <div ref="salesAmountChart" class="chart-container" v-loading="loading"></div>
         </el-card>
@@ -62,7 +64,7 @@
       <el-col :xs="24" :lg="12">
         <el-card shadow="never" class="chart-card">
           <template #header>
-            <span>车型销量排行</span>
+            <span style="margin-right: 20px;">车型销量排行</span>
           </template>
           <div ref="topModelsChart" class="chart-container" v-loading="loading"></div>
         </el-card>
@@ -82,7 +84,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, nextTick, watch } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick, watch, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Refresh } from '@element-plus/icons-vue'
@@ -96,6 +98,11 @@ const carType = ref('all') // all, electric, fuel
 const timeRange = ref('month') // month, quarter, year
 const dateRange = ref<[Date, Date]>([new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), new Date()])
 const loading = ref(false)
+
+let salesVolStd =ref(0)
+let salesVolSlope =ref(0)
+let salesAmtStd =ref(0)
+let salesAmtSlope =ref(0)
 
 // 图表实例
 const salesTrendChart = ref<HTMLDivElement>()
@@ -199,12 +206,16 @@ const generateMockSalesTrendData = () => {
   const baseDate = new Date()
   for (let i = 11; i >= 0; i--) {
     const date = new Date(baseDate.getFullYear(), baseDate.getMonth() - i, 1)
-    data.push({
+    data.push({ 
       date: date.toISOString().slice(0, 7), // YYYY-MM 格式
       salesVolume: Math.floor(Math.random() * 2000) + 3000,
     })
   }
   console.log('生成销量趋势模拟数据:', data)
+  salesVolStd.value = calcStd(data.map(item => item.salesVolume))
+  console.log('销量标准差:', salesVolStd.value)
+  salesVolSlope.value = calcSlope(data.map(item => item.salesVolume))
+  console.log('销量斜率:', salesVolSlope.value)
   return data
 }
 
@@ -219,6 +230,10 @@ const generateMockSalesAmountData = () => {
     })
   }
   console.log('生成销售额模拟数据:', data)
+  salesAmtStd.value = calcStd(data.map(item => item.salesAmount))
+  console.log('销售额标准差:', salesAmtStd.value)
+  salesAmtSlope.value = calcSlope(data.map(item => item.salesAmount))
+  console.log('销售额斜率:', salesAmtSlope.value)
   return data
 }
 
@@ -251,6 +266,101 @@ const generateMockRegionSalesData = () => {
   console.log('生成地区销量模拟数据:', data)
   return data
 }
+
+//数据分析算法，帮助用户解读数据
+//标准差，计算数据波动
+function calcStd(arr: number[]) {
+  const avg = arr.reduce((a, b) => a + b, 0) / arr.length
+  const variance = arr.reduce((a, b) => a + (b - avg) ** 2, 0) / arr.length
+  return Math.sqrt(variance)
+}
+
+//斜率，计算线性趋势
+function calcSlope(arr: number[]) {
+  const n = arr.length
+  const xSum = (n - 1) * n / 2
+  const ySum = arr.reduce((a, b) => a + b, 0)
+  const xySum = arr.map((y, x) => x * y).reduce((a, b) => a + b, 0)
+  const xxSum = arr.map((_, x) => x * x).reduce((a, b) => a + b, 0)
+  return (n * xySum - xSum * ySum) / (n * xxSum - xSum * xSum)
+}
+
+// 智能解读文本
+const salesTrendAnalysis = computed(() => {
+  if (salesVolStd.value > 800) {
+    if (salesVolSlope.value > 100) {
+      return {
+        sales: '销量波动较大，但整体呈明显上升趋势，市场活跃且增长迅速。',
+        salesTrendAnalysisData: "数据标准差：" + salesVolStd.value.toLocaleString() + "，数据线性趋势：" + salesVolSlope.value.toLocaleString()
+      }
+    } else if (salesVolSlope.value < -100) {
+      return {
+        sales: '销量波动较大，且整体呈下降趋势，需关注市场风险。',
+        salesTrendAnalysisData: "数据标准差：" + salesVolStd.value.toLocaleString() + "，数据线性趋势：" + salesVolSlope.value.toLocaleString()
+      }
+    } else {
+      return {
+        sales: '销量波动较大，整体趋势较为平稳，市场存在不确定性。',
+        salesTrendAnalysisData: "数据标准差：" + salesVolStd.value.toLocaleString() + "，数据线性趋势：" + salesVolSlope.value.toLocaleString()
+      }
+    }
+  } else {
+    if (salesVolSlope.value > 100) {
+      return {
+        sales: '销量波动较小，整体呈上升趋势，市场表现稳定且向好。',
+        salesTrendAnalysisData: "数据标准差：" + salesVolStd.value.toLocaleString() + "，数据线性趋势：" + salesVolSlope.value.toLocaleString()
+      }
+    } else if (salesVolSlope.value < -100) {
+      return {
+        sales: '销量波动较小，但整体呈下降趋势，需警惕市场下滑。',
+        salesTrendAnalysisData: "数据标准差：" + salesVolStd.value.toLocaleString() + "，数据线性趋势：" + salesVolSlope.value.toLocaleString()
+      }
+    } else {
+      return {
+        sales: '销量波动较小，整体趋势平稳，市场较为稳定。',
+        salesTrendAnalysisData: "数据标准差：" + salesVolStd.value.toLocaleString() + "，数据线性趋势：" + salesVolSlope.value.toLocaleString()
+      }
+    }
+  }
+})
+
+const salesAmountAnalysis = computed(() => {
+  if (salesAmtStd.value > 15000) {
+    if (salesAmtSlope.value > 1000) {
+      return {
+        sales: '销售额波动较大，但整体呈明显上升趋势，市场需求旺盛。',
+        salesAmountAnalysisData: "数据标准差："+salesAmtStd.value.toLocaleString()+"，数据线性趋势："+salesAmtSlope.value.toLocaleString()
+      }
+    } else if (salesAmtSlope.value < -1000) {
+      return {
+        sales: '销售额波动较大，且整体呈下降趋势，需关注收入风险。',
+        salesAmountAnalysisData: "数据标准差："+salesAmtStd.value.toLocaleString()+"，数据线性趋势："+salesAmtSlope.value.toLocaleString()
+      }
+    } else {
+      return {
+        sales: '销售额波动较大，整体趋势较为平稳，市场存在不确定性。',
+        salesAmountAnalysisData: "数据标准差："+salesAmtStd.value.toLocaleString()+"，数据线性趋势："+salesAmtSlope.value.toLocaleString()
+      }
+    }
+  } else {
+    if (salesAmtSlope.value > 1000) {
+      return {
+        sales: '销售额波动较小，整体呈上升趋势，市场表现良好。',
+        salesAmountAnalysisData: "数据标准差："+salesAmtStd.value.toLocaleString()+"，数据线性趋势："+salesAmtSlope.value.toLocaleString()
+      }
+    } else if (salesAmtSlope.value < -1000) {
+      return {
+        sales: '销售额波动较小，但整体呈下降趋势，需警惕市场下滑。',
+        salesAmountAnalysisData: "数据标准差："+salesAmtStd.value.toLocaleString()+"，数据线性趋势："+salesAmtSlope.value.toLocaleString()
+      }
+    } else {
+      return {
+        sales: '销售额波动较小，整体趋势平稳，市场较为稳定。',
+        salesAmountAnalysisData: "数据标准差："+salesAmtStd.value.toLocaleString()+"，数据线性趋势："+salesAmtSlope.value.toLocaleString()
+      }
+    }
+  }
+})
 
 // 初始化销量趋势图
 const initSalesTrendChart = async () => {
@@ -443,8 +553,16 @@ const initTopModelsChart = async () => {
     return
   }
 
-  const data = await fetchTopModels()
+  let data = await fetchTopModels()
   console.log('获取到车型排行数据:', data)
+
+  // 按销量降序排列，销量大的在上面
+  data = data.slice().sort((a: any, b: any) => b.salesVolume - a.salesVolume)
+
+  // 定义颜色数组
+  const colorList = [
+    '#409EFF', '#67C23A', '#E6A23C', '#F56C6C', '#909399', '#1abc9c', '#9b59b6', '#e67e22'
+  ]
 
   if (topModelsChartInstance) {
     topModelsChartInstance.dispose()
@@ -470,19 +588,37 @@ const initTopModelsChart = async () => {
         return `${data.axisValue}<br/>销量: ${data.value.toLocaleString()} 辆`
       },
     },
+    grid: {
+      left: '5%',
+      right: '15%',
+      bottom: '8%',
+      top: 50,
+      containLabel: true,
+    },
     xAxis: {
       type: 'value',
       name: '销量(辆)',
+      position: 'top', // x轴放顶部，交点在左上角
       axisLabel: {
         formatter: (value: number) => value.toLocaleString(),
       },
+      splitLine: {
+        show: true,
+        lineStyle: {
+          color: '#eee'
+        }
+      }
     },
     yAxis: {
       type: 'category',
       data: data.map((item: any) => item.carModel),
+      inverse: true, // 让销量大的在上面
       axisLabel: {
         interval: 0,
+        fontSize: 14,
+        color: '#333'
       },
+      axisTick: { show: false }
     },
     series: [
       {
@@ -490,18 +626,18 @@ const initTopModelsChart = async () => {
         type: 'bar',
         data: data.map((item: any) => item.salesVolume),
         itemStyle: {
-          color: '#E6A23C',
+          color: (params: any) => colorList[params.dataIndex % colorList.length],
         },
-        barWidth: '60%',
+        barWidth: 28,
+        label: {
+          show: true,
+          position: 'right',
+          formatter: '{c}',
+          fontSize: 13,
+          color: '#333'
+        },
       },
     ],
-    grid: {
-      left: '25%',
-      right: '4%',
-      bottom: '3%',
-      top: '15%',
-      containLabel: true,
-    },
   }
 
   topModelsChartInstance.setOption(option)
@@ -793,6 +929,7 @@ onUnmounted(() => {
 .chart-card .el-card__body {
   padding: 20px;
   height: 400px;
+  overflow-x: auto;
 }
 
 @media (max-width: 768px) {
