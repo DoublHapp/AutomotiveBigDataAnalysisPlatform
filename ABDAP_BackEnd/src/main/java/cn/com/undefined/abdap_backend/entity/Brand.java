@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
+import java.util.List;
 
 /**
  * 汽车品牌实体类
@@ -29,6 +30,14 @@ public class Brand {
     
     @Column(name = "brand_logo", length = 256)
     private String brandLogo;
+    
+    /**
+     * 该品牌下的所有车型（一对多关系）
+     * 使用mappedBy属性建立双向关联，避免生成中间表
+     * 懒加载，只有在访问时才从数据库查询
+     */
+    @OneToMany(mappedBy = "brand", fetch = FetchType.LAZY)
+    private List<CarModel> carModels;
     
     /**
      * 获取品牌完整信息（品牌名称 - 厂商）

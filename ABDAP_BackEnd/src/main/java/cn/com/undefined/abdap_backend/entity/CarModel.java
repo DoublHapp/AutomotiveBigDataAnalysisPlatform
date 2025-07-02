@@ -6,6 +6,7 @@ import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 
 /**
  * 汽车车型实体类
@@ -57,6 +58,64 @@ public class CarModel {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "brand_id", insertable = false, updatable = false)
     private Brand brand;
+    
+    /**
+     * 该车型的所有配置项（一对多关系）
+     * 使用mappedBy属性建立双向关联，避免生成中间表
+     * 懒加载，只有在访问时才从数据库查询
+     */
+    @OneToMany(mappedBy = "carModel", fetch = FetchType.LAZY)
+    private List<CarModelConfig> carModelConfigs;
+    
+    /**
+     * 该车型的所有销售记录（一对多关系）
+     * 使用mappedBy属性建立双向关联，避免生成中间表
+     * 懒加载，只有在访问时才从数据库查询
+     */
+    @OneToMany(mappedBy = "carModel", fetch = FetchType.LAZY)
+    private List<SaleRecord> saleRecords;
+    
+    /**
+     * 该车型的油耗经济性数据（一对一关系）
+     * 使用mappedBy属性建立双向关联，避免生成中间表
+     * 懒加载，只有在访问时才从数据库查询
+     * 每个车型只有一个综合的油耗数据记录
+     */
+    @OneToOne(mappedBy = "carModel", fetch = FetchType.LAZY)
+    private FuelEconomy fuelEconomy;
+      /**
+     * 该车型的口碑评价记录（一对一关系）
+     * 使用mappedBy属性建立双向关联，避免生成中间表
+     * 懒加载，只有在访问时才从数据库查询
+     * 每个车型只有一个综合的口碑评价记录
+     */
+    @OneToOne(mappedBy = "carModel", fetch = FetchType.LAZY)
+    private Opinion opinion;
+    
+    /**
+     * 该车型的预测记录（一对多关系)
+     * 使用mappedBy属性建立双向关联，避免生成中间表
+     * 懒加载，只有在访问时才从数据库查询
+     * 每个车型可以有多个预测记录（不同地区、不同时期）
+     */
+    @OneToMany(mappedBy = "carModel", fetch = FetchType.LAZY)
+    private List<Prediction> predictions;
+    
+    /**
+     * 以该车型为本品牌车型的竞品分析记录（一对多关系）
+     * 使用mappedBy属性建立双向关联，避免生成中间表
+     * 懒加载，只有在访问时才从数据库查询
+     */
+    @OneToMany(mappedBy = "carModel", fetch = FetchType.LAZY)
+    private List<CompetitorAnalysis> competitorAnalyses;
+    
+    /**
+     * 以该车型为竞品车型的竞品分析记录（一对多关系）
+     * 使用mappedBy属性建立双向关联，避免生成中间表
+     * 懒加载，只有在访问时才从数据库查询
+     */
+    @OneToMany(mappedBy = "competitorModel", fetch = FetchType.LAZY)
+    private List<CompetitorAnalysis> asCompetitorAnalyses;
     
     /**
      * 获取完整车型名称（品牌 + 车型）
