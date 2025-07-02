@@ -54,4 +54,7 @@ declare module 'vue' {
     VChart: typeof import('vue-echarts')['default']
     WelcomeItem: typeof import('./src/components/WelcomeItem.vue')['default']
   }
+  export interface GlobalDirectives {
+    vLoading: typeof import('element-plus/es')['ElLoadingDirective']
+  }
 }
