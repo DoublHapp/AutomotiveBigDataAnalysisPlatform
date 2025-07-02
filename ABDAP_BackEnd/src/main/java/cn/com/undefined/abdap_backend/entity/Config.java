@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
+import java.util.List;
 
 /**
  * 配置项实体类
@@ -26,6 +27,22 @@ public class Config {
     
     @Column(name = "config_type", length = 32)
     private String configType;
+    
+    /**
+     * 该配置项在各个车型中的配置情况（一对多关系）
+     * 使用mappedBy属性建立双向关联，避免生成中间表
+     * 懒加载，只有在访问时才从数据库查询
+     */
+    @OneToMany(mappedBy = "config", fetch = FetchType.LAZY)
+    private List<CarModelConfig> carModelConfigs;
+    
+    /**
+     * 该配置项的热度统计记录（一对多关系）
+     * 使用mappedBy属性建立双向关联，避免生成中间表
+     * 懒加载，只有在访问时才从数据库查询
+     */
+    @OneToMany(mappedBy = "config", fetch = FetchType.LAZY)
+    private List<ConfigHeat> configHeats;
     
     /**
      * 检查配置名称是否有效

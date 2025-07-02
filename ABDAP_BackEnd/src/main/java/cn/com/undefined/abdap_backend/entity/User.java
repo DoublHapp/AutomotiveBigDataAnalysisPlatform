@@ -5,6 +5,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Table(name = "user")
@@ -35,5 +36,21 @@ public class User {
     
     @Column(name = "role", length = 64)
     private String role;
+    
+    /**
+     * 该用户填写的所有购车调研表（一对多关系）
+     * 使用mappedBy属性建立双向关联，避免生成中间表
+     * 懒加载，只有在访问时才从数据库查询
+     */
+    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
+    private List<PurchaseSurvey> purchaseSurveys;
+    
+    /**
+     * 该用户的所有推荐记录（一对多关系）
+     * 使用mappedBy属性建立双向关联，避免生成中间表
+     * 懒加载，只有在访问时才从数据库查询
+     */
+    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
+    private List<RecommendHistory> recommendHistories;
     
 }

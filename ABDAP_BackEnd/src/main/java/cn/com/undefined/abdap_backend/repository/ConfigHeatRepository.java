@@ -1,13 +1,13 @@
 package cn.com.undefined.abdap_backend.repository;
 
-import cn.com.undefined.abdap_backend.entity.CarModel;
+import cn.com.undefined.abdap_backend.entity.ConfigHeat;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 /**
- * 车型数据访问层
+ * 配置热力图数据访问层
  */
 @Repository
-public interface CarModelRepository extends JpaRepository<CarModel, Long> {
+public interface ConfigHeatRepository extends JpaRepository<ConfigHeat, Long> {
     
 }
