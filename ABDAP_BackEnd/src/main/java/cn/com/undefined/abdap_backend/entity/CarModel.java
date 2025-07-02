@@ -45,9 +45,6 @@ public class CarModel {
     @Column(name = "seat_num")
     private Integer seatNum;
     
-    @Column(name = "body_type", length = 32)
-    private String bodyType;
-    
     @Column(name = "drive_type", length = 16)
     private String driveType;
     
