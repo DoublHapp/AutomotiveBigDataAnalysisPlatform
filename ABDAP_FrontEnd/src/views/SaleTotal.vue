@@ -1,105 +1,3 @@
-<script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount } from 'vue'
-import { ElMessage } from 'element-plus'
-import {
-  Refresh,
-  Download,
-  TrendCharts,
-  Operation, // 替代 Car
-  Money,
-  Shop,
-  DataAnalysis, // 替代 PieChart
-} from '@element-plus/icons-vue'
-
-// 响应式数据
-const totalSales = ref(15267.8)
-const totalVehicles = ref(4521)
-const avgPrice = ref(33.8)
-const dealerCount = ref(156)
-const chartTimeRange = ref('6m')
-const chartPowerType = ref('all')
-const rankingType = ref('volume')
-
-// 排行榜数据
-const rankingData = ref([
-  { model: 'Model Y', sales: 1245, revenue: 4235.2, growth: 15.3, marketShare: 27.5 },
-  { model: 'Model 3', sales: 987, revenue: 2961.0, growth: 8.7, marketShare: 21.8 },
-  { model: 'Model S', sales: 654, revenue: 5886.0, growth: -2.1, marketShare: 14.5 },
-  { model: 'Model X', sales: 432, revenue: 3888.0, growth: 12.9, marketShare: 9.6 },
-  { model: 'Cybertruck', sales: 321, revenue: 1926.0, growth: 45.2, marketShare: 7.1 },
-])
-
-const PieOption = {
-  tooltip: {
-    trigger: 'item'
-  },
-  legend: {
-    top: '5%',
-    left: 'center'
-  },
-  series: [
-    {
-      name: 'Access From',
-      type: 'pie',
-      radius: ['40%', '70%'],
-      avoidLabelOverlap: false,
-      itemStyle: {
-        borderRadius: 10,
-        borderColor: '#fff',
-        borderWidth: 2
-      },
-      label: {
-        show: false,
-        position: 'center'
-      },
-      emphasis: {
-        label: {
-          show: true,
-          fontSize: 40,
-          fontWeight: 'bold'
-        }
-      },
-      labelLine: {
-        show: false
-      },
-      data: [
-        { value: 1048, name: '宝马' },
-        { value: 735, name: '丰田' },
-        { value: 580, name: '大众' },
-        { value: 484, name: 'DB' },
-        { value: 300, name: 'AP' }
-      ]
-    }
-  ]
-};
-
-// 格式化数字
-const formatNumber = (num: number) => {
-  return num.toLocaleString('zh-CN', { maximumFractionDigits: 1 })
-}
-
-// 刷新数据
-const refreshData = () => {
-  ElMessage.success('数据已刷新')
-  // 这里可以调用API刷新数据
-}
-
-// 导出数据
-const exportData = () => {
-  ElMessage.success('报告导出功能开发中...')
-  // 这里可以实现导出功能
-}
-
-onMounted(() => {
-  ElMessage.success('欢迎使用销售总览页面！')
-
-})
-
-onBeforeUnmount(() => {
-
-})
-</script>
-
 <template>
   <div class="sale-total-view">
     <!-- 页面头部 -->
@@ -138,16 +36,11 @@ onBeforeUnmount(() => {
         <el-card shadow="never" class="chart-card">
           <template #header>
             <div class="card-header">
-              <span>月度销售趋势</span>
-              <el-radio-group v-model="chartPowerType" size="small">
-                <el-radio-button value="all">所有</el-radio-button>
-                <el-radio-button value="fuel">油车</el-radio-button>
-                <el-radio-button value="electricity">新能源车</el-radio-button>
-              </el-radio-group>
-              <el-radio-group v-model="chartTimeRange" size="small">
-                <el-radio-button value="6m">近6个月</el-radio-button>
-                <el-radio-button value="1y">近1年</el-radio-button>
-                <el-radio-button value="2y">近2年</el-radio-button>
+              <span>总销量趋势</span>
+              <el-radio-group v-model="timeRange" size="small" @change="handleTimeRangeChange">
+                <el-radio-button value="month">月</el-radio-button>
+                <el-radio-button value="quarter">季度</el-radio-button>
+                <el-radio-button value="year">年</el-radio-button>
               </el-radio-group>
             </div>
           </template>
@@ -161,9 +54,7 @@ onBeforeUnmount(() => {
           <template #header>
             <span>销售额变化</span>
           </template>
-          <div class="ring-pie-chart" style="width: 340px; height: 340px;">
-            <VChart :option="PieOption"/> 
-          </div>
+          <div ref="salesAmountChart" class="chart-container" v-loading="loading"></div>
         </el-card>
       </el-col>
 
@@ -834,10 +725,6 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.el-card__body {
-  height: 100%;
-}
-
 .sale-total-view {
   padding: 0;
   background: #f5f5f5;
