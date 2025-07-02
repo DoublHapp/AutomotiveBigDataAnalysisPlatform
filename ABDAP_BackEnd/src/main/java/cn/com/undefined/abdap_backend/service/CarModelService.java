@@ -53,7 +53,6 @@ public class CarModelService {
         }
         
         // 设置车型类型和动力类型
-        dto.setType(carModel.getBodyType()); // 车身类型作为车型类型
         dto.setPowerType(carModel.getEngineType()); // 发动机类型作为动力类型
         
         // 生成价格区间
