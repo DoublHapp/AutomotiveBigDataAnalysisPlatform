@@ -42,7 +42,7 @@ export default defineConfig({
     proxy: {
       // 代理所有以 /api 开头的请求到后端服务器
       '/api': {
-        target: 'http://localhost:8080',
+        target: 'http://localhost:8088',
         changeOrigin: true,
         secure: false,
         configure: (proxy, _options) => {
