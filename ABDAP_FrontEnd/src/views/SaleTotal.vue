@@ -885,7 +885,7 @@ const fetchSalesTrend = async () => {
     const response = await axios.get('/api/SaleTotal/TotalSalesTrend', {
       params: globalFilters
     })
-    if (response.data.status === 1) {
+    if (response.data.status === 200) {
       return response.data.data
     } else {
       return generateMockSalesTrendData()

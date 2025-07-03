@@ -38,47 +38,41 @@ public class CarModelService {
                 .orElseThrow(() -> new RuntimeException("车型不存在"));
         return convertToDTO(carModel);
     }
-    
-    /**
+      /**
      * 将Entity转换为DTO
      */
     private CarModelDTO convertToDTO(CarModel carModel) {
         CarModelDTO dto = new CarModelDTO();
         dto.setCarModelId(carModel.getCarModelId());
         dto.setModelName(carModel.getModelName());
+        dto.setBrandId(carModel.getBrandId());
         
         // 获取品牌名称
         if (carModel.getBrand() != null) {
             dto.setBrandName(carModel.getBrand().getBrandName());
         }
         
-        // 设置车型类型和动力类型
-        dto.setPowerType(carModel.getEngineType()); // 发动机类型作为动力类型
+        // 设置车型级别
+        dto.setLevel(carModel.getLevel());
         
-        // 生成价格区间
-        if (carModel.getOfficialPrice() != null) {
-            dto.setPriceRange(generatePriceRange(carModel.getOfficialPrice()));
-        }
+        // 设置上市日期
+        dto.setLaunchDate(carModel.getLaunchDate());
         
-        // 设置激活状态（根据上市日期判断）
-        dto.setIsActive(carModel.getLaunchDate() != null);
+        // 设置官方指导价
+        dto.setOfficialPrice(carModel.getOfficialPrice());
+        
+        // 设置发动机类型
+        dto.setEngineType(carModel.getEngineType());
+        
+        // 设置座位数
+        dto.setSeatNum(carModel.getSeatNum());
+        
+        // 设置驱动类型
+        dto.setDriveType(carModel.getDriveType());
+        
+        // 设置续航里程
+        dto.setRangeKm(carModel.getRangeKm());
         
         return dto;
-    }
-    
-    /**
-     * 生成价格区间字符串
-     * 简化处理：以官方价格为基础生成一个区间
-     */
-    private String generatePriceRange(java.math.BigDecimal officialPrice) {
-        if (officialPrice == null) {
-            return "价格待定";
-        }
-        
-        // 简单处理：生成±10%的价格区间
-        java.math.BigDecimal lowerPrice = officialPrice.multiply(new java.math.BigDecimal("0.9"));
-        java.math.BigDecimal upperPrice = officialPrice.multiply(new java.math.BigDecimal("1.1"));
-        
-        return String.format("%.2f-%.2f万", lowerPrice, upperPrice);
     }
 }

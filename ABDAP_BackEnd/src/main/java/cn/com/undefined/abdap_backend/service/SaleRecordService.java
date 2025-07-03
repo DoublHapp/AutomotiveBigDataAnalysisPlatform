@@ -37,6 +37,13 @@ public class SaleRecordService {
     private RegionRepository regionRepository;
 
     /**
+     * 查询所有销售记录
+     */
+    public List<SaleRecord> findAll() {
+        return repository.findAll();
+    }
+
+    /**
      * 根据车型ID查询销售记录
      */
     public List<SaleRecord> findByCarModelId(Long carModelId) {
@@ -48,7 +55,39 @@ public class SaleRecordService {
      */
     public List<SaleRecord> findByRegionId(Long regionId) {
         return repository.findByRegionId(regionId);
-    }    /**
+    }
+
+    /**
+     * 根据地区名称查询销售记录
+     */
+    public List<SaleRecord> findByRegionName(String regionName) {
+        // 先根据地区名称查找地区ID
+        Region region = regionRepository.findByRegionName(regionName);
+        if (region == null) {
+            // 如果地区不存在，返回空列表
+            return new ArrayList<>();
+        }
+        
+        // 根据地区ID查询销售记录
+        return repository.findByRegionId(region.getRegionId());
+    }
+
+    /**
+     * 根据车型ID和地区名称查询销售记录
+     */
+    public List<SaleRecord> findByCarModelIdAndRegionName(Long carModelId, String regionName) {
+        // 先根据地区名称查找地区ID
+        Region region = regionRepository.findByRegionName(regionName);
+        if (region == null) {
+            // 如果地区不存在，返回空列表
+            return new ArrayList<>();
+        }
+        
+        // 根据车型ID和地区ID查询销售记录
+        return repository.findByCarModelIdAndRegionId(carModelId, region.getRegionId());
+    }
+
+    /**
      * 获取热门车型排行榜
      */
     public List<CarModelRankingDTO> getCarModelRanking(int limit) {
@@ -190,4 +229,5 @@ public class SaleRecordService {
         
         return trends;
     }
+
 }

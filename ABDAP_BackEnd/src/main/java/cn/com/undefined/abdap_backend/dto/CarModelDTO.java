@@ -3,6 +3,8 @@ package cn.com.undefined.abdap_backend.dto;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
+import java.math.BigDecimal;
+import java.time.LocalDate;
 
 /**
  * 车型响应DTO
@@ -24,27 +26,44 @@ public class CarModelDTO {
     private String modelName;
     
     /**
-     * 品牌名称
+     * 品牌ID
+     */
+    private Long brandId;
+    
+    /**
+     * 品牌名称（从Brand实体获取）
      */
     private String brandName;
     
     /**
-     * 车型类型（SUV、轿车、MPV等）
+     * 车型级别（A级、B级、C级等）
      */
-    private String type;
+    private String level;
     
     /**
-     * 动力类型：electric(电动), fuel(燃油), hybrid(混动)
+     * 上市日期
      */
-    private String powerType;
+    private LocalDate launchDate;
     
     /**
-     * 价格区间（格式：XX.XX-XX.XX万）
+     * 官方指导价（单位：元）
      */
-    private String priceRange;
+    private BigDecimal officialPrice;
+    
+    private String engineType;
     
     /**
-     * 是否有效/激活状态
+     * 座位数
      */
-    private Boolean isActive;
+    private Integer seatNum;
+    
+    /**
+     * 驱动类型（前驱、后驱、四驱等）
+     */
+    private String driveType;
+    
+    /**
+     * 续航里程（公里）
+     */
+    private Integer rangeKm;
 }
