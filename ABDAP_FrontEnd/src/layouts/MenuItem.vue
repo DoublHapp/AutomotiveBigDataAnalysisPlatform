@@ -74,7 +74,7 @@ const resolvePath = (routePath: string) => {
 const getIconComponent = (iconName: string) => {
   const iconMap: Record<string, any> = {
     // 销售经理相关图标
-    TrendCharts: TrendCharts, // 销售统计总览、竞品对比分析
+    TrendCharts: TrendCharts, // 销售统计总览
     Location: Location, // 购车热区地图
     Timer: Timer, // 时间序列可视化
     DataAnalysis: DataAnalysis, // 多维度销售预测
@@ -90,6 +90,7 @@ const getIconComponent = (iconName: string) => {
 
     // 产品经理相关图标
     Setting: Setting, // 车辆配置热度分析
+
 
     // 通用图标
     Operation: Operation,
