@@ -32,7 +32,7 @@ interface CarModel {
 }
 
 interface ModelLifecycleStage {
-  stage: 'introduction' | 'growth' | 'maturity' | 'decline'
+  stage: 'introduction' | 'growth' | 'maturity' | 'decline' //导入期/成长期/成熟期/衰退期
   stageText: string
   description: string
   monthsInStage: number
@@ -66,13 +66,6 @@ interface CompetitorThreat {
   marketOverlap: number
   priceCompetition: number
   expectedImpact: number
-}
-
-interface CannibalizationInsight {
-  id: string
-  title: string
-  description: string
-  actionText: string
 }
 
 interface OptimizationResult {
@@ -159,7 +152,6 @@ const seasonalInventory = ref<SeasonalInventory[]>([])
 
 // 竞品分析数据
 const competitorThreats = ref<CompetitorThreat[]>([])
-const cannibalizationInsights = ref<CannibalizationInsight[]>([])
 
 // 优化器数据
 const optimizationTarget = ref('max_profit')
@@ -178,7 +170,6 @@ const colorChart = ref<HTMLDivElement>()
 const elasticityChart = ref<HTMLDivElement>()
 const inventoryChart = ref<HTMLDivElement>()
 const competitorChart = ref<HTMLDivElement>()
-const cannibalizationChart = ref<HTMLDivElement>()
 const simulationChart = ref<HTMLDivElement>()
 
 let configurationChartInstance: echarts.ECharts | null = null
@@ -186,7 +177,6 @@ let colorChartInstance: echarts.ECharts | null = null
 let elasticityChartInstance: echarts.ECharts | null = null
 let inventoryChartInstance: echarts.ECharts | null = null
 let competitorChartInstance: echarts.ECharts | null = null
-let cannibalizationChartInstance: echarts.ECharts | null = null
 let simulationChartInstance: echarts.ECharts | null = null
 
 // 计算属性
@@ -473,7 +463,7 @@ const generateMockModelAnalysis = () => {
     { month: '2月', demandIndex: 0.92, recommendedStock: 2576, adjustment: '市场回暖，逐步增库存' },
     { month: '3月', demandIndex: 1.15, recommendedStock: 3220, adjustment: '购车旺季，增加库存' },
     { month: '4月', demandIndex: 1.08, recommendedStock: 3024, adjustment: '需求稳定，维持库存' },
-    { month: '5月', demandIndex: 1.12, remainedStock: 3136, adjustment: '五一促销，适当增库存' },
+    { month: '5月', demandIndex: 1.12, recommendedStock: 3136, adjustment: '五一促销，适当增库存' },
     { month: '6月', demandIndex: 1.25, recommendedStock: 3500, adjustment: '年中冲量，大幅增库存' },
   ]
 
@@ -508,22 +498,6 @@ const generateMockModelAnalysis = () => {
     },
   ]
 
-  // 生成内部竞食洞察
-  cannibalizationInsights.value = [
-    {
-      id: 'version_overlap',
-      title: '版本定位重叠',
-      description: '标准版与豪华版价格区间过近，存在竞食风险',
-      actionText: '调整定价策略',
-    },
-    {
-      id: 'brand_conflict',
-      title: '品牌内竞争',
-      description: '与同品牌其他车型存在目标客群重叠',
-      actionText: '差异化定位',
-    },
-  ]
-
   return {
     lifecycle: {
       stage: 'growth',
@@ -548,7 +522,6 @@ const generateMockModelAnalysis = () => {
     },
     competition: {
       threats: competitorThreats.value,
-      cannibalization: cannibalizationInsights.value,
     },
   }
 }
@@ -591,7 +564,6 @@ const resetSelection = () => {
     elasticityChartInstance,
     inventoryChartInstance,
     competitorChartInstance,
-    cannibalizationChartInstance,
   ]
 
   chartInstances.forEach((instance) => {
@@ -636,7 +608,6 @@ const startModelAnalysis = async () => {
     seasonalInventory.value = results.inventory.seasonal
 
     competitorThreats.value = results.competition.threats
-    cannibalizationInsights.value = results.competition.cannibalization
 
     ElMessage.success('车型分析完成！')
 
@@ -914,12 +885,6 @@ const showCounterStrategy = (threat: CompetitorThreat) => {
   })
 }
 
-// 产品配置相关函数
-const saveProductConfig = () => {
-  ElMessage.success('产品配置已保存')
-  showProductConfig.value = false
-}
-
 // 图表初始化函数
 const initAllCharts = async () => {
   await Promise.all([
@@ -928,7 +893,6 @@ const initAllCharts = async () => {
     initElasticityChart(),
     initInventoryChart(),
     initCompetitorChart(),
-    initCannibalizationChart(),
   ])
 }
 
@@ -1318,56 +1282,6 @@ const updateCompetitorChart = () => {
   // 暂时保持原有逻辑
 }
 
-const initCannibalizationChart = async () => {
-  if (!cannibalizationChart.value) return
-
-  await nextTick()
-
-  if (cannibalizationChartInstance) {
-    cannibalizationChartInstance.dispose()
-  }
-
-  cannibalizationChartInstance = echarts.init(cannibalizationChart.value)
-
-  // 模拟内部竞食数据
-  const cannibalizationData = [
-    { name: '标准版→豪华版', value: 12 },
-    { name: '豪华版→性能版', value: 8 },
-    { name: '性能版→长续航版', value: 5 },
-    { name: '其他品牌流入', value: 15 },
-    { name: '向其他品牌流出', value: 10 },
-  ]
-
-  const option = {
-    title: {
-      text: '内部竞食分析',
-      left: 'center',
-      textStyle: { fontSize: 14 },
-    },
-    tooltip: {
-      trigger: 'item',
-      formatter: '{a} <br/>{b}: {c}%',
-    },
-    series: [
-      {
-        name: '用户流向',
-        type: 'pie',
-        radius: '55%',
-        data: cannibalizationData,
-        emphasis: {
-          itemStyle: {
-            shadowBlur: 10,
-            shadowOffsetX: 0,
-            shadowColor: 'rgba(0, 0, 0, 0.5)',
-          },
-        },
-      },
-    ],
-  }
-
-  cannibalizationChartInstance.setOption(option)
-}
-
 const initSimulationChart = async () => {
   if (!simulationChart.value || !simulationResults.value) return
 
@@ -1437,7 +1351,6 @@ const handleResize = () => {
     elasticityChartInstance,
     inventoryChartInstance,
     competitorChartInstance,
-    cannibalizationChartInstance,
     simulationChartInstance,
   ]
 
@@ -1480,7 +1393,6 @@ onUnmounted(() => {
     elasticityChartInstance,
     inventoryChartInstance,
     competitorChartInstance,
-    cannibalizationChartInstance,
     simulationChartInstance,
   ]
 
@@ -1502,9 +1414,6 @@ onUnmounted(() => {
           <p>基于产品生命周期的精细化车型销售预测与策略优化</p>
         </div>
         <div class="header-actions">
-          <el-button type="warning" :icon="Setting" @click="showProductConfig = true">
-            产品配置
-          </el-button>
           <el-button type="primary" :icon="Refresh" @click="refreshData" :loading="loading">
             刷新数据
           </el-button>
@@ -2017,33 +1926,6 @@ onUnmounted(() => {
             </el-col>
           </el-row>
         </div>
-
-        <!-- 内部竞食分析 -->
-        <div class="cannibalization-analysis">
-          <h5>内部竞食分析</h5>
-          <div class="cannibalization-content">
-            <div ref="cannibalizationChart" class="chart-container" style="height: 300px"></div>
-
-            <div class="cannibalization-insights">
-              <div
-                class="insight-item"
-                v-for="insight in cannibalizationInsights"
-                :key="insight.id"
-              >
-                <div class="insight-icon">
-                  <el-icon><Warning /></el-icon>
-                </div>
-                <div class="insight-content">
-                  <div class="insight-title">{{ insight.title }}</div>
-                  <div class="insight-description">{{ insight.description }}</div>
-                  <div class="insight-action">
-                    <el-button size="small" type="text">{{ insight.actionText }}</el-button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
     </el-card>
 
@@ -2219,30 +2101,6 @@ onUnmounted(() => {
       </template>
     </el-dialog>
 
-    <!-- 产品配置弹窗 -->
-    <el-dialog v-model="showProductConfig" title="产品配置管理" width="60%">
-      <div class="product-config-content">
-        <!-- 产品配置管理界面 -->
-        <el-tabs v-model="activeProductTab">
-          <el-tab-pane label="生命周期设置" name="lifecycle">
-            <!-- 生命周期参数配置 -->
-          </el-tab-pane>
-          <el-tab-pane label="配置管理" name="configuration">
-            <!-- 产品配置管理 -->
-          </el-tab-pane>
-          <el-tab-pane label="竞品设置" name="competitors">
-            <!-- 竞品配置 -->
-          </el-tab-pane>
-        </el-tabs>
-      </div>
-
-      <template #footer>
-        <div class="dialog-footer">
-          <el-button @click="showProductConfig = false">取消</el-button>
-          <el-button type="primary" @click="saveProductConfig">保存配置</el-button>
-        </div>
-      </template>
-    </el-dialog>
   </div>
 </template>
 
@@ -2793,33 +2651,14 @@ onUnmounted(() => {
 
 .competitor-comparison,
 .threat-assessment,
-.cannibalization-analysis {
-  padding: 20px;
-}
 
 .competitor-comparison {
   border-bottom: 1px solid #f0f2f5;
 }
 
 .threat-assessment h5,
-.cannibalization-analysis h5 {
-  margin: 0 0 20px 0;
-  color: #1a1a1a;
-  font-size: 16px;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-}
 
 .threat-assessment h5::before,
-.cannibalization-analysis h5::before {
-  content: '';
-  width: 4px;
-  height: 16px;
-  background: #f56c6c;
-  margin-right: 8px;
-  border-radius: 2px;
-}
 
 .threat-card {
   background: white;
@@ -2895,18 +2734,6 @@ onUnmounted(() => {
 
 .threat-actions {
   text-align: center;
-}
-
-.cannibalization-content {
-  display: flex;
-  gap: 24px;
-}
-
-.cannibalization-insights {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
 }
 
 .insight-item {
@@ -3274,11 +3101,6 @@ onUnmounted(() => {
   .optimization-grid {
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   }
-
-  .cannibalization-content {
-    flex-direction: column;
-    gap: 16px;
-  }
 }
 
 @media (max-width: 768px) {
@@ -3415,9 +3237,6 @@ onUnmounted(() => {
   .seasonal-adjustment,
   .competitor-comparison,
   .threat-assessment,
-  .cannibalization-analysis {
-    padding: 16px;
-  }
 
   .chart-container {
     height: 200px;
