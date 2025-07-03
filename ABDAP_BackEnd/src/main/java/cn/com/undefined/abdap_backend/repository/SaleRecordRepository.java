@@ -27,7 +27,7 @@ public interface SaleRecordRepository extends JpaRepository<SaleRecord, Long> {
      */
     @Query("SELECT sr.carModelId, SUM(sr.saleCount) as totalSales " +
            "FROM SaleRecord sr " +
-           "WHERE sr.saleDate >= :startDate " +
+           "WHERE sr.saleMonth >= :startDate " +
            "GROUP BY sr.carModelId " +
            "ORDER BY totalSales DESC")
     List<Object[]> findCarModelSalesRanking(@Param("startDate") LocalDate startDate);
@@ -36,7 +36,7 @@ public interface SaleRecordRepository extends JpaRepository<SaleRecord, Long> {
      */
     @Query("SELECT sr.regionId, SUM(sr.saleCount) as totalSales " +
            "FROM SaleRecord sr " +
-           "WHERE sr.saleDate >= :startDate " +
+           "WHERE sr.saleMonth >= :startDate " +
            "GROUP BY sr.regionId " +
            "ORDER BY totalSales DESC")
     List<Object[]> findRegionSalesDistribution(@Param("startDate") LocalDate startDate);
@@ -44,24 +44,24 @@ public interface SaleRecordRepository extends JpaRepository<SaleRecord, Long> {
     /**
      * 查询指定车型的月度销量趋势
      */
-    @Query("SELECT YEAR(sr.saleDate), MONTH(sr.saleDate), SUM(sr.saleCount) as monthlySales " +
+    @Query("SELECT YEAR(sr.saleMonth), MONTH(sr.saleMonth), SUM(sr.saleCount) as monthlySales " +
            "FROM SaleRecord sr " +
            "WHERE sr.carModelId = :carModelId " +
-           "AND sr.saleDate >= :startDate " +
-           "GROUP BY YEAR(sr.saleDate), MONTH(sr.saleDate) " +
-           "ORDER BY YEAR(sr.saleDate), MONTH(sr.saleDate)")
+           "AND sr.saleMonth >= :startDate " +
+           "GROUP BY YEAR(sr.saleMonth), MONTH(sr.saleMonth) " +
+           "ORDER BY YEAR(sr.saleMonth), MONTH(sr.saleMonth)")
     List<Object[]> findMonthlySalesTrendByCarModelId(@Param("carModelId") Long carModelId, 
                                                      @Param("startDate") LocalDate startDate);
     
     /**
      * 查询指定车型的月度销售额趋势
      */
-    @Query("SELECT YEAR(sr.saleDate), MONTH(sr.saleDate), SUM(sr.saleCount * sr.unitPrice) as monthlyRevenue " +
+    @Query("SELECT YEAR(sr.saleMonth), MONTH(sr.saleMonth), SUM(sr.saleCount * sr.saleAmount) as monthlyRevenue " +
            "FROM SaleRecord sr " +
            "WHERE sr.carModelId = :carModelId " +
-           "AND sr.saleDate >= :startDate " +
-           "GROUP BY YEAR(sr.saleDate), MONTH(sr.saleDate) " +
-           "ORDER BY YEAR(sr.saleDate), MONTH(sr.saleDate)")
+           "AND sr.saleMonth >= :startDate " +
+           "GROUP BY YEAR(sr.saleMonth), MONTH(sr.saleMonth) " +
+           "ORDER BY YEAR(sr.saleMonth), MONTH(sr.saleMonth)")
     List<Object[]> findMonthlyRevenueTrendByCarModelId(@Param("carModelId") Long carModelId, 
                                                        @Param("startDate") LocalDate startDate);
 }
