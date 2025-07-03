@@ -71,4 +71,12 @@ public class ResponseUtil {
         return ResponseEntity.status(status)
                 .body(ApiResponse.error(status.value(), message));
     }
+
+    /**
+     * 未找到响应（404 Not Found）
+     */
+    public static <T> ResponseEntity<ApiResponse<T>> notFound(String message) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ApiResponse.error(404, message));
+    }
 }

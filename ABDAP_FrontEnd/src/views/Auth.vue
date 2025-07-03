@@ -132,7 +132,7 @@ const handleLogin = async () => {
 
         console.log('登录响应完整数据:', response.data)
 
-        if (response.data.status === 1) {
+        if (response.data.status === 200) {
           // 登录成功
           ElMessage.success(response.data.msg || '登录成功')
 
@@ -247,7 +247,7 @@ const handleRegister = async () => {
           role: registerForm.role,
         })
 
-        if (response.data.status === 1) {
+        if (response.data.status === 200) {
           // 注册成功
           ElMessage.success(response.data.msg)
 

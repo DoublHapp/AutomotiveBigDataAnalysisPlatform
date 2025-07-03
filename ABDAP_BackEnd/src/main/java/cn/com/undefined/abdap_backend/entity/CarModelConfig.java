@@ -12,6 +12,7 @@ import java.math.BigDecimal;
  */
 @Entity
 @Table(name = "car_model_config")
+@IdClass(CarModelConfigId.class)
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

@@ -72,14 +72,6 @@
               style="width: 200px;"
             />
             <span style="margin-left: 8px; color: #909399;">台</span>
-            <el-button
-              size="small"
-              type="text"
-              @click="showTargetSuggestion"
-              style="margin-left: 12px;"
-            >
-              获取建议
-            </el-button>
           </el-form-item>
 
           <!-- 营销投入设置 -->
@@ -97,6 +89,21 @@
               约 {{ (targetForm.marketingInvestment / 10000).toFixed(0) }} 万元
             </el-tag>
           </el-form-item>
+
+          <!-- 新增：行业平均ROI输入 -->
+<el-form-item label="行业平均ROI:" prop="industryAverageROI">
+  <el-input-number
+    v-model="targetForm.industryAverageROI"
+    :min="-100"
+    :max="100"
+    :step="1"
+    :precision="1"
+    style="width: 200px;"
+  />
+  <el-tooltip content="请输入当前行业的平均ROI水平作为对比基准" placement="top">
+    <el-icon style="margin-left: 8px; color: #909399;"><QuestionFilled /></el-icon>
+  </el-tooltip>
+</el-form-item>
 
           <!-- 投入分配明细 -->
           <el-form-item label="投入分配:">
@@ -169,7 +176,7 @@
                       </div>
                       <div class="roi-item">
                         <span>行业平均ROI:</span>
-                        <span>4.0</span>
+                        <span>{{ targetForm.industryAverageROI?.toFixed(1) || '--' }}</span>
                       </div>
                       <div class="roi-item">
                         <span>ROI评估:</span>
@@ -183,32 +190,6 @@
               </el-row>
             </div>
           </el-form-item>
-
-          <!-- 历史数据参考 -->
-          <el-form-item label="历史数据参考:">
-            <div class="historical-reference">
-              <el-row :gutter="16">
-                <el-col :span="8">
-                  <div class="ref-item">
-                    <div class="ref-label">去年同期销量</div>
-                    <div class="ref-value">{{ lastYearSales.toLocaleString() }} 台</div>
-                  </div>
-                </el-col>
-                <el-col :span="8">
-                  <div class="ref-item">
-                    <div class="ref-label">去年同期投入</div>
-                    <div class="ref-value">{{ (lastYearInvestment / 10000).toFixed(0) }} 万元</div>
-                  </div>
-                </el-col>
-                <el-col :span="8">
-                  <div class="ref-item">
-                    <div class="ref-label">去年同期ROI</div>
-                    <div class="ref-value">{{ lastYearROI.toFixed(2) }}</div>
-                  </div>
-                </el-col>
-              </el-row>
-            </div>
-          </el-form-item>
         </el-form>
       </div>
 
@@ -216,9 +197,6 @@
         <div class="dialog-footer">
           <el-button @click="showTargetDialog = false">取消</el-button>
           <el-button @click="resetTargetForm">重置</el-button>
-          <el-button type="primary" @click="saveTargetSettings" :loading="targetSaving">
-            保存设置
-          </el-button>
         </div>
       </template>
     </el-dialog>
@@ -245,13 +223,6 @@
           <template #default>
             <div class="alert-content">
               <p>{{ alert.message }}</p>
-              <el-button
-                size="small"
-                :type="alert.type === 'error' ? 'danger' : 'warning'"
-                @click="handleAlertAction(alert)"
-              >
-                {{ alert.actionText }}
-              </el-button>
             </div>
           </template>
         </el-alert>
@@ -284,10 +255,18 @@
         <div class="filter-group">
           <label>车型类别:</label>
           <el-select v-model="globalFilters.carType" @change="handleGlobalFilterChange">
-            <el-option label="全部车型" value="all" />
-            <el-option label="新能源车" value="electric" />
-            <el-option label="燃油车" value="fuel" />
-            <el-option label="混合动力" value="hybrid" />
+            <el-option label="特斯拉 Model Y" value="model_y" />
+            <el-option label="特斯拉 Model 3" value="model_3" />
+            <el-option label="比亚迪汉EV" value="han_ev" />
+            <el-option label="比亚迪海豚" value="dolphin" />
+            <el-option label="理想ONE" value="ideal_one" />
+            <el-option label="蔚来ES6" value="es6" />
+            <el-option label="小鹏P7" value="p7" />
+            <el-option label="奔驰C级" value="c_class" />
+            <el-option label="宝马3系" value="bmw_3" />
+            <el-option label="奥迪A4L" value="a4l" />
+            <el-option label="丰田凯美瑞" value="camry" />
+            <el-option label="本田雅阁" value="accord" />
           </el-select>
         </div>
 
@@ -302,11 +281,6 @@
               :value="region.id"
             />
           </el-select>
-        </div>
-
-        <div class="filter-group">
-          <label>竞品对比:</label>
-          <el-switch v-model="showCompetitorData" @change="handleCompetitorToggle" />
         </div>
       </div>
     </el-card>
@@ -412,9 +386,6 @@
                 <el-button size="small" @click="toggleTrendComparison" :type="showComparison ? 'primary' : ''">
                   {{ showComparison ? '隐藏' : '显示' }}同比
                 </el-button>
-                <el-button size="small" @click="drillDownToDaily" :disabled="!selectedTimePoint">
-                  钻取日度
-                </el-button>
                 <el-button size="small" @click="showForecast" type="success">
                   预测分析
                 </el-button>
@@ -435,7 +406,7 @@
             <div class="trend-analysis-summary">
               <el-tag :type="trendAnalysis.type">{{ trendAnalysis.summary }}</el-tag>
               <span class="analysis-detail">{{ trendAnalysis.detail }}</span>
-              <el-button size="small" type="text" @click="showTrendInsights">查看详细分析</el-button>
+          
             </div>
           </template>
           <div
@@ -461,7 +432,6 @@
             <div class="amount-analysis-summary">
               <el-tag :type="amountAnalysis.type">{{ amountAnalysis.summary }}</el-tag>
               <span class="analysis-detail">{{ amountAnalysis.detail }}</span>
-              <el-button size="small" type="text" @click="showPriceAnalysis">单价分析</el-button>
             </div>
           </template>
           <div
@@ -484,7 +454,7 @@
                   <el-option label="销量排行" value="sales" />
                   <el-option label="增长率排行" value="growth" />
                   <el-option label="市场份额排行" value="share" />
-                  <el-option label="利润贡献排行" value="profit" />
+          
                 </el-select>
                 <el-input-number
                   v-model="topN"
@@ -493,7 +463,7 @@
                   size="small"
                   @change="updateModelRanking"
                 />
-                <el-button size="small" @click="showModelComparison">对比分析</el-button>
+                
               </div>
             </div>
           </template>
@@ -517,7 +487,6 @@
                   <el-tag type="success">{{ highlightedRegion }}</el-tag>
                   <el-button size="small" type="text" @click="clearRegionHighlight">清除</el-button>
                 </div>
-                <el-button size="small" @click="showRegionInsights">区域洞察</el-button>
                 <el-button size="small" @click="showHeatMap" type="primary">热力图</el-button>
               </div>
             </div>
@@ -531,68 +500,6 @@
         </el-card>
       </el-col>
     </el-row>
-
-    <!-- 业务洞察面板 -->
-    <el-card class="insights-panel" shadow="never">
-      <template #header>
-        <div class="panel-header">
-          <el-icon><DataAnalysis /></el-icon>
-          <span>智能业务洞察</span>
-          <div class="insight-controls">
-            <el-button size="small" @click="refreshInsights" :loading="insightsLoading">
-              刷新洞察
-            </el-button>
-            <el-button size="small" @click="generateReport" type="success">
-              生成报告
-            </el-button>
-          </div>
-        </div>
-      </template>
-
-      <el-row :gutter="20">
-        <el-col :xs="24" :md="8" v-for="insight in businessInsights" :key="insight.id">
-          <div class="insight-card" :class="`priority-${insight.priority}`" @click="handleInsightClick(insight)">
-            <div class="insight-header">
-              <el-icon :class="`icon-${insight.type}`">
-                <component :is="insight.icon" />
-              </el-icon>
-              <span class="insight-title">{{ insight.title }}</span>
-              <el-tag
-                :type="insight.priority === 'high' ? 'danger' : insight.priority === 'medium' ? 'warning' : 'info'"
-                size="small"
-              >
-                {{ insight.priority === 'high' ? '高优先级' : insight.priority === 'medium' ? '中优先级' : '低优先级' }}
-              </el-tag>
-            </div>
-            <div class="insight-content">
-              <p>{{ insight.content }}</p>
-              <div class="insight-metrics" v-if="insight.metrics">
-                <div v-for="metric in insight.metrics" :key="metric.name" class="metric-item">
-                  <span class="metric-label">{{ metric.name }}:</span>
-                  <span class="metric-value" :class="metric.type">{{ metric.value }}</span>
-                </div>
-              </div>
-              <div class="insight-actions">
-                <el-button
-                  size="small"
-                  type="primary"
-                  @click.stop="handleInsightAction(insight)"
-                >
-                  {{ insight.actionText }}
-                </el-button>
-                <el-button
-                  size="small"
-                  @click.stop="saveInsight(insight)"
-                  v-if="!insight.saved"
-                >
-                  保存
-                </el-button>
-              </div>
-            </div>
-          </div>
-        </el-col>
-      </el-row>
-    </el-card>
 
     <!-- 详细分析弹窗 -->
     <el-dialog
@@ -704,9 +611,7 @@ const router = useRouter()
 
 // 响应式数据
 const loading = ref(false)
-const insightsLoading = ref(false)
 const showComparison = ref(false)
-const showCompetitorData = ref(false)
 const showDetailDialog = ref(false)
 const showKPIDialog = ref(false)
 const activeDetailTab = ref('data')
@@ -717,7 +622,6 @@ const highlightedRegion = ref('')
 const modelRankingType = ref('sales')
 const topN = ref(10)
 const showTargetDialog = ref(false)
-const targetSaving = ref(false)
 const targetFormRef = ref()
 
 
@@ -737,10 +641,6 @@ const investmentBreakdown = reactive({
   dealer: 25,    // 经销商支持
   other: 5       // 其他投入
 })
-
-// 历史数据参考
-const lastYearInvestment = ref(4500000)
-const lastYearROI = ref(3.8)
 
 // 表单验证规则
 const targetRules = {
@@ -764,7 +664,7 @@ const targetRules = {
 const globalFilters = reactive({
   timeRange: 'month',
   customDateRange: null as [Date, Date] | null,
-  carType: 'all',
+  carModel: 'all',
   region: 'all'
 })
 
@@ -935,8 +835,7 @@ const businessAlerts = computed(() => {
       type: 'error',
       title: '目标完成率预警',
       message: `当前完成率${achievementRate.value.toFixed(1)}%，距离目标还差${(targetSales.value - actualSales.value).toLocaleString()}台`,
-      actionText: '查看改进建议',
-      action: 'improvement_plan'
+
     })
   }
 
@@ -946,8 +845,7 @@ const businessAlerts = computed(() => {
       type: 'warning',
       title: '同比增长预警',
       message: `同比下降${Math.abs(yoyGrowth.value).toFixed(1)}%，市场表现不佳`,
-      actionText: '分析原因',
-      action: 'growth_analysis'
+
     })
   }
 
@@ -957,8 +855,6 @@ const businessAlerts = computed(() => {
       type: 'warning',
       title: '市场份额提醒',
       message: `市场份额仅${marketShare.value.toFixed(1)}%，存在提升空间`,
-      actionText: '竞品分析',
-      action: 'competitor_analysis'
     })
   }
 
@@ -968,101 +864,13 @@ const businessAlerts = computed(() => {
       type: 'warning',
       title: 'ROI偏低提醒',
       message: `渠道ROI仅${channelROI.value.toFixed(1)}，低于行业标准`,
-      actionText: '优化渠道',
-      action: 'channel_optimization'
+      
     })
   }
 
   return alerts
 })
 
-// 业务洞察 - 增强版
-const businessInsights = computed(() => {
-  const insights = []
-
-  // 基于销量趋势的洞察
-  if (trendAnalysis.value.type === 'success') {
-    insights.push({
-      id: 'growth_opportunity',
-      type: 'opportunity',
-      icon: 'TrendCharts',
-      title: '增长机会',
-      content: '销量呈强劲增长趋势，建议：1) 增加库存备货 2) 扩大营销投入 3) 开拓新渠道',
-      priority: 'high',
-      actionText: '制定增长策略',
-      metrics: [
-        { name: '增长率', value: '+15.2%', type: 'success' },
-        { name: '增长潜力', value: '高', type: 'success' }
-      ]
-    })
-  }
-
-  // 基于地区表现的洞察
-  if (regionSalesData.value.length > 0) {
-    const topRegion = regionSalesData.value.reduce((max, item) =>
-      item.salesVolume > max.salesVolume ? item : max
-    )
-    const avgSales = regionSalesData.value.reduce((sum, item) => sum + item.salesVolume, 0) / regionSalesData.value.length
-
-    if (topRegion.salesVolume > avgSales * 1.5) {
-      insights.push({
-        id: 'regional_excellence',
-        type: 'success',
-        icon: 'Trophy',
-        title: '区域标杆',
-        content: `${topRegion.region}表现优异，销量${topRegion.salesVolume.toLocaleString()}台，建议复制成功经验到其他区域`,
-        priority: 'medium',
-        actionText: '推广最佳实践',
-        metrics: [
-          { name: '领先幅度', value: `${((topRegion.salesVolume / avgSales - 1) * 100).toFixed(1)}%`, type: 'success' },
-          { name: '复制价值', value: '高', type: 'success' }
-        ]
-      })
-    }
-  }
-
-  // 基于车型表现的洞察
-  if (topModelsData.value.length > 0) {
-    const topModel = topModelsData.value[0]
-    const totalSales = topModelsData.value.reduce((sum, item) => sum + item.salesVolume, 0)
-    const concentration = (topModel.salesVolume / totalSales) * 100
-
-    if (concentration > 40) {
-      insights.push({
-        id: 'product_concentration',
-        type: 'risk',
-        icon: 'Warning',
-        title: '产品集中度风险',
-        content: `${topModel.carModel}占总销量${concentration.toFixed(1)}%，建议优化产品组合，降低单一产品依赖`,
-        priority: 'medium',
-        actionText: '优化产品策略',
-        metrics: [
-          { name: '集中度', value: `${concentration.toFixed(1)}%`, type: 'warning' },
-          { name: '风险等级', value: '中等', type: 'warning' }
-        ]
-      })
-    }
-  }
-
-  // 基于ROI的洞察
-  if (channelROI.value > 4) {
-    insights.push({
-      id: 'channel_excellence',
-      type: 'success',
-      icon: 'Money',
-      title: '渠道效率优秀',
-      content: `当前渠道ROI达到${channelROI.value.toFixed(1)}，表现优异，建议扩大投入规模`,
-      priority: 'low',
-      actionText: '扩大投入',
-      metrics: [
-        { name: 'ROI表现', value: `${channelROI.value.toFixed(1)}`, type: 'success' },
-        { name: '扩张建议', value: '立即执行', type: 'success' }
-      ]
-    })
-  }
-
-  return insights
-})
 
 // 工具函数
 const calculateVolatility = (data: number[]) => {
@@ -1649,25 +1457,6 @@ const handlePeriodChange = () => {
   }
 }
 
-const showTargetSuggestion = () => {
-  // 基于历史数据给出建议
-  const suggestedTarget = Math.floor(lastYearSales.value * 1.15) // 建议增长15%
-
-  ElMessageBox.confirm(
-    `基于去年同期销量 ${lastYearSales.value.toLocaleString()} 台，建议设置目标为 ${suggestedTarget.toLocaleString()} 台（同比增长15%）`,
-    '目标建议',
-    {
-      confirmButtonText: '采用建议',
-      cancelButtonText: '取消',
-      type: 'info'
-    }
-  ).then(() => {
-    targetForm.salesTarget = suggestedTarget
-    ElMessage.success('已采用建议目标')
-  }).catch(() => {
-    // 用户取消
-  })
-}
 
 const resetTargetForm = () => {
   targetFormRef.value?.resetFields()
@@ -1680,53 +1469,6 @@ const resetTargetForm = () => {
   })
 }
 
-const saveTargetSettings = async () => {
-  try {
-    // 验证表单
-    await targetFormRef.value?.validate()
-
-    // 验证投入分配总和
-    if (totalPercentage.value !== 100) {
-      ElMessage.error('投入分配总和必须等于100%')
-      return
-    }
-
-    targetSaving.value = true
-
-    // 构建保存数据
-    const saveData = {
-      period: targetForm.period,
-      targetTime: formatTargetTime(),
-      salesTarget: targetForm.salesTarget,
-      marketingInvestment: targetForm.marketingInvestment,
-      investmentBreakdown: { ...investmentBreakdown },
-      expectedROI: expectedROI.value,
-      createdBy: 'current_user', // 实际应用中从用户状态获取
-      createdAt: new Date().toISOString()
-    }
-
-    console.log('保存目标设置:', saveData)
-
-    // 调用API保存（模拟）
-    // await axios.post('/api/sales/targets', saveData)
-
-    // 更新本地数据
-    targetSales.value = targetForm.salesTarget
-    channelInvestment.value = targetForm.marketingInvestment
-
-    // 刷新图表和指标
-    await refreshAllCharts()
-
-    ElMessage.success('目标设置保存成功！')
-    showTargetDialog.value = false
-
-  } catch (error) {
-    console.error('保存目标设置失败:', error)
-    ElMessage.error('保存失败，请检查输入数据')
-  } finally {
-    targetSaving.value = false
-  }
-}
 
 const formatTargetTime = () => {
   const date = new Date(targetForm.targetTime)
@@ -1764,9 +1506,6 @@ const handleGlobalFilterChange = () => {
   updateAllChartsWithFilter()
 }
 
-const handleCompetitorToggle = () => {
-  refreshAllCharts()
-}
 
 const handleTrendChartClick = (params: any) => {
   selectedTimePoint.value = params.name
@@ -1792,13 +1531,6 @@ const handleRegionChartClick = (params: any) => {
   })
 }
 
-const handleInsightClick = (insight: any) => {
-  showDetailAnalysis('业务洞察详情', insight)
-}
-
-const handleInsightAction = (insight: any) => {
-  ElMessage.info(`执行操作: ${insight.actionText}`)
-}
 
 const showKPIDetail = (type: string) => {
   switch (type) {
@@ -1918,39 +1650,6 @@ const handleTrendExport = (command: string) => {
   }
 }
 
-const handleAlertAction = (alert: any) => {
-  switch (alert.action) {
-    case 'improvement_plan':
-      ElMessage.info('正在跳转到改进建议页面...')
-      break
-    case 'growth_analysis':
-      ElMessage.info('正在跳转到增长分析页面...')
-      break
-    case 'competitor_analysis':
-      ElMessage.info('正在跳转到竞品分析页面...')
-      break
-    case 'channel_optimization':
-      ElMessage.info('正在跳转到渠道优化页面...')
-      break
-  }
-}
-
-const refreshInsights = () => {
-  insightsLoading.value = true
-  setTimeout(() => {
-    insightsLoading.value = false
-    ElMessage.success('业务洞察已刷新')
-  }, 1000)
-}
-
-const generateReport = () => {
-  ElMessage.info('正在生成详细报告...')
-}
-
-const saveInsight = (insight: any) => {
-  insight.saved = true
-  ElMessage.success('洞察已保存')
-}
 
 const exportData = () => {
   ElMessage.info('数据导出功能开发中...')
@@ -1960,29 +1659,21 @@ const showForecast = () => {
   router.push({ name: 'SalesForecast' })
 }
 
-const showTrendInsights = () => {
-  ElMessage.info('正在分析趋势详情...')
-}
 
-const showPriceAnalysis = () => {
-  ElMessage.info('正在进行单价分析...')
-}
+
+
 
 const showModelComparison = () => {
   ElMessage.info('正在对比车型表现...')
 }
 
-const showRegionInsights = () => {
-  ElMessage.info('正在分析区域洞察...')
-}
+
 
 const showHeatMap = () => {
   router.push({ name: 'CarPurchasesHeatMap' })
 }
 
-const drillDownToDaily = () => {
-  ElMessage.info('钻取到日度数据功能开发中...')
-}
+
 
 const refreshAllCharts = async () => {
   loading.value = true
