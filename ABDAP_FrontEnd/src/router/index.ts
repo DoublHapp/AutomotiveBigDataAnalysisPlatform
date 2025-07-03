@@ -119,7 +119,7 @@ const router = createRouter({
           meta: {
             title: '车型对比分析',
             requiresAuth: true,
-            roles: ['Customer', 'ProductManager'],
+            roles: ['Customer'],
           },
         },
         {
@@ -163,6 +163,18 @@ const router = createRouter({
             roles: ['ProductManager'],
           },
         },
+
+        {
+           path: '/app/CompetitiveProductComp',
+           name: 'CompetitiveProductComp',
+           component: () => import('@/views/CompetitiveProductComp.vue'),
+          meta: {
+          title: '竞品对比分析',
+          requiresAuth:true,
+          roles: ['ProductManager']
+          }
+         },
+
       ],
     },
 

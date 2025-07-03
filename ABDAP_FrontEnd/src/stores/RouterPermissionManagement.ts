@@ -149,11 +149,11 @@ export const usePermissionStore = defineStore('permission', () => {
       },
     },
     {
-      path: '/app/VehicleModelCompAnalysis',
-      name: 'VehicleModelCompAnalysisForPM',
+      path: '/app/CompetitiveProductComp',
+      name: 'CompetitiveProductComp',
       meta: {
         title: '竞品对比分析',
-        icon: 'TrendCharts',
+        icon: 'DataBoard',
         roles: ['ProductManager'],
         keepAlive: true,
       },
