@@ -1,87 +1,46 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   Refresh,
   Download,
-  ArrowRight,
-  ArrowLeft,
-  Sort,
   Money,
+  OfficeBuilding,
+  Lightning,
   Star,
+  Guide,
+  TrendCharts,
   Trophy,
   Medal,
   Check,
   List,
   DataBoard,
   Close,
-  Guide,
-  TrendCharts,
-  Lightning,
-  MagicStick,
-  OfficeBuilding,
-  Lock,
-  Monitor,
   Loading,
-  Connection,
+  Monitor,
+  MagicStick,
+  Lock
 } from '@element-plus/icons-vue'
-import draggable from 'vuedraggable'
 import * as echarts from 'echarts'
 import axios from 'axios'
 
 const router = useRouter()
-const route = useRoute()
 
 // 接口定义
 interface QuestionnaireData {
-  // 基础需求
   budget: string
   bodyTypes: string[]
   energyType: string
   passengers: string
-  
-  // 个性偏好
   brandPreference: string[]
+  primaryUsage: string
   dailyMileage: string
-  driveType: string
-}
-
-interface PriorityFactor {
-  id: string
-  label: string
-  description: string
-  icon: any
-  weight: number
-}
-
-interface CarModel {
-  id: number
-  brand: string
-  name: string
-  type: string
-  engine: string
-  transmission: string
-  priceRange: string
-  image: string
-  isHot?: boolean
-  highlight?: string
-  matchScore?: number
-  advantages?: Advantage[]
-  reasons?: string[]
-  confidence?: number
-}
-
-interface Advantage {
-  label: string
-  description: string
-  icon: any
-  score: number
 }
 
 interface RecommendationResult {
   recommendations: CarModel[]
-  primaryRecommendation: CarModel
+  primaryRecommendation: PrimaryRecommendation
   alternatives: {
     budget: CarModel[]
     luxury: CarModel[]
@@ -92,26 +51,66 @@ interface RecommendationResult {
   analysisTime: number
 }
 
-interface PurchaseChannel {
+interface PrimaryRecommendation {
+  id: number
+  brand: string
+  name: string
+  priceRange: string
+  type: string
+  engine: string
+  transmission: string
+  image: string
+  confidence: number
+  isHot: boolean
+  reasons: string[]
+  advantages: Advantage[]
+}
+
+interface Advantage {
+  label: string
+  description: string
+  score: number
+  icon: string
+}
+
+interface CarModel {
+  id: number
+  brand: string
+  name: string
+  priceRange: string
+  type: string
+  engine: string
+  transmission: string
+  image: string
+  highlight: string
+  matchScore: number
+}
+
+interface FilterOption {
+  value: string
+  label: string
+  desc?: string
+  icon?: string
+  logo?: string
+}
+
+interface ChannelRecommendation {
   type: string
   name: string
   advantage: string
-  icon: any
+  icon: string
   recommended: boolean
 }
 
 interface ChecklistItem {
   id: string
   text: string
-  checked: boolean
 }
 
 // 响应式数据
-const loading = ref(false)
 const analyzing = ref(false)
-const currentStep = ref(1)
-const analysisProgress = ref(0)
 const currentAnalysisStep = ref('')
+const analysisProgress = ref(0)
 
 // 问卷数据
 const questionnaireData = ref<QuestionnaireData>({
@@ -120,426 +119,494 @@ const questionnaireData = ref<QuestionnaireData>({
   energyType: '',
   passengers: '',
   brandPreference: [],
-  dailyMileage: '',
-  driveType: ''
+  primaryUsage: '',
+  dailyMileage: ''
 })
-
-// 优先级排序
-const priorityFactors = ref<PriorityFactor[]>([
-  {
-    id: 'fuelEconomy',
-    label: '油耗/电耗',
-    description: '燃油经济性或电能消耗效率',
-    icon: MagicStick,
-    weight: 30
-  },
-  {
-    id: 'comfort',
-    label: '舒适性',
-    description: '驾乘舒适度和便利性配置',
-    icon: Star,
-    weight: 25
-  },
-  {
-    id: 'space',
-    label: '空间',
-    description: '车内空间大小和储物能力',
-    icon: OfficeBuilding,
-    weight: 20
-  },
-  {
-    id: 'performance',
-    label: '动力性能',
-    description: '加速性能和动力响应',
-    icon: Lightning,
-    weight: 15
-  },
-  {
-    id: 'intelligence',
-    label: '智能配置',
-    description: '科技配置和智能驾驶功能',
-    icon: Monitor,
-    weight: 10
-  }
-])
 
 // 推荐结果
 const recommendationResult = ref<RecommendationResult | null>(null)
 const showAllAlternatives = ref(false)
 const activeAlternativeTab = ref('budget')
 
-// 对比工具
+// 对比功能
 const comparisonList = ref<CarModel[]>([])
 
 // 购买建议
 const checkedItems = ref<string[]>([])
-const purchaseChecklist = ref<ChecklistItem[]>([
-  { id: 'budget', text: '确认预算和贷款方案', checked: false },
-  { id: 'insurance', text: '了解保险费用和政策', checked: false },
-  { id: 'maintenance', text: '查询维保政策和费用', checked: false },
-  { id: 'test_drive', text: '预约试驾体验', checked: false },
-  { id: 'negotiate', text: '准备购车谈判要点', checked: false },
-  { id: 'documents', text: '准备购车所需证件', checked: false }
-])
 
-// 图表相关
+// 图表实例
 const primaryRadarChart = ref<HTMLDivElement>()
 let primaryRadarChartInstance: echarts.ECharts | null = null
 
+// 筛选选项配置
+const budgetOptions = ref<FilterOption[]>([
+  { value: 'under10', label: '10万以下', desc: '经济实用' },
+  { value: '10-20', label: '10-20万', desc: '主流选择' },
+  { value: '20-30', label: '20-30万', desc: '品质升级' },
+  { value: '30-50', label: '30-50万', desc: '豪华体验' },
+  { value: 'over50', label: '50万以上', desc: '顶级品质' },
+  { value: 'unlimited', label: '预算充足', desc: '不限价格' }
+])
+
+const bodyTypeOptions = ref<FilterOption[]>([
+  { value: 'sedan', label: '轿车', desc: '商务优雅', icon: 'Monitor' },
+  { value: 'suv', label: 'SUV', desc: '空间宽敞', icon: 'OfficeBuilding' },
+  { value: 'mpv', label: 'MPV', desc: '家庭首选', icon: 'Star' },
+  { value: 'coupe', label: '跑车', desc: '运动激情', icon: 'Lightning' },
+  { value: 'hatchback', label: '两厢车', desc: '城市便利', icon: 'Monitor' },
+  { value: 'pickup', label: '皮卡', desc: '实用多能', icon: 'OfficeBuilding' }
+])
+
+const energyTypeOptions = ref<FilterOption[]>([
+  { value: 'gasoline', label: '燃油车', desc: '成熟可靠', icon: 'MagicStick' },
+  { value: 'electric', label: '纯电动', desc: '环保节能', icon: 'Lightning' },
+  { value: 'hybrid', label: '混合动力', desc: '省油环保', icon: 'Monitor' },
+  { value: 'phev', label: '插电混动', desc: '兼顾油电', icon: 'Star' },
+  { value: 'unlimited', label: '不限类型', desc: '全部考虑', icon: 'Star' }
+])
+
+const passengerOptions = ref<FilterOption[]>([
+  { value: '1-2', label: '1-2人', desc: '个人通勤' },
+  { value: '3-4', label: '3-4人', desc: '小家庭' },
+  { value: '5', label: '5人', desc: '标准家庭' },
+  { value: '7+', label: '7人+', desc: '大家庭' },
+  { value: 'unlimited', label: '不限人数', desc: '灵活需求' }
+])
+
+const brandOptions = ref<FilterOption[]>([
+  { value: 'tesla', label: '特斯拉', logo: 'https://via.placeholder.com/32x32?text=T' },
+  { value: 'byd', label: '比亚迪', logo: 'https://via.placeholder.com/32x32?text=B' },
+  { value: 'nio', label: '蔚来', logo: 'https://via.placeholder.com/32x32?text=N' },
+  { value: 'bmw', label: '宝马', logo: 'https://via.placeholder.com/32x32?text=BMW' },
+  { value: 'audi', label: '奥迪', logo: 'https://via.placeholder.com/32x32?text=A' },
+  { value: 'mercedes', label: '奔驰', logo: 'https://via.placeholder.com/32x32?text=M' },
+  { value: 'toyota', label: '丰田', logo: 'https://via.placeholder.com/32x32?text=T' },
+  { value: 'volkswagen', label: '大众', logo: 'https://via.placeholder.com/32x32?text=V' }
+])
+
+const usageOptions = ref<FilterOption[]>([
+  { value: 'commute', label: '城市通勤', desc: '日常代步', icon: 'Monitor' },
+  { value: 'family', label: '家庭出行', desc: '全家使用', icon: 'Star' },
+  { value: 'business', label: '商务接待', desc: '工作需要', icon: 'OfficeBuilding' },
+  { value: 'leisure', label: '休闲娱乐', desc: '周末出游', icon: 'TrendCharts' },
+  { value: 'mixed', label: '综合使用', desc: '多种场景', icon: 'Guide' }
+])
+
+const mileageOptions = ref<FilterOption[]>([
+  { value: 'under50', label: '50km以内', desc: '城市代步' },
+  { value: '50-100', label: '50-100km', desc: '市内通勤' },
+  { value: '100-200', label: '100-200km', desc: '跨区出行' },
+  { value: 'over200', label: '200km以上', desc: '长途需求' },
+  { value: 'unlimited', label: '不确定', desc: '视情况而定' }
+])
+
 // 计算属性
 const getCandidateCount = computed(() => {
-  // 模拟根据筛选条件计算候选车型数量
-  let count = 2000
-  
-  if (questionnaireData.value.budget !== 'unlimited' && questionnaireData.value.budget) {
-    count = Math.floor(count * 0.3)
-  }
-  
-  if (questionnaireData.value.bodyTypes.length > 0 && !questionnaireData.value.bodyTypes.includes('unlimited')) {
-    count = Math.floor(count * 0.4)
-  }
-  
-  if (questionnaireData.value.energyType !== 'unlimited' && questionnaireData.value.energyType) {
-    count = Math.floor(count * 0.6)
-  }
-  
-  return Math.max(count, 50)
+  if (!isStep1Valid()) return 0
+
+  let count = 50 // 基础车型数量
+
+  // 根据预算调整
+  if (questionnaireData.value.budget === 'under10') count = Math.floor(count * 0.3)
+  else if (questionnaireData.value.budget === 'over50') count = Math.floor(count * 0.2)
+
+  // 根据车型类别调整
+  if (questionnaireData.value.bodyTypes.length === 1) count = Math.floor(count * 0.4)
+
+  // 根据能源类型调整
+  if (questionnaireData.value.energyType === 'electric') count = Math.floor(count * 0.3)
+
+  return Math.max(1, count)
 })
 
 const getPriceRange = computed(() => {
   const budget = questionnaireData.value.budget
   const ranges = {
-    'under10': '5-10万',
+    'under10': '10万以下',
     '10-20': '10-20万',
     '20-30': '20-30万',
     '30-50': '30-50万',
     'over50': '50万以上',
-    'unlimited': '全价格段'
+    'unlimited': '不限'
   }
-  return ranges[budget] || '全价格段'
+  return ranges[budget] || '请选择预算'
 })
 
 const getPopularBrands = computed(() => {
-  const selected = questionnaireData.value.brandPreference
-  if (selected.includes('none') || selected.length === 0) {
-    return '特斯拉、比亚迪、理想'
-  }
-  return selected.slice(0, 3).map(brand => {
-    const brandMap = {
-      'tesla': '特斯拉',
-      'byd': '比亚迪',
-      'nio': '蔚来',
-      'bmw': '宝马',
-      'mercedes': '奔驰',
-      'audi': '奥迪'
-    }
-    return brandMap[brand] || brand
-  }).join('、')
+  if (questionnaireData.value.budget === 'over50') return '奔驰 宝马 奥迪'
+  if (questionnaireData.value.energyType === 'electric') return '特斯拉 蔚来 比亚迪'
+  return '丰田 大众 本田'
 })
 
-// 工具函数
+const purchaseChecklist = computed<ChecklistItem[]>(() => [
+  { id: 'insurance', text: '了解保险方案和费用' },
+  { id: 'financing', text: '确认贷款方案和利率' },
+  { id: 'license', text: '准备上牌所需材料' },
+  { id: 'maintenance', text: '了解保养政策和费用' },
+  { id: 'testdrive', text: '预约试驾体验' },
+  { id: 'contract', text: '仔细阅读购车合同' }
+])
+
+// 筛选交互函数
+const selectBudget = (value: string) => {
+  questionnaireData.value.budget = value
+  ElMessage.info(`已选择预算: ${budgetOptions.value.find(opt => opt.value === value)?.label}`)
+}
+
+const toggleBodyType = (value: string) => {
+  const index = questionnaireData.value.bodyTypes.indexOf(value)
+  if (index > -1) {
+    questionnaireData.value.bodyTypes.splice(index, 1)
+  } else {
+    if (value === 'unlimited') {
+      questionnaireData.value.bodyTypes = ['unlimited']
+    } else {
+      questionnaireData.value.bodyTypes = questionnaireData.value.bodyTypes.filter(t => t !== 'unlimited')
+      questionnaireData.value.bodyTypes.push(value)
+    }
+  }
+}
+
+const selectEnergyType = (value: string) => {
+  questionnaireData.value.energyType = value
+}
+
+const selectPassengers = (value: string) => {
+  questionnaireData.value.passengers = value
+}
+
+const toggleBrandPreference = (value: string) => {
+  const index = questionnaireData.value.brandPreference.indexOf(value)
+  if (index > -1) {
+    questionnaireData.value.brandPreference.splice(index, 1)
+  } else {
+    questionnaireData.value.brandPreference.push(value)
+  }
+}
+
+const selectPrimaryUsage = (value: string) => {
+  questionnaireData.value.primaryUsage = value
+}
+
+const selectDailyMileage = (value: string) => {
+  questionnaireData.value.dailyMileage = value
+}
+
+// 验证函数
 const isStep1Valid = () => {
-  return questionnaireData.value.budget && 
-         questionnaireData.value.bodyTypes.length > 0 && 
-         questionnaireData.value.energyType && 
+  return questionnaireData.value.budget &&
+         questionnaireData.value.bodyTypes.length > 0 &&
+         questionnaireData.value.energyType &&
          questionnaireData.value.passengers
 }
 
+const getEstimatedTime = () => {
+  return isStep1Valid() ? '2-3秒' : '请完善筛选条件'
+}
+
+// 智能提示
 const getSmartHints = () => {
-  const hints = []
-  
-  if (questionnaireData.value.budget === 'under10') {
-    hints.push('建议关注新能源车型，享受购车补贴优惠')
+  const hints: string[] = []
+
+  if (questionnaireData.value.budget === 'under10' && questionnaireData.value.energyType === 'electric') {
+    hints.push('💡 10万以下的电动车选择较少，建议考虑混合动力车型')
   }
-  
-  if (questionnaireData.value.bodyTypes.includes('suv')) {
-    hints.push('SUV车型空间更大，适合家庭出行需求')
+
+  if (questionnaireData.value.passengers === '7+' && questionnaireData.value.bodyTypes.includes('sedan')) {
+    hints.push('💡 7人以上乘坐建议选择MPV或大型SUV')
   }
-  
-  if (questionnaireData.value.energyType === 'electric') {
-    hints.push('纯电动车型使用成本更低，适合城市通勤')
+
+  if (questionnaireData.value.dailyMileage === 'over200' && questionnaireData.value.energyType === 'electric') {
+    hints.push('💡 长途出行建议选择续航里程较长的车型')
   }
-  
+
   return hints
 }
 
-const getScenarioTagType = () => {
-  if (questionnaireData.value.passengers === '7+') return 'success'
-  if (questionnaireData.value.energyType === 'electric') return 'primary'
-  if (questionnaireData.value.budget === 'over50') return 'warning'
-  return 'info'
-}
-
-const getUserScenarioLabel = () => {
-  if (questionnaireData.value.passengers === '7+') return '家庭用户'
-  if (questionnaireData.value.energyType === 'electric') return '环保用户'
-  if (questionnaireData.value.budget === 'over50') return '豪华用户'
-  return '综合用户'
-}
-
-const getAnalysisTime = () => {
-  return recommendationResult.value?.analysisTime || 2.3
-}
-
-const getPurchaseTimingAdvice = () => {
-  const month = new Date().getMonth() + 1
-  if (month >= 11 || month <= 2) {
-    return '年底促销季，优惠力度较大，建议抓住机会'
-  } else if (month >= 3 && month <= 5) {
-    return '春季新车上市期，可关注新款车型'
-  } else {
-    return '淡季购车，谈判空间相对较大'
-  }
-}
-
-const getRecommendedChannels = (): PurchaseChannel[] => {
-  return [
-    {
-      type: 'dealer',
-      name: '4S店',
-      advantage: '服务保障全面，售后有保证',
-      icon: OfficeBuilding,
-      recommended: true
-    },
-    {
-      type: 'online',
-      name: '官方商城',
-      advantage: '价格透明，购车流程便捷',
-      icon: Monitor,
-      recommended: true
-    },
-    {
-      type: 'supermarket',
-      name: '汽车超市',
-      advantage: '多品牌对比，价格有优势',
-      icon: Star,
-      recommended: false
-    }
-  ]
-}
-
-// 事件处理函数
-const nextStep = () => {
-  if (currentStep.value < 4) {
-    currentStep.value++
-  }
-}
-
-const prevStep = () => {
-  if (currentStep.value > 1) {
-    currentStep.value--
-  }
-}
-
-const updatePriorityWeights = () => {
-  // 根据排序位置计算权重
-  const totalFactors = priorityFactors.value.length
-  priorityFactors.value.forEach((factor, index) => {
-    // 第1位：30%，第2位：25%，第3位：20%，第4位：15%，第5位：10%
-    const weights = [30, 25, 20, 15, 10]
-    factor.weight = weights[index] || 5
-  })
-}
-
+// 推荐生成
 const generateRecommendation = async () => {
+  if (!isStep1Valid()) {
+    ElMessage.warning('请完善必填的筛选条件')
+    return
+  }
+
   analyzing.value = true
   analysisProgress.value = 0
-  
+
   try {
     // 模拟AI分析过程
-    const steps = [
-      '正在分析您的需求偏好...',
-      '正在匹配车型数据库...',
-      '正在计算匹配度评分...',
-      '正在生成个性化推荐...',
-      '正在优化推荐结果...'
-    ]
-    
-    for (let i = 0; i < steps.length; i++) {
-      currentAnalysisStep.value = steps[i]
-      analysisProgress.value = (i + 1) * 20
-      await new Promise(resolve => setTimeout(resolve, 800))
-    }
-    
-    // 调用推荐API
-    await fetchRecommendation()
-    
-    currentStep.value = 4
+    currentAnalysisStep.value = '正在分析您的预算需求...'
+    analysisProgress.value = 20
+    await new Promise(resolve => setTimeout(resolve, 800))
+
+    currentAnalysisStep.value = '正在匹配车型数据库...'
+    analysisProgress.value = 40
+    await new Promise(resolve => setTimeout(resolve, 800))
+
+    currentAnalysisStep.value = '正在计算匹配度评分...'
+    analysisProgress.value = 60
+    await new Promise(resolve => setTimeout(resolve, 800))
+
+    currentAnalysisStep.value = '正在生成个性化推荐...'
+    analysisProgress.value = 80
+    await new Promise(resolve => setTimeout(resolve, 800))
+
+    currentAnalysisStep.value = '推荐生成完成！'
+    analysisProgress.value = 100
+    await new Promise(resolve => setTimeout(resolve, 500))
+
+    // 生成模拟推荐结果
+    recommendationResult.value = generateMockRecommendationResult()
+
+    ElMessage.success('推荐生成成功！为您找到了最适合的车型')
+
+    // 初始化雷达图
     await nextTick()
-    await initPrimaryRadarChart()
-    
+    initPrimaryRadarChart()
+
   } catch (error) {
-    console.error('生成推荐失败:', error)
-    ElMessage.error('推荐生成失败，请稍后重试')
+    ElMessage.error('推荐生成失败，请重试')
   } finally {
     analyzing.value = false
-    analysisProgress.value = 100
   }
 }
 
-const fetchRecommendation = async () => {
-  try {
-    const response = await axios.post('/api/recommendation/generate', {
-      questionnaire: questionnaireData.value,
-      priorities: priorityFactors.value
-    })
-    
-    if (response.data.status === 1) {
-      recommendationResult.value = response.data.data
-    } else {
-      throw new Error('API响应失败')
-    }
-  } catch (error) {
-    console.error('获取推荐失败:', error)
-    // 使用模拟数据
-    recommendationResult.value = generateMockRecommendation()
+// 生成模拟推荐结果
+const generateMockRecommendationResult = (): RecommendationResult => {
+  const primaryRecommendation: PrimaryRecommendation = {
+    id: 1,
+    brand: '比亚迪',
+    name: 'Han EV',
+    priceRange: '22.98-32.98万',
+    type: '中大型轿车',
+    engine: '纯电动',
+    transmission: '电动单速',
+    image: 'https://picsum.photos/400/300?random=1',
+    confidence: 95,
+    isHot: true,
+    reasons: [
+      '完全符合您的预算要求',
+      '新能源政策支持，使用成本低',
+      '续航里程605km，满足日常需求',
+      '安全配置齐全，获得C-NCAP五星评级',
+      '品牌口碑良好，保值率较高'
+    ],
+    advantages: [
+      { label: '续航能力', description: '605km超长续航', score: 92, icon: 'Lightning' },
+      { label: '安全性能', description: 'C-NCAP五星安全', score: 95, icon: 'Lock' },
+      { label: '科技配置', description: 'DiLink智能网联', score: 88, icon: 'Monitor' },
+      { label: '性价比', description: '同级别价格优势', score: 90, icon: 'Money' }
+    ]
   }
-}
 
-const generateMockRecommendation = (): RecommendationResult => {
-  const mockCars = [
-    {
-      id: 1,
-      brand: 'Tesla',
-      name: 'Model Y',
-      type: 'SUV',
-      engine: '双电机',
-      transmission: '单速变速箱',
-      priceRange: '26.39-36.39万',
-      image: 'https://picsum.photos/400/300?random=1',
-      isHot: true,
-      confidence: 92,
-      matchScore: 94,
-      highlight: '续航优秀',
-      advantages: [
-        {
-          label: '续航里程',
-          description: 'CLTC续航594km，满足长途需求',
-          icon: Lightning,
-          score: 95
-        },
-        {
-          label: '科技配置',
-          description: '自动驾驶、OTA升级等领先科技',
-          icon: Monitor,
-          score: 98
-        },
-        {
-          label: '品牌价值',
-          description: '全球电动车领导品牌',
-          icon: Star,
-          score: 96
-        }
-      ],
-      reasons: [
-        '与您的预算区间完美匹配',
-        '纯电动符合您的环保理念',
-        'SUV车型满足空间需求',
-        '智能配置符合您的优先级'
-      ]
-    },
-    {
-      id: 2,
-      brand: '比亚迪',
-      name: '宋PLUS DM-i',
-      type: 'SUV',
-      engine: '1.5L混动',
-      transmission: 'E-CVT',
-      priceRange: '15.48-21.68万',
-      image: 'https://picsum.photos/400/300?random=2',
-      matchScore: 89,
-      highlight: '性价比高'
-    },
-    {
-      id: 3,
-      brand: '理想',
-      name: 'L7',
-      type: 'SUV',
-      engine: '增程式',
-      transmission: '单速',
-      priceRange: '31.98-37.98万',
-      image: 'https://picsum.photos/400/300?random=3',
-      matchScore: 87,
-      highlight: '空间宽敞'
-    }
-  ]
-  
+  const alternatives = {
+    budget: [
+      {
+        id: 2,
+        brand: '长安',
+        name: 'UNI-V',
+        priceRange: '10.89-13.99万',
+        type: '紧凑型轿车',
+        engine: '1.5T',
+        transmission: '7挡双离合',
+        image: 'https://picsum.photos/400/300?random=2',
+        highlight: '高性价比',
+        matchScore: 85
+      },
+      {
+        id: 3,
+        brand: '吉利',
+        name: '帝豪L',
+        priceRange: '8.98-12.98万',
+        type: '紧凑型轿车',
+        engine: '1.4T',
+        transmission: 'CVT',
+        image: 'https://picsum.photos/400/300?random=3',
+        highlight: '经济实用',
+        matchScore: 82
+      }
+    ],
+    luxury: [
+      {
+        id: 4,
+        brand: '奔驰',
+        name: 'E级',
+        priceRange: '43.99-64.29万',
+        type: '中大型轿车',
+        engine: '2.0T',
+        transmission: '9挡手自一体',
+        image: 'https://picsum.photos/400/300?random=4',
+        highlight: '豪华配置',
+        matchScore: 88
+      },
+      {
+        id: 5,
+        brand: '宝马',
+        name: '5系',
+        priceRange: '42.69-54.69万',
+        type: '中大型轿车',
+        engine: '2.0T',
+        transmission: '8挡手自一体',
+        image: 'https://picsum.photos/400/300?random=5',
+        highlight: '运动豪华',
+        matchScore: 86
+      }
+    ],
+    practical: [
+      {
+        id: 6,
+        brand: '本田',
+        name: 'CR-V',
+        priceRange: '18.59-26.39万',
+        type: '紧凑型SUV',
+        engine: '1.5T',
+        transmission: 'CVT',
+        image: 'https://picsum.photos/400/300?random=6',
+        highlight: '空间实用',
+        matchScore: 87
+      },
+      {
+        id: 7,
+        brand: '丰田',
+        name: 'RAV4荣放',
+        priceRange: '17.48-25.88万',
+        type: '紧凑型SUV',
+        engine: '2.0L',
+        transmission: 'CVT',
+        image: 'https://picsum.photos/400/300?random=7',
+        highlight: '可靠耐用',
+        matchScore: 84
+      }
+    ]
+  }
+
   return {
-    recommendations: mockCars,
-    primaryRecommendation: mockCars[0],
-    alternatives: {
-      budget: [mockCars[1]],
-      luxury: [mockCars[2]],
-      practical: [mockCars[1]]
-    },
-    matchScore: 94,
+    recommendations: [primaryRecommendation, ...alternatives.budget, ...alternatives.luxury, ...alternatives.practical],
+    primaryRecommendation,
+    alternatives,
+    matchScore: 95,
     totalCandidates: getCandidateCount.value,
     analysisTime: 2.3
   }
 }
 
+// 初始化雷达图
 const initPrimaryRadarChart = async () => {
-  if (!primaryRadarChart.value || !recommendationResult.value) return
-  
   await nextTick()
-  
-  if (primaryRadarChartInstance) {
-    primaryRadarChartInstance.dispose()
-  }
-  
+
+  if (!primaryRadarChart.value) return
+
   primaryRadarChartInstance = echarts.init(primaryRadarChart.value)
-  
+
   const option = {
+    title: {
+      text: '匹配度分析',
+      left: 'center',
+      textStyle: { fontSize: 14, color: '#1a1a1a' }
+    },
     radar: {
       indicator: [
-        { name: '油耗/电耗', max: 100 },
-        { name: '舒适性', max: 100 },
-        { name: '空间', max: 100 },
-        { name: '动力性能', max: 100 },
-        { name: '智能配置', max: 100 }
+        { name: '预算匹配', max: 100 },
+        { name: '功能需求', max: 100 },
+        { name: '品牌偏好', max: 100 },
+        { name: '使用场景', max: 100 },
+        { name: '性价比', max: 100 },
+        { name: '口碑评价', max: 100 }
       ],
-      radius: '70%'
+      radius: 80,
+      startAngle: 90
     },
     series: [{
+      name: '匹配度',
       type: 'radar',
       data: [{
-        value: [95, 88, 85, 90, 98],
-        name: '匹配度',
+        value: [95, 88, 92, 90, 93, 89],
+        name: '综合匹配度',
         areaStyle: {
           color: 'rgba(79, 172, 254, 0.3)'
         },
         lineStyle: {
+          color: '#4facfe',
+          width: 2
+        },
+        itemStyle: {
           color: '#4facfe'
         }
       }]
     }]
   }
-  
+
   primaryRadarChartInstance.setOption(option)
 }
 
-// 对比工具相关
-const addToComparison = (model: CarModel) => {
+// 场景标签
+const getScenarioTagType = () => {
+  const usage = questionnaireData.value.primaryUsage
+  const typeMap = {
+    'family': 'success',
+    'business': 'warning',
+    'commute': 'info',
+    'leisure': 'primary'
+  }
+  return typeMap[usage] || 'info'
+}
+
+const getUserScenarioLabel = () => {
+  const usage = questionnaireData.value.primaryUsage
+  const labelMap = {
+    'family': '家庭用车',
+    'business': '商务用车',
+    'commute': '通勤代步',
+    'leisure': '休闲娱乐',
+    'mixed': '综合使用'
+  }
+  return labelMap[usage] || '个性化推荐'
+}
+
+const getAnalysisTime = () => {
+  return recommendationResult.value?.analysisTime.toFixed(1) || '0'
+}
+
+// 操作函数
+const viewModelDetails = (model: CarModel | PrimaryRecommendation) => {
+  ElMessage.info(`查看 ${model.brand} ${model.name} 详细信息`)
+  // 跳转到详情页面
+  router.push(`/car/${model.id}`)
+}
+
+const addToComparison = (model: CarModel | PrimaryRecommendation) => {
   if (comparisonList.value.length >= 3) {
     ElMessage.warning('最多只能对比3款车型')
     return
   }
-  
-  if (comparisonList.value.find(item => item.id === model.id)) {
+
+  if (comparisonList.value.some(car => car.id === model.id)) {
     ElMessage.warning('该车型已在对比列表中')
     return
   }
-  
-  comparisonList.value.push(model)
+
+  const carModel: CarModel = {
+    id: model.id,
+    brand: model.brand,
+    name: model.name,
+    priceRange: model.priceRange,
+    type: model.type,
+    engine: model.engine,
+    transmission: model.transmission,
+    image: model.image,
+    highlight: 'highlight' in model ? model.highlight : '推荐车型',
+    matchScore: 'matchScore' in model ? model.matchScore : 95
+  }
+
+  comparisonList.value.push(carModel)
   ElMessage.success(`${model.brand} ${model.name} 已加入对比`)
 }
 
 const removeFromComparison = (modelId: number) => {
-  const index = comparisonList.value.findIndex(item => item.id === modelId)
+  const index = comparisonList.value.findIndex(car => car.id === modelId)
   if (index > -1) {
-    const model = comparisonList.value[index]
-    comparisonList.value.splice(index, 1)
-    ElMessage.success(`${model.brand} ${model.name} 已移出对比`)
+    const removed = comparisonList.value.splice(index, 1)[0]
+    ElMessage.info(`${removed.brand} ${removed.name} 已移出对比`)
   }
 }
 
@@ -553,37 +620,63 @@ const startDetailedComparison = () => {
     ElMessage.warning('至少需要2款车型才能开始对比')
     return
   }
-  
-  const modelIds = comparisonList.value.map(model => model.id).join(',')
+
+  const modelIds = comparisonList.value.map(car => car.id).join(',')
   router.push({
     name: 'VehicleModelCompAnalysis',
     query: { models: modelIds }
   })
 }
 
+// 购买建议
+const getPurchaseTimingAdvice = () => {
+  const month = new Date().getMonth() + 1
+  if (month >= 3 && month <= 5) {
+    return '春季是购车淡季，优惠力度较大，建议近期购买'
+  } else if (month >= 9 && month <= 11) {
+    return '金九银十购车旺季，新车上市较多，可选择性强'
+  }
+  return '当前时期购车政策稳定，建议根据个人需求决定购买时机'
+}
+
+const getRecommendedChannels = (): ChannelRecommendation[] => [
+  {
+    type: 'official',
+    name: '官方4S店',
+    advantage: '正品保证，售后完善',
+    icon: 'OfficeBuilding',
+    recommended: true
+  },
+  {
+    type: 'online',
+    name: '线上直销',
+    advantage: '价格透明，便捷高效',
+    icon: 'Monitor',
+    recommended: questionnaireData.value.energyType === 'electric'
+  },
+  {
+    type: 'dealer',
+    name: '经销商',
+    advantage: '价格灵活，库存充足',
+    icon: 'Star',
+    recommended: false
+  }
+]
+
 // 页面操作
-const resetQuestionnaire = () => {
-  ElMessageBox.confirm('确定要重新开始推荐吗？当前进度将会丢失。', '确认操作', {
-    confirmButtonText: '确定',
-    cancelButtonText: '取消',
-    type: 'warning'
-  }).then(() => {
-    currentStep.value = 1
-    questionnaireData.value = {
-      budget: '',
-      bodyTypes: [],
-      energyType: '',
-      passengers: '',
-      brandPreference: [],
-      dailyMileage: '',
-      driveType: ''
-    }
-    recommendationResult.value = null
-    comparisonList.value = []
-    ElMessage.success('已重置，请重新填写问卷')
-  }).catch(() => {
-    // 用户取消
-  })
+const resetAllFilters = () => {
+  questionnaireData.value = {
+    budget: '',
+    bodyTypes: [],
+    energyType: '',
+    passengers: '',
+    brandPreference: [],
+    primaryUsage: '',
+    dailyMileage: ''
+  }
+  recommendationResult.value = null
+  comparisonList.value = []
+  ElMessage.info('筛选条件已重置')
 }
 
 const exportRecommendation = () => {
@@ -591,58 +684,68 @@ const exportRecommendation = () => {
     ElMessage.warning('暂无推荐结果可导出')
     return
   }
-  
+
   const content = [
     '购车推荐报告',
+    '=' * 20,
     `生成时间: ${new Date().toLocaleString()}`,
-    `用户类型: ${getUserScenarioLabel()}`,
+    `使用场景: ${getUserScenarioLabel()}`,
+    `预算范围: ${getPriceRange.value}`,
     '',
-    '主要推荐:',
+    '最佳推荐:',
     `${recommendationResult.value.primaryRecommendation.brand} ${recommendationResult.value.primaryRecommendation.name}`,
-    `匹配度: ${recommendationResult.value.primaryRecommendation.matchScore}%`,
     `价格: ${recommendationResult.value.primaryRecommendation.priceRange}`,
+    `匹配度: ${recommendationResult.value.matchScore}%`,
     '',
     '推荐理由:',
-    ...recommendationResult.value.primaryRecommendation.reasons || []
+    ...recommendationResult.value.primaryRecommendation.reasons.map(reason => `- ${reason}`),
+    '',
+    '备选推荐:',
+    ...recommendationResult.value.alternatives.budget.map(car => `- ${car.brand} ${car.name} (${car.priceRange})`),
   ].join('\n')
-  
+
   const blob = new Blob([content], { type: 'text/plain;charset=utf-8' })
   const link = document.createElement('a')
   link.href = URL.createObjectURL(blob)
-  link.download = `购车推荐报告_${new Date().toISOString().slice(0, 10)}.txt`
+  link.download = '购车推荐报告.txt'
   link.click()
-  
+
   ElMessage.success('推荐报告已导出')
 }
 
 const saveRecommendation = () => {
-  if (!recommendationResult.value) return
-  
-  const recommendationId = Date.now()
-  localStorage.setItem(`recommendation_${recommendationId}`, JSON.stringify({
+  if (!recommendationResult.value) {
+    ElMessage.warning('暂无推荐结果可保存')
+    return
+  }
+
+  const saveData = {
+    timestamp: Date.now(),
     questionnaire: questionnaireData.value,
-    priorities: priorityFactors.value,
-    result: recommendationResult.value,
-    timestamp: Date.now()
-  }))
-  
+    result: recommendationResult.value
+  }
+
+  localStorage.setItem(`recommendation_${Date.now()}`, JSON.stringify(saveData))
   ElMessage.success('推荐结果已保存到本地')
 }
 
 const shareRecommendation = () => {
-  if (!recommendationResult.value) return
-  
-  const shareText = `我通过AI智能推荐找到了最适合的车型：${recommendationResult.value.primaryRecommendation.brand} ${recommendationResult.value.primaryRecommendation.name}，匹配度${recommendationResult.value.primaryRecommendation.matchScore}%！`
-  
+  if (!recommendationResult.value) {
+    ElMessage.warning('暂无推荐结果可分享')
+    return
+  }
+
+  const shareText = `我通过AI智能推荐找到了最适合的车型：${recommendationResult.value.primaryRecommendation.brand} ${recommendationResult.value.primaryRecommendation.name}，匹配度${recommendationResult.value.matchScore}%！`
+
   if (navigator.share) {
     navigator.share({
-      title: '智能购车推荐',
+      title: '购车推荐结果',
       text: shareText,
       url: window.location.href
     })
   } else {
     navigator.clipboard.writeText(shareText).then(() => {
-      ElMessage.success('推荐内容已复制到剪贴板')
+      ElMessage.success('推荐结果已复制到剪贴板')
     }).catch(() => {
       ElMessage.error('分享失败')
     })
@@ -650,15 +753,16 @@ const shareRecommendation = () => {
 }
 
 const restartQuestionnaire = () => {
-  resetQuestionnaire()
-}
-
-const viewModelDetails = (model: CarModel) => {
-  ElMessage.info(`查看 ${model.brand} ${model.name} 详情功能开发中...`)
-}
-
-const bookTestDrive = (model: CarModel) => {
-  ElMessage.info(`预约 ${model.brand} ${model.name} 试驾功能开发中...`)
+  ElMessageBox.confirm('确定要重新开始推荐吗？当前结果将被清除。', '确认重新推荐', {
+    confirmButtonText: '确定',
+    cancelButtonText: '取消',
+    type: 'warning'
+  }).then(() => {
+    resetAllFilters()
+    ElMessage.success('已重置，请重新填写需求')
+  }).catch(() => {
+    // 用户取消
+  })
 }
 
 // 窗口大小调整
@@ -668,27 +772,16 @@ const handleResize = () => {
   }
 }
 
-// 监听器
-watch(priorityFactors, () => {
-  updatePriorityWeights()
-}, { deep: true })
-
 // 生命周期
 onMounted(async () => {
-  ElMessage.success('欢迎使用智能购车推荐系统！')
-  
-  // 检查URL参数
-  const step = route.query.step as string
-  if (step && parseInt(step) >= 1 && parseInt(step) <= 4) {
-    currentStep.value = parseInt(step)
-  }
-  
+  ElMessage.success('欢迎使用智能购车推荐！')
+
   window.addEventListener('resize', handleResize)
 })
 
 onUnmounted(() => {
   window.removeEventListener('resize', handleResize)
-  
+
   if (primaryRadarChartInstance) {
     primaryRadarChartInstance.dispose()
   }
@@ -702,11 +795,11 @@ onUnmounted(() => {
       <div class="header-content">
         <div class="header-left">
           <h2>智能购车推荐</h2>
-          <p>基于个性化需求的科学推荐，3分钟找到最适合您的车型</p>
+          <p>通过筛选条件快速找到最适合您的车型，让购车更简单</p>
         </div>
         <div class="header-actions">
-          <el-button type="primary" :icon="Refresh" @click="resetQuestionnaire" v-if="currentStep > 1">
-            重新开始
+          <el-button type="primary" :icon="Refresh" @click="resetAllFilters">
+            重置筛选
           </el-button>
           <el-button type="success" :icon="Download" @click="exportRecommendation" :disabled="!recommendationResult">
             导出推荐
@@ -715,274 +808,206 @@ onUnmounted(() => {
       </div>
     </el-card>
 
-    <!-- 进度指示器 -->
-    <el-card shadow="never" class="progress-card" v-if="currentStep <= 3">
-      <div class="progress-content">
-        <el-steps :active="currentStep - 1" finish-status="success" align-center>
-          <el-step title="基础需求" description="预算·车型·用途"></el-step>
-          <el-step title="个性偏好" description="品牌·配置·驱动"></el-step>
-          <el-step title="优先级设置" description="重要因素排序"></el-step>
-        </el-steps>
-        <div class="progress-stats">
-          <span class="step-info">第 {{ currentStep }} 步，共 3 步</span>
-          <span class="time-estimate">预计还需 {{ (4 - currentStep) * 1 }} 分钟</span>
+    <!-- 筛选条件卡片 -->
+    <el-card shadow="never" class="filter-card">
+      <template #header>
+        <div class="filter-header">
+          <span>购车需求筛选</span>
+          <div class="filter-stats">
+            <el-tag type="primary">符合条件: {{ getCandidateCount }} 款</el-tag>
+            <el-button size="small" type="primary" @click="generateRecommendation" :disabled="!isStep1Valid()" :loading="analyzing">
+              生成推荐
+            </el-button>
+          </div>
+        </div>
+      </template>
+
+      <div class="filter-content">
+        <!-- 预算区间 -->
+        <div class="filter-section">
+          <div class="section-label">
+            <el-icon><Money /></el-icon>
+            <span>预算区间</span>
+            <span class="required">*</span>
+          </div>
+          <div class="filter-options budget-options">
+            <div
+              v-for="option in budgetOptions"
+              :key="option.value"
+              class="filter-option"
+              :class="{ active: questionnaireData.budget === option.value }"
+              @click="selectBudget(option.value)"
+            >
+              <span class="option-label">{{ option.label }}</span>
+              <span class="option-desc" v-if="option.desc">{{ option.desc }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 车型类别 -->
+        <div class="filter-section">
+          <div class="section-label">
+            <el-icon><OfficeBuilding /></el-icon>
+            <span>车型类别</span>
+            <span class="required">*</span>
+          </div>
+          <div class="filter-options body-type-options">
+            <div
+              v-for="option in bodyTypeOptions"
+              :key="option.value"
+              class="filter-option"
+              :class="{ active: questionnaireData.bodyTypes.includes(option.value) }"
+              @click="toggleBodyType(option.value)"
+            >
+              <el-icon><component :is="option.icon" /></el-icon>
+              <span class="option-label">{{ option.label }}</span>
+              <span class="option-desc">{{ option.desc }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 能源类型 -->
+        <div class="filter-section">
+          <div class="section-label">
+            <el-icon><Lightning /></el-icon>
+            <span>能源类型</span>
+            <span class="required">*</span>
+          </div>
+          <div class="filter-options energy-options">
+            <div
+              v-for="option in energyTypeOptions"
+              :key="option.value"
+              class="filter-option"
+              :class="{ active: questionnaireData.energyType === option.value }"
+              @click="selectEnergyType(option.value)"
+            >
+              <el-icon><component :is="option.icon" /></el-icon>
+              <span class="option-label">{{ option.label }}</span>
+              <span class="option-desc">{{ option.desc }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 乘坐人数 -->
+        <div class="filter-section">
+          <div class="section-label">
+            <el-icon><Star /></el-icon>
+            <span>乘坐人数</span>
+            <span class="required">*</span>
+          </div>
+          <div class="filter-options passenger-options">
+            <div
+              v-for="option in passengerOptions"
+              :key="option.value"
+              class="filter-option"
+              :class="{ active: questionnaireData.passengers === option.value }"
+              @click="selectPassengers(option.value)"
+            >
+              <span class="option-label">{{ option.label }}</span>
+              <span class="option-desc">{{ option.desc }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 品牌偏好 -->
+        <div class="filter-section">
+          <div class="section-label">
+            <el-icon><Star /></el-icon>
+            <span>品牌偏好</span>
+            <span class="optional">选填</span>
+          </div>
+          <div class="filter-options brand-options">
+            <div
+              v-for="option in brandOptions"
+              :key="option.value"
+              class="filter-option brand-option"
+              :class="{ active: questionnaireData.brandPreference.includes(option.value) }"
+              @click="toggleBrandPreference(option.value)"
+            >
+              <img :src="option.logo" :alt="option.label" class="brand-logo" />
+              <span class="option-label">{{ option.label }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 主要用途 -->
+        <div class="filter-section">
+          <div class="section-label">
+            <el-icon><Guide /></el-icon>
+            <span>主要用途</span>
+            <span class="optional">选填</span>
+          </div>
+          <div class="filter-options usage-options">
+            <div
+              v-for="option in usageOptions"
+              :key="option.value"
+              class="filter-option"
+              :class="{ active: questionnaireData.primaryUsage === option.value }"
+              @click="selectPrimaryUsage(option.value)"
+            >
+              <el-icon><component :is="option.icon" /></el-icon>
+              <span class="option-label">{{ option.label }}</span>
+              <span class="option-desc">{{ option.desc }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 日均里程 -->
+        <div class="filter-section">
+          <div class="section-label">
+            <el-icon><TrendCharts /></el-icon>
+            <span>日均里程</span>
+            <span class="optional">选填</span>
+          </div>
+          <div class="filter-options mileage-options">
+            <div
+              v-for="option in mileageOptions"
+              :key="option.value"
+              class="filter-option"
+              :class="{ active: questionnaireData.dailyMileage === option.value }"
+              @click="selectDailyMileage(option.value)"
+            >
+              <span class="option-label">{{ option.label }}</span>
+              <span class="option-desc">{{ option.desc }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 实时预览统计 -->
+        <div class="filter-preview">
+          <h4>🎯 筛选预览</h4>
+          <div class="preview-stats">
+            <div class="stat-item">
+              <span class="stat-label">符合条件</span>
+              <span class="stat-value">{{ getCandidateCount }} 款</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">价格区间</span>
+              <span class="stat-value">{{ getPriceRange }}</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">推荐品牌</span>
+              <span class="stat-value">{{ getPopularBrands }}</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">预计分析时间</span>
+              <span class="stat-value">{{ getEstimatedTime() }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 智能提示 -->
+        <div class="smart-hints" v-if="getSmartHints().length > 0">
+          <h4>💡 智能提示</h4>
+          <ul class="hints-list">
+            <li v-for="hint in getSmartHints()" :key="hint">{{ hint }}</li>
+          </ul>
         </div>
       </div>
     </el-card>
 
-    <!-- 智能问卷区域 -->
-    <div class="questionnaire-section" v-if="currentStep <= 3">
-      <!-- 第一步：基础需求 -->
-      <el-card shadow="never" class="questionnaire-card" v-if="currentStep === 1">
-        <template #header>
-          <div class="questionnaire-header">
-            <el-icon><Money /></el-icon>
-            <span>基础购车需求</span>
-            <el-tag type="primary">必填信息</el-tag>
-          </div>
-        </template>
-
-        <div class="questionnaire-content">
-          <el-form :model="questionnaireData" label-width="120px" size="large">
-            <!-- 预算范围 -->
-            <el-form-item label="预算范围" required>
-              <el-radio-group v-model="questionnaireData.budget" class="budget-options">
-                <el-radio value="unlimited">无限制</el-radio>
-                <el-radio value="under10">10万以下</el-radio>
-                <el-radio value="10-20">10-20万</el-radio>
-                <el-radio value="20-30">20-30万</el-radio>
-                <el-radio value="30-50">30-50万</el-radio>
-                <el-radio value="over50">50万以上</el-radio>
-              </el-radio-group>
-              <div class="live-preview" v-if="questionnaireData.budget">
-                <span class="preview-label">符合条件车型：</span>
-                <span class="preview-count">{{ getCandidateCount() }} 款</span>
-              </div>
-            </el-form-item>
-
-            <!-- 外观偏好 -->
-            <el-form-item label="外观偏好" required>
-              <el-checkbox-group v-model="questionnaireData.bodyTypes" class="body-type-options">
-                <el-checkbox value="unlimited">无限制</el-checkbox>
-                <el-checkbox value="sedan">轿车</el-checkbox>
-                <el-checkbox value="suv">SUV</el-checkbox>
-                <el-checkbox value="mpv">MPV</el-checkbox>
-                <el-checkbox value="pickup">皮卡</el-checkbox>
-                <el-checkbox value="sports">跑车</el-checkbox>
-                <el-checkbox value="crossover">跨界车</el-checkbox>
-              </el-checkbox-group>
-            </el-form-item>
-
-            <!-- 能源偏好 -->
-            <el-form-item label="能源偏好" required>
-              <el-radio-group v-model="questionnaireData.energyType" class="energy-options">
-                <el-radio value="unlimited">无限制</el-radio>
-                <el-radio value="gasoline">燃油车</el-radio>
-                <el-radio value="electric">纯电动</el-radio>
-                <el-radio value="hybrid">混动/插混</el-radio>
-              </el-radio-group>
-            </el-form-item>
-
-            <!-- 乘坐人数 -->
-            <el-form-item label="乘坐人数" required>
-              <el-radio-group v-model="questionnaireData.passengers" class="passenger-options">
-                <el-radio value="unlimited">无限制</el-radio>
-                <el-radio value="1-2">1-2人</el-radio>
-                <el-radio value="3-4">3-4人</el-radio>
-                <el-radio value="5">5人</el-radio>
-                <el-radio value="7+">7人及以上</el-radio>
-              </el-radio-group>
-            </el-form-item>
-          </el-form>
-
-          <!-- 智能提示 -->
-          <div class="smart-hints" v-if="getSmartHints().length > 0">
-            <h4>💡 智能建议</h4>
-            <ul class="hints-list">
-              <li v-for="hint in getSmartHints()" :key="hint">{{ hint }}</li>
-            </ul>
-          </div>
-        </div>
-
-        <div class="questionnaire-actions">
-          <el-button type="primary" size="large" @click="nextStep" :disabled="!isStep1Valid()">
-            下一步：个性偏好
-            <el-icon><ArrowRight /></el-icon>
-          </el-button>
-        </div>
-      </el-card>
-
-      <!-- 第二步：个性偏好 -->
-      <el-card shadow="never" class="questionnaire-card" v-if="currentStep === 2">
-        <template #header>
-          <div class="questionnaire-header">
-            <el-icon><Star /></el-icon>
-            <span>个性化偏好设置</span>
-            <el-tag type="warning">选填信息</el-tag>
-          </div>
-        </template>
-
-        <div class="questionnaire-content">
-          <el-form :model="questionnaireData" label-width="120px" size="large">
-            <!-- 品牌倾向 -->
-            <el-form-item label="品牌倾向">
-              <el-checkbox-group v-model="questionnaireData.brandPreference" class="brand-options">
-                <el-checkbox value="none">无偏好</el-checkbox>
-                <el-checkbox value="mercedes">奔驰</el-checkbox>
-                <el-checkbox value="bmw">宝马</el-checkbox>
-                <el-checkbox value="audi">奥迪</el-checkbox>
-                <el-checkbox value="tesla">特斯拉</el-checkbox>
-                <el-checkbox value="byd">比亚迪</el-checkbox>
-                <el-checkbox value="nio">蔚来</el-checkbox>
-                <el-checkbox value="xiaopeng">小鹏</el-checkbox>
-                <el-checkbox value="lixiang">理想</el-checkbox>
-                <el-checkbox value="toyota">丰田</el-checkbox>
-                <el-checkbox value="honda">本田</el-checkbox>
-                <el-checkbox value="volkswagen">大众</el-checkbox>
-              </el-checkbox-group>
-            </el-form-item>
-
-            <!-- 日均行驶里程 -->
-            <el-form-item label="日均里程">
-              <el-radio-group v-model="questionnaireData.dailyMileage" class="mileage-options">
-                <el-radio value="unlimited">无限制</el-radio>
-                <el-radio value="under100">100km以内</el-radio>
-                <el-radio value="100-200">100-200km</el-radio>
-                <el-radio value="200-300">200-300km</el-radio>
-                <el-radio value="over300">300km以上</el-radio>
-              </el-radio-group>
-            </el-form-item>
-
-            <!-- 驱动形式偏好 -->
-            <el-form-item label="驱动形式">
-              <el-radio-group v-model="questionnaireData.driveType" class="drive-options">
-                <el-radio value="none">无特别要求</el-radio>
-                <el-radio value="fwd">前驱</el-radio>
-                <el-radio value="rwd">后驱</el-radio>
-                <el-radio value="awd">四驱</el-radio>
-              </el-radio-group>
-            </el-form-item>
-          </el-form>
-
-          <!-- 实时更新的筛选结果 -->
-          <div class="filter-preview">
-            <h4>🎯 筛选预览</h4>
-            <div class="preview-stats">
-              <div class="stat-item">
-                <span class="stat-label">符合条件</span>
-                <span class="stat-value">{{ getCandidateCount() }} 款</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-label">价格区间</span>
-                <span class="stat-value">{{ getPriceRange() }}</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-label">热门品牌</span>
-                <span class="stat-value">{{ getPopularBrands() }}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="questionnaire-actions">
-          <el-button size="large" @click="prevStep">
-            <el-icon><ArrowLeft /></el-icon>
-            上一步
-          </el-button>
-          <el-button type="primary" size="large" @click="nextStep">
-            下一步：优先级设置
-            <el-icon><ArrowRight /></el-icon>
-          </el-button>
-        </div>
-      </el-card>
-
-      <!-- 第三步：优先级排序 -->
-      <el-card shadow="never" class="questionnaire-card" v-if="currentStep === 3">
-        <template #header>
-          <div class="questionnaire-header">
-            <el-icon><Sort /></el-icon>
-            <span>购车优先级排序</span>
-            <el-tag type="success">关键步骤</el-tag>
-          </div>
-        </template>
-
-        <div class="questionnaire-content">
-          <div class="priority-instruction">
-            <h4>📋 请拖拽排序以下因素的重要程度（1最重要，5最不重要）</h4>
-            <p>您的排序将直接影响推荐结果的准确性</p>
-          </div>
-
-          <div class="priority-sorting">
-            <draggable 
-              v-model="priorityFactors" 
-              item-key="id" 
-              class="priority-list"
-              @change="updatePriorityWeights"
-            >
-              <template #item="{ element, index }">
-                <div class="priority-item" :class="`priority-${index + 1}`">
-                  <div class="priority-rank">{{ index + 1 }}</div>
-                  <div class="priority-info">
-                    <el-icon>
-                      <component :is="element.icon" />
-                    </el-icon>
-                    <div class="priority-details">
-                      <h5>{{ element.label }}</h5>
-                      <p>{{ element.description }}</p>
-                    </div>
-                  </div>
-                  <div class="priority-weight">{{ element.weight }}%</div>
-                  <div class="drag-handle">
-                    <el-icon><Sort /></el-icon>
-                  </div>
-                </div>
-              </template>
-            </draggable>
-          </div>
-
-          <!-- 权重可视化 -->
-          <div class="weight-visualization">
-            <h4>📊 权重分布预览</h4>
-            <div class="weight-bars">
-              <div 
-                v-for="factor in priorityFactors" 
-                :key="factor.id"
-                class="weight-bar"
-              >
-                <span class="bar-label">{{ factor.label }}</span>
-                <div class="bar-container">
-                  <div 
-                    class="bar-fill" 
-                    :style="{ width: factor.weight + '%' }"
-                    :class="`bar-${factor.id}`"
-                  ></div>
-                </div>
-                <span class="bar-value">{{ factor.weight }}%</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="questionnaire-actions">
-          <el-button size="large" @click="prevStep">
-            <el-icon><ArrowLeft /></el-icon>
-            上一步
-          </el-button>
-          <el-button 
-            type="primary" 
-            size="large" 
-            @click="generateRecommendation"
-            :loading="analyzing"
-          >
-            <el-icon><Connection/></el-icon>
-            生成专属推荐
-          </el-button>
-        </div>
-      </el-card>
-    </div>
-
     <!-- 推荐结果展示区 -->
-    <div class="recommendation-results" v-if="currentStep === 4 && recommendationResult">
+    <div class="recommendation-results" v-if="recommendationResult">
       <!-- 推荐摘要卡片 -->
       <el-card shadow="never" class="summary-card">
         <template #header>
@@ -1030,8 +1055,8 @@ onUnmounted(() => {
         <div class="primary-content">
           <div class="primary-model">
             <div class="model-showcase">
-              <img 
-                :src="recommendationResult.primaryRecommendation.image" 
+              <img
+                :src="recommendationResult.primaryRecommendation.image"
                 :alt="recommendationResult.primaryRecommendation.name"
                 class="showcase-image"
               />
@@ -1053,7 +1078,7 @@ onUnmounted(() => {
                 <el-tag size="small" type="success">{{ recommendationResult.primaryRecommendation.engine }}</el-tag>
                 <el-tag size="small" type="warning">{{ recommendationResult.primaryRecommendation.transmission }}</el-tag>
               </div>
-              
+
               <!-- 匹配度雷达图 -->
               <div class="match-radar">
                 <h4>匹配度分析</h4>
@@ -1077,8 +1102,8 @@ onUnmounted(() => {
           <div class="core-advantages">
             <h4>⭐ 核心优势</h4>
             <div class="advantages-grid">
-              <div 
-                v-for="advantage in recommendationResult.primaryRecommendation.advantages" 
+              <div
+                v-for="advantage in recommendationResult.primaryRecommendation.advantages"
                 :key="advantage.label"
                 class="advantage-item"
               >
@@ -1102,9 +1127,6 @@ onUnmounted(() => {
           <el-button size="large" @click="addToComparison(recommendationResult.primaryRecommendation)">
             加入对比
           </el-button>
-          <el-button size="large" @click="bookTestDrive(recommendationResult.primaryRecommendation)">
-            预约试驾
-          </el-button>
         </div>
       </el-card>
 
@@ -1125,8 +1147,8 @@ onUnmounted(() => {
             <el-tabs v-model="activeAlternativeTab" type="card">
               <el-tab-pane label="性价比推荐" name="budget">
                 <div class="alternative-group">
-                  <div 
-                    v-for="model in recommendationResult.alternatives.budget" 
+                  <div
+                    v-for="model in recommendationResult.alternatives.budget"
                     :key="model.id"
                     class="alternative-item"
                   >
@@ -1152,8 +1174,8 @@ onUnmounted(() => {
 
               <el-tab-pane label="豪华配置" name="luxury">
                 <div class="alternative-group">
-                  <div 
-                    v-for="model in recommendationResult.alternatives.luxury" 
+                  <div
+                    v-for="model in recommendationResult.alternatives.luxury"
                     :key="model.id"
                     class="alternative-item"
                   >
@@ -1179,8 +1201,8 @@ onUnmounted(() => {
 
               <el-tab-pane label="实用首选" name="practical">
                 <div class="alternative-group">
-                  <div 
-                    v-for="model in recommendationResult.alternatives.practical" 
+                  <div
+                    v-for="model in recommendationResult.alternatives.practical"
                     :key="model.id"
                     class="alternative-item"
                   >
@@ -1322,6 +1344,7 @@ onUnmounted(() => {
   </div>
 </template>
 
+
 <style scoped>
 /* 整体布局 */
 .recommendation-analysis {
@@ -1353,7 +1376,7 @@ onUnmounted(() => {
   color: white;
   font-size: 32px;
   font-weight: 700;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  letter-spacing: -0.5px;
 }
 
 .header-left p {
@@ -1384,8 +1407,8 @@ onUnmounted(() => {
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
 }
 
-/* 进度指示器 */
-.progress-card {
+/* 筛选卡片样式 */
+.filter-card {
   margin-bottom: 24px;
   border-radius: 16px;
   box-shadow: 0 6px 30px rgba(0, 0, 0, 0.08);
@@ -1393,141 +1416,167 @@ onUnmounted(() => {
   overflow: hidden;
 }
 
-.progress-content {
-  padding: 24px;
-}
-
-.progress-stats {
+.filter-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 20px;
-  padding-top: 16px;
-  border-top: 1px solid #e8eaed;
-}
-
-.step-info {
-  font-size: 14px;
-  color: #606266;
-  font-weight: 500;
-}
-
-.time-estimate {
-  font-size: 12px;
-  color: #909399;
-}
-
-/* 问卷卡片样式 */
-.questionnaire-card {
-  margin-bottom: 24px;
-  border-radius: 16px;
-  box-shadow: 0 6px 30px rgba(0, 0, 0, 0.08);
-  border: 1px solid #e8eaed;
-  overflow: hidden;
-}
-
-.questionnaire-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
   font-weight: 600;
   color: #1a1a1a;
   font-size: 18px;
 }
 
-.questionnaire-content {
-  padding: 24px;
-}
-
-.questionnaire-actions {
+.filter-stats {
   display: flex;
-  justify-content: center;
+  align-items: center;
   gap: 16px;
-  padding: 24px;
-  border-top: 1px solid #e8eaed;
-  background: #f8fafb;
 }
 
-/* 表单选项样式 */
-.budget-options,
-.body-type-options,
-.energy-options,
-.passenger-options,
-.brand-options,
-.mileage-options,
-.drive-options {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 12px;
-  margin-top: 8px;
+.filter-content {
+  padding: 8px 0;
 }
 
-.budget-options .el-radio,
-.energy-options .el-radio,
-.passenger-options .el-radio,
-.mileage-options .el-radio,
-.drive-options .el-radio {
-  margin-right: 0;
-  padding: 12px 16px;
-  background: #f8fafb;
-  border: 2px solid #e8eaed;
-  border-radius: 12px;
-  transition: all 0.3s ease;
-  width: 100%;
-  text-align: center;
+/* 筛选区块样式 */
+.filter-section {
+  margin-bottom: 32px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid #f0f2f5;
 }
 
-.budget-options .el-radio.is-checked,
-.energy-options .el-radio.is-checked,
-.passenger-options .el-radio.is-checked,
-.mileage-options .el-radio.is-checked,
-.drive-options .el-radio.is-checked {
-  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-  color: white;
-  border-color: #4facfe;
-  box-shadow: 0 4px 15px rgba(79, 172, 254, 0.3);
+.filter-section:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
 }
 
-.body-type-options .el-checkbox,
-.brand-options .el-checkbox {
-  margin-right: 0;
-  padding: 10px 14px;
-  background: #f8fafb;
-  border: 2px solid #e8eaed;
-  border-radius: 10px;
-  transition: all 0.3s ease;
-  width: 100%;
-  text-align: center;
+.section-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  font-weight: 600;
+  color: #1a1a1a;
+  font-size: 16px;
 }
 
-.body-type-options .el-checkbox.is-checked,
-.brand-options .el-checkbox.is-checked {
-  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-  color: white;
-  border-color: #4facfe;
-  box-shadow: 0 4px 15px rgba(79, 172, 254, 0.3);
-}
-
-/* 实时预览 */
-.live-preview {
-  margin-top: 12px;
-  padding: 8px 12px;
-  background: #e8f4fd;
-  border-radius: 8px;
-  font-size: 14px;
+.section-label .el-icon {
   color: #4facfe;
 }
 
-.preview-label {
-  font-weight: 500;
+.required {
+  color: #f56c6c;
+  font-size: 12px;
+  margin-left: 4px;
 }
 
-.preview-count {
-  font-weight: 700;
-  color: #1976d2;
+.optional {
+  color: #909399;
+  font-size: 12px;
+  margin-left: 4px;
 }
 
-/* 筛选预览 */
+/* 筛选选项样式 */
+.filter-options {
+  display: grid;
+  gap: 12px;
+}
+
+.budget-options {
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+.body-type-options {
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+}
+
+.energy-options {
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}
+
+.passenger-options {
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+}
+
+.brand-options {
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+}
+
+.usage-options {
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+}
+
+.mileage-options {
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+}
+
+.filter-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 12px;
+  background: white;
+  border: 2px solid #e8eaed;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  text-align: center;
+  min-height: 80px;
+}
+
+.filter-option:hover {
+  border-color: #4facfe;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(79, 172, 254, 0.2);
+}
+
+.filter-option.active {
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  border-color: #4facfe;
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(79, 172, 254, 0.3);
+}
+
+.filter-option.active .option-desc {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.filter-option .el-icon {
+  font-size: 20px;
+  margin-bottom: 8px;
+  color: #4facfe;
+}
+
+.filter-option.active .el-icon {
+  color: white;
+}
+
+.option-label {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 4px;
+  line-height: 1.2;
+}
+
+.option-desc {
+  font-size: 11px;
+  color: #909399;
+  line-height: 1.3;
+}
+
+/* 品牌选项特殊样式 */
+.brand-option {
+  min-height: 90px;
+}
+
+.brand-logo {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  margin-bottom: 8px;
+  border-radius: 4px;
+}
+
+/* 筛选预览样式 */
 .filter-preview {
   margin-top: 24px;
   padding: 20px;
@@ -1570,235 +1619,33 @@ onUnmounted(() => {
   color: #4facfe;
 }
 
-/* 智能提示 */
+/* 智能提示样式 */
 .smart-hints {
   margin-top: 24px;
   padding: 20px;
   background: linear-gradient(135deg, #fff9e6 0%, #fffbf0 100%);
   border-radius: 12px;
-  border-left: 4px solid #ffd700;
+  border: 1px solid #ffd700;
 }
 
 .smart-hints h4 {
   margin: 0 0 12px 0;
-  color: #b8860b;
+  color: #e6a23c;
   font-size: 16px;
   font-weight: 600;
 }
 
 .hints-list {
   margin: 0;
-  padding-left: 20px;
+  padding-left: 0;
   list-style: none;
 }
 
 .hints-list li {
   margin-bottom: 8px;
-  color: #8b6914;
+  color: #b8860b;
   font-size: 14px;
-  position: relative;
-}
-
-.hints-list li::before {
-  content: '💡';
-  margin-right: 8px;
-}
-
-/* 优先级排序 */
-.priority-instruction {
-  margin-bottom: 24px;
-  text-align: center;
-}
-
-.priority-instruction h4 {
-  margin: 0 0 8px 0;
-  color: #1a1a1a;
-  font-size: 18px;
-  font-weight: 600;
-}
-
-.priority-instruction p {
-  margin: 0;
-  color: #606266;
-  font-size: 14px;
-}
-
-.priority-sorting {
-  margin-bottom: 32px;
-}
-
-.priority-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.priority-item {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 20px;
-  background: white;
-  border: 2px solid #e8eaed;
-  border-radius: 16px;
-  transition: all 0.3s ease;
-  cursor: move;
-}
-
-.priority-item:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
-  border-color: #4facfe;
-}
-
-.priority-item.priority-1 {
-  border-color: #ffd700;
-  background: linear-gradient(135deg, #fff9e6 0%, #fffbf0 100%);
-}
-
-.priority-item.priority-2 {
-  border-color: #c0c4cc;
-  background: linear-gradient(135deg, #f5f7fa 0%, #ffffff 100%);
-}
-
-.priority-rank {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  font-size: 18px;
-  color: white;
-  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-  box-shadow: 0 4px 15px rgba(79, 172, 254, 0.3);
-}
-
-.priority-item.priority-1 .priority-rank {
-  background: linear-gradient(135deg, #ffd700 0%, #ffb300 100%);
-  box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3);
-}
-
-.priority-info {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.priority-info .el-icon {
-  font-size: 24px;
-  color: #4facfe;
-}
-
-.priority-details h5 {
-  margin: 0 0 4px 0;
-  font-size: 16px;
-  font-weight: 600;
-  color: #1a1a1a;
-}
-
-.priority-details p {
-  margin: 0;
-  font-size: 14px;
-  color: #606266;
-  line-height: 1.4;
-}
-
-.priority-weight {
-  font-size: 18px;
-  font-weight: 700;
-  color: #4facfe;
-  min-width: 60px;
-  text-align: center;
-}
-
-.drag-handle {
-  cursor: move;
-  color: #c0c4cc;
-  font-size: 20px;
-}
-
-.drag-handle:hover {
-  color: #4facfe;
-}
-
-/* 权重可视化 */
-.weight-visualization {
-  margin-top: 24px;
-  padding: 20px;
-  background: #f8fafb;
-  border-radius: 12px;
-  border: 1px solid #e8eaed;
-}
-
-.weight-visualization h4 {
-  margin: 0 0 16px 0;
-  color: #1a1a1a;
-  font-size: 16px;
-  font-weight: 600;
-}
-
-.weight-bars {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.weight-bar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.bar-label {
-  min-width: 80px;
-  font-size: 14px;
-  font-weight: 500;
-  color: #606266;
-}
-
-.bar-container {
-  flex: 1;
-  height: 8px;
-  background: #e8eaed;
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.bar-fill {
-  height: 100%;
-  border-radius: 4px;
-  transition: all 0.3s ease;
-}
-
-.bar-fuelEconomy {
-  background: linear-gradient(135deg, #67c23a 0%, #85ce61 100%);
-}
-
-.bar-comfort {
-  background: linear-gradient(135deg, #409eff 0%, #66b1ff 100%);
-}
-
-.bar-space {
-  background: linear-gradient(135deg, #e6a23c 0%, #ebb563 100%);
-}
-
-.bar-performance {
-  background: linear-gradient(135deg, #f56c6c 0%, #f78989 100%);
-}
-
-.bar-intelligence {
-  background: linear-gradient(135deg, #909399 0%, #a6a9ad 100%);
-}
-
-.bar-value {
-  min-width: 40px;
-  font-size: 14px;
-  font-weight: 600;
-  color: #4facfe;
-  text-align: right;
+  line-height: 1.5;
 }
 
 /* 推荐结果区域 */
@@ -1808,7 +1655,7 @@ onUnmounted(() => {
   gap: 24px;
 }
 
-/* 摘要卡片 */
+/* 摘要卡片样式 */
 .summary-card {
   border-radius: 16px;
   box-shadow: 0 6px 30px rgba(0, 0, 0, 0.08);
@@ -1825,11 +1672,14 @@ onUnmounted(() => {
   font-size: 18px;
 }
 
+.summary-content {
+  padding: 8px 0;
+}
+
 .summary-stats {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   gap: 20px;
-  padding: 20px;
 }
 
 .stat-card {
@@ -1838,12 +1688,6 @@ onUnmounted(() => {
   background: linear-gradient(135deg, #f8fafb 0%, #ffffff 100%);
   border-radius: 12px;
   border: 1px solid #e8eaed;
-  transition: all 0.3s ease;
-}
-
-.stat-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
 }
 
 .stat-number {
@@ -1851,6 +1695,7 @@ onUnmounted(() => {
   font-weight: 700;
   color: #4facfe;
   margin-bottom: 8px;
+  display: block;
 }
 
 .stat-label {
@@ -1859,13 +1704,23 @@ onUnmounted(() => {
   font-weight: 500;
 }
 
-/* 主推荐卡片 */
+/* 主推荐卡片样式 */
 .primary-recommendation-card {
   border-radius: 16px;
-  box-shadow: 0 6px 30px rgba(0, 0, 0, 0.08);
-  border: 2px solid #ffd700;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.12);
+  border: 2px solid #4facfe;
   overflow: hidden;
-  background: linear-gradient(135deg, #fff9e6 0%, #ffffff 100%);
+  position: relative;
+}
+
+.primary-recommendation-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
 }
 
 .primary-header {
@@ -1879,7 +1734,7 @@ onUnmounted(() => {
 
 .confidence-badge {
   margin-left: auto;
-  padding: 6px 12px;
+  padding: 4px 12px;
   background: linear-gradient(135deg, #67c23a 0%, #85ce61 100%);
   color: white;
   border-radius: 20px;
@@ -1888,26 +1743,25 @@ onUnmounted(() => {
 }
 
 .primary-content {
-  padding: 24px;
+  padding: 8px 0;
 }
 
 .primary-model {
-  display: flex;
+  display: grid;
+  grid-template-columns: 300px 1fr;
   gap: 24px;
-  margin-bottom: 32px;
+  margin-bottom: 24px;
 }
 
 .model-showcase {
   position: relative;
-  flex-shrink: 0;
 }
 
 .showcase-image {
-  width: 300px;
+  width: 100%;
   height: 200px;
   object-fit: cover;
-  border-radius: 16px;
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
 }
 
 .model-badges {
@@ -1919,10 +1773,6 @@ onUnmounted(() => {
   gap: 8px;
 }
 
-.model-details {
-  flex: 1;
-}
-
 .model-details h3 {
   margin: 0 0 8px 0;
   font-size: 24px;
@@ -1931,90 +1781,88 @@ onUnmounted(() => {
 }
 
 .model-price {
-  margin: 0 0 16px 0;
-  font-size: 20px;
+  margin: 0 0 12px 0;
+  font-size: 18px;
   font-weight: 600;
-  color: #f56c6c;
+  color: #4facfe;
 }
 
 .model-specs {
   display: flex;
   gap: 8px;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
   flex-wrap: wrap;
 }
 
-/* 匹配度雷达图 */
 .match-radar {
-  margin-top: 24px;
+  margin-top: 20px;
 }
 
 .match-radar h4 {
-  margin: 0 0 16px 0;
-  color: #1a1a1a;
+  margin: 0 0 12px 0;
   font-size: 16px;
   font-weight: 600;
+  color: #1a1a1a;
 }
 
 .radar-chart {
-  height: 250px;
+  height: 200px;
   width: 100%;
 }
 
-/* 推荐理由 */
+/* 推荐理由样式 */
 .recommendation-reasons {
-  margin-bottom: 32px;
+  margin-bottom: 24px;
 }
 
 .recommendation-reasons h4 {
   margin: 0 0 16px 0;
-  color: #1a1a1a;
   font-size: 18px;
   font-weight: 600;
+  color: #1a1a1a;
 }
 
 .reasons-list {
-  list-style: none;
   margin: 0;
-  padding: 0;
+  padding-left: 0;
+  list-style: none;
 }
 
 .reasons-list li {
   display: flex;
-  align-items: center;
-  gap: 12px;
+  align-items: flex-start;
+  gap: 8px;
   margin-bottom: 12px;
-  padding: 12px 16px;
-  background: #f0f9ff;
-  border-radius: 10px;
-  color: #1976d2;
   font-size: 14px;
+  color: #606266;
   line-height: 1.5;
 }
 
 .reasons-list li .el-icon {
   color: #67c23a;
   font-size: 16px;
+  margin-top: 2px;
+  flex-shrink: 0;
 }
 
-/* 核心优势 */
+/* 核心优势样式 */
 .core-advantages h4 {
   margin: 0 0 16px 0;
-  color: #1a1a1a;
   font-size: 18px;
   font-weight: 600;
+  color: #1a1a1a;
 }
 
 .advantages-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 16px;
 }
 
 .advantage-item {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
   padding: 16px;
   background: white;
   border: 1px solid #e8eaed;
@@ -2031,6 +1879,7 @@ onUnmounted(() => {
 .advantage-item .el-icon {
   font-size: 24px;
   color: #4facfe;
+  flex-shrink: 0;
 }
 
 .advantage-info {
@@ -2047,26 +1896,25 @@ onUnmounted(() => {
 .advantage-info p {
   margin: 0;
   font-size: 12px;
-  color: #606266;
-  line-height: 1.4;
+  color: #909399;
+  line-height: 1.3;
 }
 
 .advantage-score {
   font-size: 16px;
   font-weight: 700;
-  color: #67c23a;
+  color: #4facfe;
 }
 
-/* 主推荐操作按钮 */
 .primary-actions {
   display: flex;
   justify-content: center;
   gap: 16px;
-  padding-top: 24px;
-  border-top: 1px solid #e8eaed;
+  padding: 24px;
+  border-top: 1px solid #f0f2f5;
 }
 
-/* 备选推荐 */
+/* 备选推荐样式 */
 .alternatives-card {
   border-radius: 16px;
   box-shadow: 0 6px 30px rgba(0, 0, 0, 0.08);
@@ -2076,27 +1924,32 @@ onUnmounted(() => {
 
 .alternatives-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: 12px;
   font-weight: 600;
   color: #1a1a1a;
   font-size: 18px;
 }
 
 .alternatives-content {
-  padding: 20px;
+  padding: 8px 0;
+}
+
+.alternatives-tabs .el-tabs__header {
+  margin: 0;
 }
 
 .alternative-group {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 20px;
+  gap: 16px;
+  padding: 16px 0;
 }
 
 .alternative-item {
   display: flex;
   gap: 16px;
-  padding: 20px;
+  padding: 16px;
   background: white;
   border: 1px solid #e8eaed;
   border-radius: 12px;
@@ -2110,8 +1963,8 @@ onUnmounted(() => {
 }
 
 .alternative-image {
-  width: 120px;
-  height: 80px;
+  width: 100px;
+  height: 70px;
   object-fit: cover;
   border-radius: 8px;
   flex-shrink: 0;
@@ -2119,43 +1972,48 @@ onUnmounted(() => {
 
 .alternative-info {
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .alternative-info h4 {
-  margin: 0 0 8px 0;
+  margin: 0;
   font-size: 16px;
   font-weight: 600;
   color: #1a1a1a;
 }
 
 .alternative-price {
-  margin: 0 0 8px 0;
+  margin: 0;
   font-size: 14px;
   font-weight: 600;
-  color: #f56c6c;
+  color: #4facfe;
 }
 
 .alternative-highlight {
-  margin-bottom: 12px;
+  margin: 4px 0;
 }
 
 .match-score {
-  font-size: 12px;
-  color: #606266;
+  margin-top: auto;
 }
 
-.match-score .el-progress {
-  margin-top: 4px;
+.match-score span {
+  font-size: 12px;
+  color: #606266;
+  margin-bottom: 4px;
+  display: block;
 }
 
 .alternative-actions {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  align-self: flex-start;
+  align-self: center;
 }
 
-/* 对比工具 */
+/* 对比工具样式 */
 .comparison-tool-card {
   border-radius: 16px;
   box-shadow: 0 6px 30px rgba(0, 0, 0, 0.08);
@@ -2165,20 +2023,21 @@ onUnmounted(() => {
 
 .comparison-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: 12px;
   font-weight: 600;
-  color: #4facfe;
-  font-size: 16px;
+  color: #1a1a1a;
+  font-size: 18px;
 }
 
 .comparison-actions {
+  margin-left: auto;
   display: flex;
   gap: 8px;
 }
 
 .comparison-content {
-  padding: 20px;
+  padding: 8px 0;
 }
 
 .comparison-models {
@@ -2191,10 +2050,11 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 16px;
-  background: #f0f9ff;
+  padding: 12px;
+  background: white;
+  border: 1px solid #e8eaed;
   border-radius: 12px;
-  border: 1px solid #4facfe;
+  min-width: 200px;
 }
 
 .comparison-image {
@@ -2202,6 +2062,10 @@ onUnmounted(() => {
   height: 40px;
   object-fit: cover;
   border-radius: 6px;
+}
+
+.comparison-info {
+  flex: 1;
 }
 
 .comparison-info h5 {
@@ -2217,7 +2081,7 @@ onUnmounted(() => {
   color: #606266;
 }
 
-/* 购买建议 */
+/* 购买建议样式 */
 .purchase-advice-card {
   border-radius: 16px;
   box-shadow: 0 6px 30px rgba(0, 0, 0, 0.08);
@@ -2235,44 +2099,43 @@ onUnmounted(() => {
 }
 
 .advice-content {
-  padding: 24px;
+  padding: 8px 0;
 }
 
 .advice-sections {
   display: flex;
   flex-direction: column;
-  gap: 32px;
+  gap: 24px;
 }
 
 .advice-section h4 {
   margin: 0 0 16px 0;
-  color: #1a1a1a;
   font-size: 16px;
   font-weight: 600;
+  color: #1a1a1a;
 }
 
 .timing-advice,
 .channel-advice {
-  padding: 20px;
+  padding: 16px;
   background: #f8fafb;
   border-radius: 12px;
-  border: 1px solid #e8eaed;
 }
 
 .advice-item {
   display: flex;
   align-items: flex-start;
-  gap: 16px;
+  gap: 12px;
 }
 
 .advice-item .el-icon {
-  font-size: 24px;
+  font-size: 20px;
   color: #4facfe;
   margin-top: 2px;
 }
 
 .advice-text h5 {
-  margin: 0 0 8px 0;
+  margin: 0 0 4px 0;
   font-size: 14px;
   font-weight: 600;
   color: #1a1a1a;
@@ -2288,23 +2151,17 @@ onUnmounted(() => {
 .channel-options {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
 }
 
 .channel-item {
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 16px;
+  gap: 12px;
+  padding: 12px;
   background: white;
   border: 1px solid #e8eaed;
-  border-radius: 10px;
-  transition: all 0.3s ease;
-}
-
-.channel-item:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
 }
 
 .channel-item .el-icon {
@@ -2326,37 +2183,19 @@ onUnmounted(() => {
 .channel-info p {
   margin: 0;
   font-size: 12px;
-  color: #606266;
+  color: #909399;
 }
 
 .checklist {
-  padding: 20px;
+  padding: 16px;
   background: #f8fafb;
   border-radius: 12px;
-  border: 1px solid #e8eaed;
 }
 
 .checklist-items {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 12px;
-}
-
-.checklist-items .el-checkbox {
-  padding: 12px;
-  background: white;
-  border: 1px solid #e8eaed;
-  border-radius: 8px;
-  transition: all 0.3s ease;
-}
-
-.checklist-items .el-checkbox:hover {
-  border-color: #4facfe;
-}
-
-.checklist-items .el-checkbox.is-checked {
-  background: #f0f9ff;
-  border-color: #4facfe;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .advice-actions {
@@ -2364,44 +2203,42 @@ onUnmounted(() => {
   justify-content: center;
   gap: 16px;
   padding: 24px;
-  border-top: 1px solid #e8eaed;
-  background: #f8fafb;
+  border-top: 1px solid #f0f2f5;
 }
 
-/* 加载状态 */
+/* 加载状态样式 */
 .loading-overlay {
   position: fixed;
   top: 0;
   left: 0;
-  width: 100%;
-  height: 100%;
+  right: 0;
+  bottom: 0;
   background: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 9999;
-  backdrop-filter: blur(4px);
 }
 
 .loading-card {
-  width: 400px;
+  min-width: 400px;
   border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
 }
 
 .loading-content {
   text-align: center;
-  padding: 40px 24px;
+  padding: 40px 20px;
 }
 
 .loading-icon {
   font-size: 48px;
   color: #4facfe;
   margin-bottom: 16px;
-  animation: rotate 2s linear infinite;
+  animation: spin 1s linear infinite;
 }
 
-@keyframes rotate {
+@keyframes spin {
   from {
     transform: rotate(0deg);
   }
@@ -2412,15 +2249,15 @@ onUnmounted(() => {
 
 .loading-content h3 {
   margin: 0 0 8px 0;
-  color: #1a1a1a;
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 600;
+  color: #1a1a1a;
 }
 
 .loading-content p {
   margin: 0 0 20px 0;
-  color: #606266;
   font-size: 14px;
+  color: #606266;
 }
 
 /* Element Plus 组件样式优化 */
@@ -2432,76 +2269,54 @@ onUnmounted(() => {
 .el-button {
   border-radius: 8px;
   font-weight: 500;
-  transition: all 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.el-button:hover {
-  transform: translateY(-1px);
+.el-button--primary {
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  border: none;
+  box-shadow: 0 4px 12px rgba(79, 172, 254, 0.3);
 }
 
-.el-progress-bar__outer {
-  border-radius: 4px;
+.el-button--primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(79, 172, 254, 0.4);
 }
 
-.el-progress-bar__inner {
-  border-radius: 4px;
+.el-button--success {
+  background: linear-gradient(135deg, #67c23a 0%, #85ce61 100%);
+  border: none;
+  box-shadow: 0 4px 12px rgba(103, 194, 58, 0.3);
 }
 
-.el-tabs__nav-wrap::after {
-  display: none;
+.el-button--success:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(103, 194, 58, 0.4);
 }
 
-.el-tabs__item {
-  border-radius: 8px 8px 0 0;
+.el-tag {
+  border-radius: 6px;
   font-weight: 500;
 }
 
-.el-steps .el-step__line {
-  border-radius: 2px;
-}
-
-/* 动画效果 */
-@keyframes slideInUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.questionnaire-card,
-.summary-card,
-.primary-recommendation-card,
-.alternatives-card {
-  animation: slideInUp 0.6s ease-out;
-}
-
-.alternative-item {
-  animation: slideInUp 0.4s ease-out;
+.el-progress__text {
+  font-size: 12px !important;
+  font-weight: 600;
 }
 
 /* 响应式设计 */
 @media (max-width: 1200px) {
   .primary-model {
-    flex-direction: column;
-    gap: 20px;
-  }
-
-  .showcase-image {
-    width: 100%;
-    max-width: 400px;
-    margin: 0 auto;
+    grid-template-columns: 1fr;
+    gap: 16px;
   }
 
   .advantages-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   }
 
   .alternative-group {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   }
 }
 
@@ -2518,6 +2333,7 @@ onUnmounted(() => {
 
   .header-actions {
     justify-content: center;
+    flex-wrap: wrap;
   }
 
   .header-left h2 {
@@ -2529,10 +2345,10 @@ onUnmounted(() => {
     text-align: center;
   }
 
-  .progress-stats {
+  .filter-header {
     flex-direction: column;
-    gap: 8px;
-    text-align: center;
+    gap: 12px;
+    align-items: stretch;
   }
 
   .budget-options,
@@ -2540,51 +2356,47 @@ onUnmounted(() => {
   .energy-options,
   .passenger-options,
   .brand-options,
-  .mileage-options,
-  .drive-options {
-    grid-template-columns: 1fr;
+  .usage-options,
+  .mileage-options {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .filter-option {
+    min-height: 70px;
+    padding: 12px 8px;
   }
 
   .preview-stats {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
   }
 
   .summary-stats {
     grid-template-columns: repeat(2, 1fr);
   }
 
+  .primary-header {
+    flex-direction: column;
+    gap: 8px;
+    align-items: stretch;
+  }
+
+  .confidence-badge {
+    margin-left: 0;
+    text-align: center;
+  }
+
   .primary-actions {
     flex-direction: column;
   }
 
-  .advice-actions {
+  .alternatives-header {
     flex-direction: column;
+    gap: 8px;
+    align-items: stretch;
   }
 
-  .comparison-models {
-    flex-direction: column;
-  }
-
-  .channel-options {
-    gap: 12px;
-  }
-
-  .checklist-items {
+  .alternative-group {
     grid-template-columns: 1fr;
-  }
-
-  .loading-card {
-    width: 320px;
-  }
-}
-
-@media (max-width: 480px) {
-  .questionnaire-actions {
-    flex-direction: column;
-  }
-
-  .questionnaire-actions .el-button {
-    width: 100%;
   }
 
   .alternative-item {
@@ -2592,13 +2404,75 @@ onUnmounted(() => {
     text-align: center;
   }
 
+  .alternative-image {
+    width: 100%;
+    height: 120px;
+  }
+
   .alternative-actions {
     flex-direction: row;
-    justify-content: center;
+    align-self: stretch;
+  }
+
+  .comparison-header {
+    flex-direction: column;
+    gap: 8px;
+    align-items: stretch;
+  }
+
+  .comparison-models {
+    flex-direction: column;
   }
 
   .comparison-model {
-    justify-content: space-between;
+    min-width: auto;
+  }
+
+  .advice-actions {
+    flex-direction: column;
+  }
+
+  .channel-options {
+    gap: 8px;
+  }
+
+  .channel-item {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .loading-card {
+    min-width: 320px;
+    margin: 0 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .budget-options,
+  .body-type-options,
+  .energy-options,
+  .passenger-options,
+  .brand-options,
+  .usage-options,
+  .mileage-options {
+    grid-template-columns: 1fr;
+  }
+
+  .preview-stats,
+  .summary-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .advantages-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .stat-number {
+    font-size: 24px;
+  }
+
+  .header-left h2 {
+    font-size: 20px;
   }
 }
 
@@ -2609,7 +2483,7 @@ onUnmounted(() => {
     color: #e4e7ed;
   }
 
-  .questionnaire-card,
+  .filter-card,
   .summary-card,
   .primary-recommendation-card,
   .alternatives-card,
@@ -2619,8 +2493,11 @@ onUnmounted(() => {
     border-color: #404040;
   }
 
-  .alternative-item,
+  .filter-option,
+  .stat-card,
   .advantage-item,
+  .alternative-item,
+  .comparison-model,
   .channel-item {
     background: #2d2d2d;
     border-color: #404040;
@@ -2628,12 +2505,64 @@ onUnmounted(() => {
 
   .filter-preview,
   .smart-hints,
-  .weight-visualization,
   .timing-advice,
   .channel-advice,
   .checklist {
     background: #363636;
-    border-color: #505050;
+  }
+
+  .loading-card {
+    background: #2d2d2d;
+  }
+}
+
+/* 高对比度模式支持 */
+@media (prefers-contrast: high) {
+  .filter-option,
+  .alternative-item,
+  .comparison-model,
+  .channel-item {
+    border-width: 2px;
+    border-color: #000;
+  }
+
+  .showcase-image,
+  .alternative-image,
+  .comparison-image {
+    border: 2px solid #000;
+  }
+}
+
+/* 打印样式 */
+@media print {
+  .recommendation-analysis {
+    background: white !important;
+  }
+
+  .header-actions,
+  .filter-stats,
+  .primary-actions,
+  .alternative-actions,
+  .comparison-actions,
+  .advice-actions {
+    display: none !important;
+  }
+
+  .filter-card,
+  .summary-card,
+  .primary-recommendation-card,
+  .alternatives-card,
+  .purchase-advice-card {
+    break-inside: avoid;
+    margin-bottom: 12px;
+    box-shadow: none !important;
+    border: 1px solid #ccc !important;
+  }
+
+  .page-header {
+    background: white !important;
+    color: black !important;
+    border: 1px solid #ccc !important;
   }
 }
 
@@ -2648,9 +2577,9 @@ onUnmounted(() => {
 
 /* 聚焦样式 */
 .el-button:focus-visible,
-.el-radio:focus-visible,
-.el-checkbox:focus-visible,
-.priority-item:focus-visible {
+.filter-option:focus-visible,
+.alternative-item:focus-visible,
+.comparison-model:focus-visible {
   outline: 2px solid #4facfe;
   outline-offset: 2px;
 }
