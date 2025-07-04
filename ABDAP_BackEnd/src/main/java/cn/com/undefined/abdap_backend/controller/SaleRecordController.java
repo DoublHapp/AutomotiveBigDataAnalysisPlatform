@@ -5,7 +5,7 @@ import cn.com.undefined.abdap_backend.dto.CarModelRankingDTO;
 import cn.com.undefined.abdap_backend.dto.MonthlySalesTrendDTO;
 import cn.com.undefined.abdap_backend.dto.MonthlyRevenueTrendDTO;
 import cn.com.undefined.abdap_backend.dto.RegionSalesDTO;
-import cn.com.undefined.abdap_backend.entity.SaleRecord;
+import cn.com.undefined.abdap_backend.dto.SaleRecordDTO;
 import cn.com.undefined.abdap_backend.service.SaleRecordService;
 import cn.com.undefined.abdap_backend.util.ResponseUtil;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,15 +24,13 @@ import java.util.List;
 public class SaleRecordController {
 
     @Autowired
-    private SaleRecordService service;
-
-    /**
+    private SaleRecordService service;    /**
      * 查询所有销售记录
      * GET /api/sale-records
      */
     @GetMapping
-    public ResponseEntity<ApiResponse<List<SaleRecord>>> getAllSaleRecords() {
-        List<SaleRecord> records = service.findAll();
+    public ResponseEntity<ApiResponse<List<SaleRecordDTO>>> getAllSaleRecords() {
+        List<SaleRecordDTO> records = service.findAll();
         return ResponseUtil.success(records);
     }
 
@@ -41,18 +39,16 @@ public class SaleRecordController {
      * GET /api/sale-records/car-model/{carModelId}
      */
     @GetMapping("/car-model/{carModelId}")
-    public ResponseEntity<ApiResponse<List<SaleRecord>>> getByCarModelId(@PathVariable Long carModelId) {
-        List<SaleRecord> records = service.findByCarModelId(carModelId);
+    public ResponseEntity<ApiResponse<List<SaleRecordDTO>>> getByCarModelId(@PathVariable Long carModelId) {
+        List<SaleRecordDTO> records = service.findByCarModelId(carModelId);
         return ResponseUtil.success(records);
-    }
-
-    /**
+    }    /**
      * 根据地区ID查询销售记录
      * GET /api/sale-records/region/{regionId}
      */
     @GetMapping("/region/{regionId}")
-    public ResponseEntity<ApiResponse<List<SaleRecord>>> getByRegionId(@PathVariable Long regionId) {
-        List<SaleRecord> records = service.findByRegionId(regionId);
+    public ResponseEntity<ApiResponse<List<SaleRecordDTO>>> getByRegionId(@PathVariable Long regionId) {
+        List<SaleRecordDTO> records = service.findByRegionId(regionId);
         return ResponseUtil.success(records);
     }
 
@@ -61,8 +57,8 @@ public class SaleRecordController {
      * GET /api/sale-records/region/name/{regionName}
      */
     @GetMapping("/region/name/{regionName}")
-    public ResponseEntity<ApiResponse<List<SaleRecord>>> getByRegionName(@PathVariable String regionName) {
-        List<SaleRecord> records = service.findByRegionName(regionName);
+    public ResponseEntity<ApiResponse<List<SaleRecordDTO>>> getByRegionName(@PathVariable String regionName) {
+        List<SaleRecordDTO> records = service.findByRegionName(regionName);
         return ResponseUtil.success(records);
     }
 
@@ -71,10 +67,10 @@ public class SaleRecordController {
      * GET /api/sale-records/search?carModelId={carModelId}&regionName={regionName}
      */
     @GetMapping("/search")
-    public ResponseEntity<ApiResponse<List<SaleRecord>>> getByCarModelIdAndRegionName(
+    public ResponseEntity<ApiResponse<List<SaleRecordDTO>>> getByCarModelIdAndRegionName(
             @RequestParam Long carModelId,
             @RequestParam String regionName) {
-        List<SaleRecord> records = service.findByCarModelIdAndRegionName(carModelId, regionName);
+        List<SaleRecordDTO> records = service.findByCarModelIdAndRegionName(carModelId, regionName);
         return ResponseUtil.success(records);
     }
 
