@@ -45,7 +45,7 @@ interface regionOption {
 }
 
 const regionOptionsAll: regionOption[] = [
-  { label: '全国', value: 'null' },
+  { label: '全国', value: '0' },
   { label: '北京省', value: '1' },
   { label: '上海省', value: '2' },
   { label: '广东省', value: '3' },
@@ -71,18 +71,65 @@ const carModelOptions: carModelOption[] = [
 // 筛选条件
 const dateRangeType = ref<'month' | 'quarter' | 'year'>('month')
 const dateRange = ref<[string, string]>(['2023-01', '2023-12'])
-const carModelTargets = ref<string[]>(['1'])
-const regionTargets = ref<string[]>(['null'])
+const regionSingle = ref<string>('1'); 
+const regionArray = ref<string[]>([]);
+const carModelSingle = ref<string>(''); 
+const carModelArray = ref<string[]>([]);
+
 const powerType = ref<string>('全部')
 
 // 计算当前可选项和选择方式
 const carModelMultiple = computed(() => compareMode.value == 'carModel' || compareMode.value == 'none')
 const regionMultiple = computed(() => compareMode.value == 'region' || compareMode.value == 'none')
 const regionOptions = computed(() =>
-  compareMode.value === 'region'
-    ? regionOptionsNoAll
-    : regionOptionsAll
+  compareMode.value !== 'region'
+    ? regionOptionsAll
+    : regionOptionsNoAll
 )
+
+// 计算当前选择数组还是对象
+const carModelTargets = computed<any>({
+  get() {
+    return carModelMultiple.value ? carModelArray.value : carModelSingle.value;
+  },
+  set(newVal) {
+    if (carModelMultiple.value) {
+      carModelArray.value = newVal;
+    } else {
+      carModelSingle.value = newVal;
+    }
+  },
+});
+
+const regionTargets = computed<any>({
+  get() {
+    return regionMultiple ? regionArray.value : regionSingle.value;
+  },
+  set(newVal) {
+    if (carModelMultiple) {
+      regionArray.value = newVal;
+    } else {
+      regionSingle.value = newVal;
+    }
+  },
+});
+
+const getSafeRegionArray = () => {
+  return regionMultiple.value 
+    ? regionArray.value 
+    : regionSingle.value 
+      ? [regionSingle.value] 
+      : [];
+};
+
+const getSafeCarModelArray = () => {
+  return carModelMultiple.value 
+    ? carModelArray.value 
+    : carModelSingle.value 
+      ? [carModelSingle.value] 
+      : [];
+};
+
 // 图表实例
 const chartRef = ref<HTMLDivElement>()
 let chartInstance: echarts.ECharts | null = null
@@ -101,25 +148,20 @@ function showStatsDetail(stats: { name: string, min: number, max: number, avg: n
   statsDetailVisible.value = true
 }
 
-// 测试
-const handleFilterChange = () => {
-  console.log(carModelTargets.value)
-}
-
 // 选择时自动修正选项
 watch(compareMode, (mode) => {
   if (mode === 'region') {
-    // 地区多选，车型单选，地区包含全国
-    carModelTargets.value = []
-    regionTargets.value = []
+    // 地区多选，车型单选，不包含全国
+    regionArray.value = [];
+    carModelSingle.value = ''; 
   } else if (mode === 'carModel') {
-    // 车型多选，地区单选，不含全国
-    regionTargets.value = [regionOptionsAll[0].value]
-    carModelTargets.value = ['1']
+    // 车型多选，地区单选，包含全国
+    carModelArray.value = [];
+    regionSingle.value = '';
   } else {
     // 不限，地区多选不含全国，车型多选
-    regionTargets.value = [regionOptionsNoAll[0].value]
-    carModelTargets.value = [carModelOptions[0].value]
+    regionArray.value = [];
+    carModelArray.value = [];
   }
 })
 
@@ -165,62 +207,62 @@ watch(statsDetailVisible, (visible) => {
 })
 
 // 生成模拟数据
-function generateMockData() {
-  const [start, end] = dateRange.value
-  const dateList: string[] = []
-  let cur = new Date(start + '-01')
-  const endDate = new Date(end + '-01')
-  if (dateRangeType.value === 'month') {
-    while (cur <= endDate) {
-      dateList.push(cur.toISOString().slice(0, 7))
-      cur.setMonth(cur.getMonth() + 1)
-    }
-  } else if (dateRangeType.value === 'quarter') {
-    while (cur <= endDate) {
-      const year = cur.getFullYear()
-      const month = cur.getMonth()
-      const quarter = Math.floor(month / 3) + 1
-      dateList.push(`${year}-Q${quarter}`)
-      cur.setMonth(month + 3)
-    }
-  } else if (dateRangeType.value === 'year') {
-    while (cur <= endDate) {
-      dateList.push(cur.getFullYear().toString())
-      cur.setFullYear(cur.getFullYear() + 1)
-    }
-  }
+// function generateMockData() {
+//   const [start, end] = dateRange.value
+//   const dateList: string[] = []
+//   let cur = new Date(start + '-01')
+//   const endDate = new Date(end + '-01')
+//   if (dateRangeType.value === 'month') {
+//     while (cur <= endDate) {
+//       dateList.push(cur.toISOString().slice(0, 7))
+//       cur.setMonth(cur.getMonth() + 1)
+//     }
+//   } else if (dateRangeType.value === 'quarter') {
+//     while (cur <= endDate) {
+//       const year = cur.getFullYear()
+//       const month = cur.getMonth()
+//       const quarter = Math.floor(month / 3) + 1
+//       dateList.push(`${year}-Q${quarter}`)
+//       cur.setMonth(month + 3)
+//     }
+//   } else if (dateRangeType.value === 'year') {
+//     while (cur <= endDate) {
+//       dateList.push(cur.getFullYear().toString())
+//       cur.setFullYear(cur.getFullYear() + 1)
+//     }
+//   }
 
-  let targets: { region: string, carModel: string }[] = []
-  if (compareMode.value === 'region') {
-    // 地区多选，车型单选
-    regionTargets.value.forEach(region =>
-      targets.push({ region, carModel: carModelTargets.value[0] })
-    )
-  } else if (compareMode.value === 'carModel') {
-    // 车型多选，地区单选
-    carModelTargets.value.forEach(carModel =>
-      targets.push({ region: regionTargets.value[0], carModel })
-    )
-  } else {
-    // 不限，地区和车型多选，耦合为独立项
-    regionTargets.value.forEach(region =>
-      carModelTargets.value.forEach(carModel =>
-        targets.push({ region, carModel })
-      )
-    )
-  }
+//   let targets: { region: string, carModel: string }[] = []
+//   if (compareMode.value === 'region') {
+//     // 地区多选，车型单选
+//     regionTargets.value.forEach(region =>
+//       targets.push({ region, carModel: carModelTargets.value[0] })
+//     )
+//   } else if (compareMode.value === 'carModel') {
+//     // 车型多选，地区单选
+//     carModelTargets.value.forEach(carModel =>
+//       targets.push({ region: regionTargets.value[0], carModel })
+//     )
+//   } else {
+//     // 不限，地区和车型多选，耦合为独立项
+//     regionTargets.value.forEach(region =>
+//       carModelTargets.value.forEach(carModel =>
+//         targets.push({ region, carModel })
+//       )
+//     )
+//   }
 
-  return targets.map((target, idx) => {
-    const base = 2000 + Math.floor(Math.random() * 2000)
-    const fluct = 500 + Math.floor(Math.random() * 500)
-    const data = dateList.map((_d, i) => base + Math.floor(Math.sin(i / 2 + idx) * fluct + Math.random() * 200))
-    return {
-      name: `${target.region}-${target.carModel}`,
-      data,
-      dateList
-    }
-  })
-}
+//   return targets.map((target, idx) => {
+//     const base = 2000 + Math.floor(Math.random() * 2000)
+//     const fluct = 500 + Math.floor(Math.random() * 500)
+//     const data = dateList.map((_d, i) => base + Math.floor(Math.sin(i / 2 + idx) * fluct + Math.random() * 200))
+//     return {
+//       name: `${target.region}-${target.carModel}`,
+//       data,
+//       dateList
+//     }
+//   })
+// }
 
 interface repsonseData {
   saleId: number;
@@ -243,10 +285,10 @@ function processResponseData(salesData: repsonseData[]): chartData[] {
   // 创建一个Map来按名称分组数据
   const groupedData = new Map<string, { counts: number[]; dates: string[] }>();
 
-  console.log(salesData[0].regionName,typeof salesData[0].regionName,salesData[0].regionName === "null")
+  console.log(salesData[0].regionId,typeof salesData[0].regionName,salesData[0].regionName === "null")
   // 遍历所有销售记录
   salesData.forEach(record => {
-    const key = record.regionName ===  "全国"?`${record.carModelName}`:`${record.carModelName}${record.regionName}`;
+    const key = record.regionName ===  "全国"?`${record.carModelName}`:`${record.carModelName}--${record.regionId}`;
     
     // 如果Map中还没有这个key，就初始化
     if (!groupedData.has(key)) {
@@ -288,16 +330,42 @@ function processResponseData(salesData: repsonseData[]): chartData[] {
 async function fetchTrendData() {
   // 这里实际应调用后端接口
   const params = new URLSearchParams();
-  carModelTargets.value.forEach(item => {
-    params.append('carModelIds', item.toString());
-  });
-  console.log(carModelTargets.value)
-  if(regionTargets.value[0] !== 'null'){ 
-    console.log(regionTargets.value)
-    regionTargets.value.forEach(item => {
-      params.append('regionIds', item?.toString() || '');
+  if(regionMultiple.value){
+    regionArray.value.forEach(item => {
+      params.append('regionIds', item.toString());
     });
+  }else{
+    params.append('regionIds', regionSingle.value.toString());
   }
+
+  if(carModelMultiple.value){
+    carModelArray.value.forEach(item => {
+      params.append('carModelIds', item.toString());
+    });
+  }else{
+    params.append('carModelIds', carModelSingle.value.toString());
+  }
+  // getSafeCarModelArray().forEach(item => {
+  //   params.append('carModelIds', item.toString());
+  // });
+  // getSafeRegionArray().forEach(item => {
+  //   params.append('regionIds', item?.toString() || '');
+  // });
+
+  // if(Array.isArray(carModelTargets.value)){
+    
+  // }else{
+  //   [carModelTargets.value].forEach(item => {
+  //     params.append('carModelIds', item.toString());
+  //   });
+  // }
+  
+  // console.log(carModelTargets.value)
+  // if(regionTargets.value[0] !== 'null'){ 
+  //   console.log(regionTargets.value)
+    
+  // }
+  
   console.log(`/api/sale-records/multiple?${params.toString()}`)
   const res = await axios.get(`/api/sale-records/multiple?${params.toString()}`)
   console.log('请求参数:', res.data)
@@ -420,14 +488,13 @@ onMounted(() => {
           </el-radio-group>
           <!-- 车型选择 -->
           <el-select
-            v-model="carModelTargets.values"
+            v-model="carModelTargets"
             :multiple="carModelMultiple"
             filterable
             collapse-tags
             collapse-tags-tooltip
             placeholder="选择车型"
             style="margin-left: 16px; width: 220px; max-height: 32px; overflow: hidden;vertical-align: middle;"
-            @change="handleFilterChange"
           >
             <el-option
               v-for="item in carModelOptions"
@@ -438,7 +505,7 @@ onMounted(() => {
           </el-select>
           <!-- 地区选择 -->
           <el-select
-            v-model="regionTargets.values"
+            v-model="regionTargets"
             :multiple="regionMultiple"
             filterable
             collapse-tags
