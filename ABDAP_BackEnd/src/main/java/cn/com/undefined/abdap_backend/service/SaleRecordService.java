@@ -11,6 +11,8 @@ import cn.com.undefined.abdap_backend.entity.SaleRecord;
 import cn.com.undefined.abdap_backend.repository.CarModelRepository;
 import cn.com.undefined.abdap_backend.repository.RegionRepository;
 import cn.com.undefined.abdap_backend.repository.SaleRecordRepository;
+import jakarta.persistence.EntityNotFoundException;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -308,14 +310,28 @@ public class SaleRecordService {
         dto.setSaleMonth(saleRecord.getSaleMonth());
         dto.setSaleCount(saleRecord.getSaleCount());
         dto.setSaleAmount(saleRecord.getSaleAmount());
-        // 设置车型名称
-        if (saleRecord.getCarModel() != null) {
-            dto.setCarModelName(saleRecord.getCarModel().getModelName());
+        // 安全设置车型名称
+        try {
+            if (saleRecord.getCarModel() != null) {
+                dto.setCarModelName(saleRecord.getCarModel().getModelName());
+            } else {
+                dto.setCarModelName(null);
+            }
+        } catch (EntityNotFoundException e) {
+            // 如果获取车型信息失败，设置为null
+            dto.setCarModelName(null);
         }
 
-        // 设置地区名称
-        if (saleRecord.getRegion() != null) {
-            dto.setRegionName(saleRecord.getRegion().getRegionName());
+        // 安全设置地区名称
+        try {
+            if (saleRecord.getRegion() != null) {
+                dto.setRegionName(saleRecord.getRegion().getRegionName());
+            } else {
+                dto.setRegionName(null);
+            }
+        } catch (EntityNotFoundException e) {
+            // 如果获取地区信息失败，设置为null
+            dto.setRegionName(null);
         }
 
         return dto;
