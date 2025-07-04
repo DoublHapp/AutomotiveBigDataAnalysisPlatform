@@ -291,9 +291,14 @@ async function fetchTrendData() {
   carModelTargets.value.forEach(item => {
     params.append('carModelIds', item.toString());
   });
-  regionTargets.value.forEach(item => {
-    params.append('regionIds', item?.toString() || '[]');
-  });
+  console.log(carModelTargets.value)
+  if(regionTargets.value[0] !== 'null'){ 
+    console.log(regionTargets.value)
+    regionTargets.value.forEach(item => {
+      params.append('regionIds', item?.toString() || '');
+    });
+  }
+  console.log(`/api/sale-records/multiple?${params.toString()}`)
   const res = await axios.get(`/api/sale-records/multiple?${params.toString()}`)
   console.log('请求参数:', res.data)
   return processResponseData(res.data.data)
@@ -415,7 +420,7 @@ onMounted(() => {
           </el-radio-group>
           <!-- 车型选择 -->
           <el-select
-            v-model="carModelTargets"
+            v-model="carModelTargets.values"
             :multiple="carModelMultiple"
             filterable
             collapse-tags
@@ -433,7 +438,7 @@ onMounted(() => {
           </el-select>
           <!-- 地区选择 -->
           <el-select
-            v-model="regionTargets"
+            v-model="regionTargets.values"
             :multiple="regionMultiple"
             filterable
             collapse-tags
