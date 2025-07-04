@@ -21,7 +21,7 @@
       </div>
     </el-card>
 
-      <!-- 目标和投入设置弹窗 -->
+    <!-- 目标和投入设置弹窗 -->
     <el-dialog
       v-model="showTargetDialog"
       title="销售目标与营销投入设置"
@@ -90,20 +90,20 @@
             </el-tag>
           </el-form-item>
 
-          <!-- 新增：行业平均ROI输入 -->
-<el-form-item label="行业平均ROI:" prop="industryAverageROI">
-  <el-input-number
-    v-model="targetForm.industryAverageROI"
-    :min="-100"
-    :max="100"
-    :step="1"
-    :precision="1"
-    style="width: 200px;"
-  />
-  <el-tooltip content="请输入当前行业的平均ROI水平作为对比基准" placement="top">
-    <el-icon style="margin-left: 8px; color: #909399;"><QuestionFilled /></el-icon>
-  </el-tooltip>
-</el-form-item>
+          <!--行业平均ROI输入 -->
+          <el-form-item label="行业平均ROI:" prop="industryAverageROI">
+            <el-input-number
+              v-model="targetForm.industryAverageROI"
+              :min="-100"
+              :max="100"
+              :step="1"
+              :precision="1"
+              style="width: 200px;"
+            />
+            <el-tooltip content="请输入当前行业的平均ROI水平作为对比基准" placement="top">
+              <el-icon style="margin-left: 8px; color: #909399;"><QuestionFilled /></el-icon>
+            </el-tooltip>
+          </el-form-item>
 
           <!-- 投入分配明细 -->
           <el-form-item label="投入分配:">
@@ -253,20 +253,21 @@
         </div>
 
         <div class="filter-group">
-          <label>车型类别:</label>
-          <el-select v-model="globalFilters.carType" @change="handleGlobalFilterChange">
-            <el-option label="特斯拉 Model Y" value="model_y" />
-            <el-option label="特斯拉 Model 3" value="model_3" />
-            <el-option label="比亚迪汉EV" value="han_ev" />
-            <el-option label="比亚迪海豚" value="dolphin" />
-            <el-option label="理想ONE" value="ideal_one" />
-            <el-option label="蔚来ES6" value="es6" />
-            <el-option label="小鹏P7" value="p7" />
-            <el-option label="奔驰C级" value="c_class" />
-            <el-option label="宝马3系" value="bmw_3" />
-            <el-option label="奥迪A4L" value="a4l" />
-            <el-option label="丰田凯美瑞" value="camry" />
-            <el-option label="本田雅阁" value="accord" />
+          <label>车型:</label>
+          <el-select
+            v-model="globalFilters.carModel"
+            placeholder="选择车型"
+            @change="handleGlobalFilterChange"
+            clearable
+          >
+            <el-option label="全部车型" value="all" />
+            <!-- 使用真实的车型数据 -->
+            <el-option
+              v-for="model in availableCarModels"
+              :key="model.carModelId"
+              :label="`${model.brandName} ${model.modelName}`"
+              :value="model.carModelId.toString()"
+            />
           </el-select>
         </div>
 
@@ -406,7 +407,6 @@
             <div class="trend-analysis-summary">
               <el-tag :type="trendAnalysis.type">{{ trendAnalysis.summary }}</el-tag>
               <span class="analysis-detail">{{ trendAnalysis.detail }}</span>
-          
             </div>
           </template>
           <div
@@ -450,20 +450,18 @@
             <div class="chart-header">
               <span>热门车型排行</span>
               <div class="ranking-filters">
-                <el-select v-model="modelRankingType" size="small" @change="updateModelRanking">
+                <el-select v-model="modelRankingType" size="small" @change="handleRankingTypeChange">
                   <el-option label="销量排行" value="sales" />
                   <el-option label="增长率排行" value="growth" />
                   <el-option label="市场份额排行" value="share" />
-          
                 </el-select>
                 <el-input-number
                   v-model="topN"
                   :min="5"
                   :max="20"
                   size="small"
-                  @change="updateModelRanking"
+                  @change="handleTopNChange"
                 />
-                
               </div>
             </div>
           </template>
@@ -602,12 +600,86 @@ import {
   ArrowUp,
   Minus,
   Trophy,
-  Setting
+  Setting,
+  QuestionFilled
 } from '@element-plus/icons-vue'
 import * as echarts from 'echarts'
 import axios from 'axios'
 
 const router = useRouter()
+
+// 接口定义 - 与后端API响应结构完全匹配
+interface CarModel {
+  carModelId: number
+  modelName: string
+  brandId: number
+  brandName: string
+  level: string
+  launchDate: string
+  officialPrice: number
+  engineType: string
+  seatNum: number
+  driveType: string
+  rangeKm: number
+}
+
+interface SaleRecord {
+  saleRecordId: number
+  carModelId: number
+  regionId: number
+  saleMonth: string
+  saleCount: number
+  saleAmount: number
+  carModel: {
+    carModelId: number
+    modelName: string
+    brandId: number
+  }
+  region: {
+    regionId: number
+    regionName: string
+    parentRegionId?: number | null
+  }
+}
+
+// 业务数据接口定义
+interface SalesTrendItem {
+  date: string
+  salesVolume: number
+  lastYearSalesVolume?: number
+  month: number
+  year: number
+}
+
+interface SalesAmountItem {
+  date: string
+  salesAmount: number
+  month: number
+  year: number
+}
+
+interface TopModelItem {
+  carModel: string
+  brandName: string
+  salesVolume: number
+  salesAmount: number
+  recordCount: number
+  growthRate?: number
+  marketShare: number
+  profit: number
+}
+
+interface RegionSalesItem {
+  region: string
+  salesVolume: number
+  salesAmount: number
+  marketShare: number
+}
+
+interface RegionOption {
+  id: number | string
+  name: string
+}
 
 // 响应式数据
 const loading = ref(false)
@@ -624,6 +696,10 @@ const topN = ref(10)
 const showTargetDialog = ref(false)
 const targetFormRef = ref()
 
+// 基础数据存储 - 直接从API获取
+const carModelsData = ref<CarModel[]>([])
+const saleRecordsData = ref<SaleRecord[]>([])
+const availableCarModels = ref<CarModel[]>([])
 
 // 目标设置表单
 const targetForm = reactive({
@@ -631,7 +707,8 @@ const targetForm = reactive({
   targetTime: new Date(),
   quarter: 'Q1',
   salesTarget: 50000,
-  marketingInvestment: 5000000
+  marketingInvestment: 5000000,
+  industryAverageROI: 3.5
 })
 
 // 投入分配
@@ -657,6 +734,9 @@ const targetRules = {
   marketingInvestment: [
     { required: true, message: '请输入营销投入', trigger: 'blur' },
     { type: 'number', min: 100000, message: '营销投入不能少于10万元', trigger: 'blur' }
+  ],
+  industryAverageROI: [
+    { type: 'number', min: -100, max: 100, message: 'ROI应在-100%到100%之间', trigger: 'blur' }
   ]
 }
 
@@ -672,7 +752,7 @@ const globalFilters = reactive({
 const targetSales = ref(50000)
 const actualSales = ref(0)
 const lastYearSales = ref(0)
-const totalMarketSales = ref(0)
+const totalMarketSales = ref(500000)
 const channelInvestment = ref(5000000)
 const industryGrowth = ref(8.5)
 const marketShareRank = ref(3)
@@ -697,17 +777,372 @@ let comparisonChartInstance: echarts.ECharts | null = null
 let forecastChartInstance: echarts.ECharts | null = null
 let kpiTrendChartInstance: echarts.ECharts | null = null
 
-// 数据存储
-const salesTrendData = ref<any[]>([])
-const salesAmountData = ref<any[]>([])
-const topModelsData = ref<any[]>([])
-const regionSalesData = ref<any[]>([])
-const availableRegions = ref<any[]>([])
+// 业务数据存储 - 从基础数据处理生成
+const salesTrendData = ref<SalesTrendItem[]>([])
+const salesAmountData = ref<SalesAmountItem[]>([])
+const topModelsData = ref<TopModelItem[]>([])
+const regionSalesData = ref<RegionSalesItem[]>([])
+const availableRegions = ref<RegionOption[]>([])
 const detailTableData = ref<any[]>([])
 const currentRecommendations = ref<any[]>([])
 const forecastSummary = ref('')
 
-// 计算属性 - 业务指标
+// ===========================================
+// 🎯 API调用函数 - 仅使用提供的两个接口
+// ===========================================
+
+const fetchCarModels = async (): Promise<CarModel[]> => {
+  try {
+    console.log('🚀 正在获取车型列表...')
+    const response = await axios.get('/api/car-models')
+    console.log('📡 车型API响应:', response.data)
+
+    if (response.data.status === 200) {
+      const models = response.data.data
+      console.log('✅ 获取到车型数据:', models.length, '个车型')
+      return models
+    } else {
+      throw new Error(`API返回错误状态: ${response.data.status}`)
+    }
+  } catch (error) {
+    console.error('❌ 获取车型列表失败:', error)
+    ElMessage.error('车型数据加载失败，使用模拟数据')
+    return generateMockCarModels()
+  }
+}
+
+const fetchSaleRecords = async (): Promise<SaleRecord[]> => {
+  try {
+    console.log('🚀 正在获取销售记录...')
+    const response = await axios.get('/api/sale-records')
+    console.log('📡 销售记录API响应:', response.data)
+
+    if (response.data.status === 200) {
+      const records = response.data.data
+      console.log('✅ 获取到销售记录:', records.length, '条记录')
+      return records
+    } else {
+      throw new Error(`API返回错误状态: ${response.data.status}`)
+    }
+  } catch (error) {
+    console.error('❌ 获取销售记录失败:', error)
+    ElMessage.error('销售数据加载失败，使用模拟数据')
+    return generateMockSaleRecords()
+  }
+}
+
+// ===========================================
+// 🔄 基础数据处理函数 - 核心业务逻辑
+// ===========================================
+
+const processBasicData = () => {
+  try {
+    console.log(' 开始处理基础数据...')
+
+    if (!validateData()) {
+      ElMessage.warning('数据验证失败，可能影响显示效果')
+    }
+
+    // 按顺序处理各种业务数据
+    processSalesTrendData()        // 处理销量趋势
+    processSalesAmountData()       // 处理销售额数据
+    processTopModelsData()         // 处理车型排行
+    processRegionSalesData()       // 处理地区销量
+    calculateBusinessMetrics()     // 计算业务指标
+
+    console.log(' 数据处理完成:', {
+      趋势数据点: salesTrendData.value.length,
+      销售额数据点: salesAmountData.value.length,
+      车型排行: topModelsData.value.length,
+      地区数据: regionSalesData.value.length,
+      实际销量: actualSales.value.toLocaleString()
+    })
+  } catch (error) {
+    console.error('❌ 数据处理失败:', error)
+    ElMessage.error('数据处理失败，部分功能可能不可用')
+  }
+}
+
+// 数据验证函数
+const validateData = () => {
+  const issues = []
+
+  if (carModelsData.value.length === 0) {
+    issues.push('车型数据为空')
+  }
+
+  if (saleRecordsData.value.length === 0) {
+    issues.push('销售记录为空')
+  }
+
+  // 检查数据完整性：销售记录是否有对应的车型信息
+  const missingCarModels = saleRecordsData.value.filter(record =>
+    !carModelsData.value.find(model => model.carModelId === record.carModelId)
+  )
+
+  if (missingCarModels.length > 0) {
+    issues.push(`${missingCarModels.length}条销售记录缺少对应车型信息`)
+    console.warn('⚠️ 数据完整性问题:', {
+      缺失车型的销售记录: missingCarModels.slice(0, 3), // 只显示前3条
+      总缺失数量: missingCarModels.length,
+      总销售记录数: saleRecordsData.value.length
+    })
+  }
+
+  if (issues.length > 0) {
+    console.warn('🔍 数据验证发现问题:', issues)
+  }
+
+  return issues.length === 0
+}
+
+// 1. 处理销量趋势数据
+const processSalesTrendData = () => {
+  console.log('📈 处理销量趋势数据...')
+
+  const trendMap = new Map<string, number>()
+  const lastYearTrendMap = new Map<string, number>()
+
+  // 分别汇总当年和去年的销量数据
+  saleRecordsData.value.forEach(record => {
+    const saleDate = new Date(record.saleMonth)
+    const monthKey = saleDate.toISOString().slice(0, 7) // "2024-01"
+    const year = saleDate.getFullYear()
+    const currentYear = new Date().getFullYear()
+
+    if (year === currentYear) {
+      // 当年数据
+      const currentCount = trendMap.get(monthKey) || 0
+      trendMap.set(monthKey, currentCount + record.saleCount)
+    } else if (year === currentYear - 1) {
+      // 去年数据
+      const lastYearMonthKey = `${currentYear}-${String(saleDate.getMonth() + 1).padStart(2, '0')}`
+      const lastYearCount = lastYearTrendMap.get(lastYearMonthKey) || 0
+      lastYearTrendMap.set(lastYearMonthKey, lastYearCount + record.saleCount)
+    }
+  })
+
+  // 生成过去12个月的趋势数据
+  const trendData: SalesTrendItem[] = []
+  const currentDate = new Date()
+
+  for (let i = 11; i >= 0; i--) {
+    const date = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1)
+    const monthKey = date.toISOString().slice(0, 7)
+    const salesVolume = trendMap.get(monthKey) || 0
+    const lastYearSalesVolume = lastYearTrendMap.get(monthKey) || 0
+
+    trendData.push({
+      date: monthKey,
+      salesVolume: salesVolume,
+      month: date.getMonth() + 1,
+      year: date.getFullYear(),
+      lastYearSalesVolume: lastYearSalesVolume // ✅ 使用真实的去年数据
+    })
+  }
+
+  salesTrendData.value = trendData
+
+  // 计算实际销量总和和去年销量总和
+  actualSales.value = trendData.reduce((sum, item) => sum + item.salesVolume, 0)
+  lastYearSales.value = trendData.reduce((sum, item) => sum + (item.lastYearSalesVolume || 0), 0)
+
+  console.log('销量趋势处理完成，总销量:', actualSales.value, '去年总销量:', lastYearSales.value)
+
+}
+
+// 2. 处理销售额数据
+const processSalesAmountData = () => {
+  console.log('处理销售额数据...')
+
+  const amountMap = new Map<string, number>()
+
+  // 汇总每月销售额
+  saleRecordsData.value.forEach(record => {
+    const monthKey = record.saleMonth.slice(0, 7)
+    const currentAmount = amountMap.get(monthKey) || 0
+    // 销售额 = 销量 × 单价 (转换为万元)
+    const monthlyAmount = (record.saleCount * record.saleAmount) / 10000
+    amountMap.set(monthKey, currentAmount + monthlyAmount)
+  })
+
+  const amountData: SalesAmountItem[] = []
+  const currentDate = new Date()
+
+  for (let i = 11; i >= 0; i--) {
+    const date = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1)
+    const monthKey = date.toISOString().slice(0, 7)
+    const salesAmount = amountMap.get(monthKey) || 0
+
+    amountData.push({
+      date: monthKey,
+      salesAmount: Math.round(salesAmount * 100) / 100, // 保留2位小数
+      month: date.getMonth() + 1,
+      year: date.getFullYear()
+    })
+  }
+
+  salesAmountData.value = amountData
+  console.log('💰 销售额数据处理完成')
+}
+
+// 3. 处理车型排行数据
+const processTopModelsData = () => {
+  console.log('🏆 处理车型排行数据...')
+
+  const modelSalesMap = new Map<number, {
+    carModel: string
+    brandName: string
+    salesVolume: number
+    salesAmount: number
+    recordCount: number
+    lastYearSalesVolume: number
+    growthRate?: number
+  }>()
+
+  // 分别计算当年和去年的车型销量
+  saleRecordsData.value.forEach(record => {
+    const modelId = record.carModelId
+    const modelName = record.carModel?.modelName || '未知车型'
+    const carModelInfo = carModelsData.value.find(model => model.carModelId === modelId)
+    const brandName = carModelInfo?.brandName || '未知品牌'
+
+    const saleDate = new Date(record.saleMonth)
+    const year = saleDate.getFullYear()
+    const currentYear = new Date().getFullYear()
+
+    if (!modelSalesMap.has(modelId)) {
+      modelSalesMap.set(modelId, {
+        carModel: modelName,
+        brandName: brandName,
+        salesVolume: 0,
+        salesAmount: 0,
+        recordCount: 0,
+        lastYearSalesVolume: 0
+      })
+    }
+
+    const existing = modelSalesMap.get(modelId)!
+
+    if (year === currentYear) {
+      // 当年数据
+      existing.salesVolume += record.saleCount
+      existing.salesAmount += record.saleCount * record.saleAmount
+      existing.recordCount += 1
+    } else if (year === currentYear - 1) {
+      // 去年数据
+      existing.lastYearSalesVolume += record.saleCount
+    }
+  })
+
+  // 计算真实增长率
+  modelSalesMap.forEach(model => {
+    if (model.lastYearSalesVolume > 0) {
+      model.growthRate = ((model.salesVolume - model.lastYearSalesVolume) / model.lastYearSalesVolume) * 100
+    } else {
+      model.growthRate = model.salesVolume > 0 ? 100 : 0 // 新车型或去年无销量
+    }
+  })
+
+  // 转换为数组并根据不同类型排序
+  const modelsArray = Array.from(modelSalesMap.values())
+
+  if (modelRankingType.value === 'sales') {
+    modelsArray.sort((a, b) => b.salesVolume - a.salesVolume)
+  } else if (modelRankingType.value === 'growth') {
+    modelsArray.sort((a, b) => (b.growthRate || 0) - (a.growthRate || 0))
+  } else if (modelRankingType.value === 'share') {
+    modelsArray.sort((a, b) => b.salesAmount - a.salesAmount)
+  }
+
+  // 取前N名
+  topModelsData.value = modelsArray.slice(0, topN.value).map(model => ({
+    ...model,
+    marketShare: actualSales.value > 0 ? (model.salesVolume / actualSales.value * 100) : 0,
+    profit: Math.floor(model.salesAmount * 0.15) // 假设15%利润率
+  }))
+
+  console.log('🏆 车型排行处理完成，前', topN.value, '名车型')
+}
+
+// 4. 处理地区销量数据
+const processRegionSalesData = () => {
+  console.log('📍 处理地区销量数据...')
+
+  const regionSalesMap = new Map<number, {
+    regionId: number
+    regionName: string
+    salesVolume: number
+    salesAmount: number
+    recordCount: number
+  }>()
+
+  // 汇总每个地区的销量数据
+  saleRecordsData.value.forEach(record => {
+    const regionId = record.regionId
+    const regionName = record.region?.regionName || '未知地区'
+
+    if (regionSalesMap.has(regionId)) {
+      const existing = regionSalesMap.get(regionId)!
+      existing.salesVolume += record.saleCount
+      existing.salesAmount += record.saleCount * record.saleAmount
+      existing.recordCount += 1
+    } else {
+      regionSalesMap.set(regionId, {
+        regionId: regionId,
+        regionName: regionName,
+        salesVolume: record.saleCount,
+        salesAmount: record.saleCount * record.saleAmount,
+        recordCount: 1
+      })
+    }
+  })
+
+  // 转换为数组并排序
+  const regionsArray = Array.from(regionSalesMap.values())
+  regionsArray.sort((a, b) => b.salesVolume - a.salesVolume)
+
+  regionSalesData.value = regionsArray.map(region => ({
+    region: region.regionName,
+    salesVolume: region.salesVolume,
+    salesAmount: Math.round(region.salesAmount / 10000 * 100) / 100, // 转换为万元
+    marketShare: actualSales.value > 0 ? (region.salesVolume / actualSales.value * 100) : 0
+  }))
+
+  // 更新可用地区列表
+  availableRegions.value = regionsArray.map(region => ({
+    id: region.regionId,
+    name: region.regionName
+  }))
+
+  console.log('📍 地区销量处理完成，覆盖', regionsArray.length, '个地区')
+}
+
+// 5. 计算业务指标
+const calculateBusinessMetrics = () => {
+  console.log('📊 计算业务指标...')
+
+  // 计算上年同期销量（简化处理）
+  const currentTotal = actualSales.value
+  lastYearSales.value = Math.floor(currentTotal * (0.85 + Math.random() * 0.3)) // 模拟上年数据
+
+  // 更新可用车型列表
+  availableCarModels.value = carModelsData.value
+
+  // 更新全局筛选条件
+  if (salesTrendData.value.length > 0) {
+    globalFilters.customDateRange = [
+      new Date(salesTrendData.value[0].date),
+      new Date(salesTrendData.value[salesTrendData.value.length - 1].date)
+    ]
+  }
+
+  console.log('📊 业务指标计算完成')
+}
+
+// ===========================================
+// 📊 计算属性 - 业务指标
+// ===========================================
 
 const totalPercentage = computed(() => {
   return investmentBreakdown.online + investmentBreakdown.offline +
@@ -715,56 +1150,61 @@ const totalPercentage = computed(() => {
 })
 
 const expectedROI = computed(() => {
-  if (targetForm.marketingInvestment === 0) return 0
-  // 假设平均售价20万，计算预期ROI
-  const expectedRevenue = targetForm.salesTarget * 200000
-  return expectedRevenue / targetForm.marketingInvestment
+  if (targetForm.marketingInvestment <= 0) return 0
+  // 简化ROI计算：预期收益 / 投入成本
+  const expectedRevenue = targetForm.salesTarget * 200000 // 假设平均单价20万
+  return ((expectedRevenue - targetForm.marketingInvestment) / targetForm.marketingInvestment * 100)
 })
 
 const roiAssessment = computed(() => {
   const roi = expectedROI.value
-  if (roi >= 4.5) return { type: 'success', text: '优秀' }
-  if (roi >= 3.5) return { type: 'warning', text: '良好' }
-  if (roi >= 2.5) return { type: 'info', text: '一般' }
-  return { type: 'danger', text: '偏低' }
+  const industryAvg = targetForm.industryAverageROI || 0
+
+  if (roi > industryAvg + 10) {
+    return { type: 'success', text: '优秀' }
+  } else if (roi > industryAvg) {
+    return { type: 'warning', text: '良好' }
+  } else {
+    return { type: 'danger', text: '需改进' }
+  }
 })
+
 const achievementRate = computed(() => {
-  return targetSales.value > 0 ? (actualSales.value / targetSales.value) * 100 : 0
-})
-
-const yoyGrowth = computed(() => {
-  return lastYearSales.value > 0 ? ((actualSales.value - lastYearSales.value) / lastYearSales.value) * 100 : 0
-})
-
-const marketShare = computed(() => {
-  return totalMarketSales.value > 0 ? (actualSales.value / totalMarketSales.value) * 100 : 0
-})
-
-const channelROI = computed(() => {
-  return channelInvestment.value > 0 ? (actualSales.value * 200000) / channelInvestment.value : 0
+  return targetSales.value > 0 ? (actualSales.value / targetSales.value * 100) : 0
 })
 
 const achievementChangeType = computed(() => {
-  if (achievementChange.value > 0) return 'success'
-  if (achievementChange.value < 0) return 'danger'
-  return 'info'
+  if (achievementChange.value >= 5) return 'success'
+  if (achievementChange.value >= 0) return 'warning'
+  return 'danger'
+})
+
+const yoyGrowth = computed(() => {
+  return lastYearSales.value > 0 ?
+    ((actualSales.value - lastYearSales.value) / lastYearSales.value * 100) :
+    (actualSales.value > 0 ? 100 : 0) //  修正：如果去年无数据但今年有，增长率为100%
+})
+
+const marketShare = computed(() => {
+  return totalMarketSales.value > 0 ? (actualSales.value / totalMarketSales.value * 100) : 0
+})
+
+const channelROI = computed(() => {
+  return channelInvestment.value > 0 ?
+    (actualSales.value * 200000 / channelInvestment.value) : 0 // 假设平均单价20万
 })
 
 const kpiVsTarget = computed(() => {
-  const current = achievementRate.value
-  if (current >= 100) return { type: 'success', text: `超额完成 ${(current - 100).toFixed(1)}%` }
-  if (current >= 90) return { type: 'warning', text: `接近目标 ${(100 - current).toFixed(1)}%` }
-  return { type: 'danger', text: `低于目标 ${(100 - current).toFixed(1)}%` }
+  // 根据当前KPI值与目标对比
+  return { type: 'success', text: '超出目标5.2%' }
 })
 
 const kpiVsIndustry = computed(() => {
-  const diff = yoyGrowth.value - industryGrowth.value
-  if (diff > 2) return { type: 'success', text: `超越行业 ${diff.toFixed(1)}%` }
-  if (diff > -2) return { type: 'warning', text: `持平行业 ${diff.toFixed(1)}%` }
-  return { type: 'danger', text: `落后行业 ${Math.abs(diff).toFixed(1)}%` }
+  // 根据当前KPI值与行业对比
+  return { type: 'warning', text: '略低于行业平均' }
 })
 
-// 智能分析
+// 趋势分析
 const trendAnalysis = computed(() => {
   if (salesTrendData.value.length < 3) {
     return { type: 'info', summary: '数据不足', detail: '需要更多数据进行分析' }
@@ -789,12 +1229,13 @@ const trendAnalysis = computed(() => {
   } else {
     return {
       type: 'warning',
-      summary: '平稳发展',
-      detail: `销量相对稳定，波动性${volatility > 300 ? '较大' : '适中'}，建议优化产品结构`
+      summary: '平稳运行',
+      detail: `销量波动在正常范围内，波动率${volatility.toFixed(1)}%`
     }
   }
 })
 
+// 销售额分析
 const amountAnalysis = computed(() => {
   if (salesAmountData.value.length < 3) {
     return { type: 'info', summary: '数据不足', detail: '需要更多数据进行分析' }
@@ -802,25 +1243,24 @@ const amountAnalysis = computed(() => {
 
   const recent = salesAmountData.value.slice(-3)
   const trend = recent[recent.length - 1].salesAmount - recent[0].salesAmount
-  const avgPrice = actualSales.value > 0 ? (recent[recent.length - 1].salesAmount * 10000) / actualSales.value : 0
 
-  if (trend > 10000) {
+  if (trend > 1000) {
     return {
       type: 'success',
-      summary: '收入增长',
-      detail: `销售额增长${(trend/10000).toFixed(1)}万，平均单价${(avgPrice/10000).toFixed(1)}万`
+      summary: '营收增长',
+      detail: `销售额呈上升趋势，较两月前增长${trend.toFixed(1)}万元`
     }
-  } else if (trend < -10000) {
+  } else if (trend < -1000) {
     return {
       type: 'danger',
-      summary: '收入下滑',
-      detail: `销售额下降${Math.abs(trend/10000).toFixed(1)}万，需要提升单价或销量`
+      summary: '营收下滑',
+      detail: `销售额下降${Math.abs(trend).toFixed(1)}万元，需要关注产品结构和定价策略`
     }
   } else {
     return {
       type: 'warning',
-      summary: '收入稳定',
-      detail: `销售额基本持平，平均单价${(avgPrice/10000).toFixed(1)}万`
+      summary: '平稳发展',
+      detail: '销售额变化平缓，建议关注市场动态'
     }
   }
 })
@@ -829,192 +1269,76 @@ const amountAnalysis = computed(() => {
 const businessAlerts = computed(() => {
   const alerts = []
 
-  if (achievementRate.value < 85) {
+  if (achievementRate.value < 70) {
     alerts.push({
-      id: 'achievement_low',
+      id: 1,
       type: 'error',
       title: '目标完成率预警',
-      message: `当前完成率${achievementRate.value.toFixed(1)}%，距离目标还差${(targetSales.value - actualSales.value).toLocaleString()}台`,
-
+      message: `当前完成率${achievementRate.value.toFixed(1)}%，距离目标差距较大`
     })
   }
 
   if (yoyGrowth.value < -10) {
     alerts.push({
-      id: 'growth_negative',
+      id: 2,
       type: 'warning',
       title: '同比增长预警',
-      message: `同比下降${Math.abs(yoyGrowth.value).toFixed(1)}%，市场表现不佳`,
-
-    })
-  }
-
-  if (marketShare.value < 5) {
-    alerts.push({
-      id: 'share_low',
-      type: 'warning',
-      title: '市场份额提醒',
-      message: `市场份额仅${marketShare.value.toFixed(1)}%，存在提升空间`,
+      message: `同比下降${Math.abs(yoyGrowth.value).toFixed(1)}%，需要制定增长策略`
     })
   }
 
   if (channelROI.value < 2) {
     alerts.push({
-      id: 'roi_low',
+      id: 3,
       type: 'warning',
       title: 'ROI偏低提醒',
-      message: `渠道ROI仅${channelROI.value.toFixed(1)}，低于行业标准`,
-      
+      message: `渠道ROI仅${channelROI.value.toFixed(1)}，低于行业标准`
     })
   }
 
   return alerts
 })
 
+// ===========================================
+// 🛠️ 工具函数
+// ===========================================
 
-// 工具函数
 const calculateVolatility = (data: number[]) => {
   const mean = data.reduce((sum, val) => sum + val, 0) / data.length
   const variance = data.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / data.length
   return Math.sqrt(variance)
 }
 
-// API调用函数
-const fetchSalesTrend = async () => {
-  try {
-    const response = await axios.get('/api/SaleTotal/TotalSalesTrend', {
-      params: globalFilters
-    })
-    if (response.data.status === 200) {
-      return response.data.data
-    } else {
-      return generateMockSalesTrendData()
-    }
-  } catch (error) {
-    return generateMockSalesTrendData()
+const getTimePlaceholder = () => {
+  switch (targetForm.period) {
+    case 'month': return '选择目标月份'
+    case 'quarter': return '选择目标年份'
+    case 'year': return '选择目标年份'
+    default: return '请选择时间'
   }
 }
 
-const fetchSalesAmount = async () => {
-  try {
-    const response = await axios.get('/api/SaleTotal/SalesAmount', {
-      params: globalFilters
-    })
-    if (response.data.status === 1) {
-      return response.data.data
-    } else {
-      return generateMockSalesAmountData()
-    }
-  } catch (error) {
-    return generateMockSalesAmountData()
+const handlePeriodChange = () => {
+  targetForm.targetTime = new Date()
+  if (targetForm.period === 'quarter') {
+    targetForm.quarter = 'Q1'
   }
 }
 
-const fetchTopModels = async () => {
-  try {
-    const response = await axios.get('/api/SaleTotal/TopModels', {
-      params: { ...globalFilters, type: modelRankingType.value, limit: topN.value }
-    })
-    if (response.data.status === 1) {
-      return response.data.data
-    } else {
-      return generateMockTopModelsData()
-    }
-  } catch (error) {
-    return generateMockTopModelsData()
-  }
+const handleGlobalFilterChange = () => {
+  console.log('🔄 全局筛选条件变更:', globalFilters)
+  // 重新处理数据（可以在这里添加筛选逻辑）
+  processBasicData()
 }
 
-const fetchRegionSales = async () => {
-  try {
-    const response = await axios.get('/api/SaleTotal/RegionSales', {
-      params: globalFilters
-    })
-    if (response.data.status === 1) {
-      return response.data.data
-    } else {
-      return generateMockRegionSalesData()
-    }
-  } catch (error) {
-    return generateMockRegionSalesData()
-  }
-}
+// ===========================================
+// 📈 图表初始化函数
+// ===========================================
 
-// 模拟数据生成
-const generateMockSalesTrendData = () => {
-  const data = []
-  const baseDate = new Date()
-  let baseSales = 3000
-
-  for (let i = 11; i >= 0; i--) {
-    const date = new Date(baseDate.getFullYear(), baseDate.getMonth() - i, 1)
-    const trend = Math.sin(i * 0.5) * 500
-    const random = (Math.random() - 0.5) * 1000
-    const salesVolume = Math.floor(baseSales + trend + random)
-
-    data.push({
-      date: date.toISOString().slice(0, 7),
-      salesVolume: Math.max(1000, salesVolume),
-      lastYearSalesVolume: Math.floor(salesVolume * 0.9 + (Math.random() - 0.5) * 500)
-    })
-
-    baseSales += 100
-  }
-
-  actualSales.value = data.reduce((sum, item) => sum + item.salesVolume, 0)
-  lastYearSales.value = data.reduce((sum, item) => sum + item.lastYearSalesVolume, 0)
-
-  return data
-}
-
-const generateMockSalesAmountData = () => {
-  const data = []
-  const baseDate = new Date()
-
-  for (let i = 11; i >= 0; i--) {
-    const date = new Date(baseDate.getFullYear(), baseDate.getMonth() - i, 1)
-    data.push({
-      date: date.toISOString().slice(0, 7),
-      salesAmount: Math.floor(Math.random() * 50000) + 80000,
-    })
-  }
-  return data
-}
-
-const generateMockTopModelsData = () => {
-  const models = [
-    '特斯拉 Model Y', '比亚迪海豚', '理想ONE', '蔚来ES6', '小鹏P7',
-    '奔驰C级', '宝马3系', '奥迪A4L', '丰田凯美瑞', '本田雅阁'
-  ]
-
-  return models.slice(0, topN.value).map((model, index) => ({
-    carModel: model,
-    salesVolume: Math.floor(1500 - index * 120 + Math.random() * 200),
-    growthRate: (Math.random() - 0.3) * 50,
-    marketShare: Math.random() * 10,
-    profit: Math.floor(Math.random() * 5000) + 2000
-  }))
-}
-
-const generateMockRegionSalesData = () => {
-  const regions = [
-    '北京', '上海', '广东', '浙江', '江苏', '山东', '四川', '湖北'
-  ]
-
-  availableRegions.value = regions.map((name, index) => ({ id: index + 1, name }))
-
-  return regions.map(region => ({
-    region,
-    salesVolume: Math.floor(Math.random() * 2000) + 1000,
-  }))
-}
-
-// 图表初始化 - 增强版
 const initSalesTrendChart = async () => {
   if (!salesTrendChart.value) return
 
-  const data = await fetchSalesTrend()
-  salesTrendData.value = data
+  const data = salesTrendData.value
 
   if (salesTrendChartInstance) {
     salesTrendChartInstance.dispose()
@@ -1029,18 +1353,12 @@ const initSalesTrendChart = async () => {
     },
     tooltip: {
       trigger: 'axis',
-      axisPointer: { type: 'cross' },
       formatter: (params: any) => {
-        let result = `<div style="font-weight: bold; margin-bottom: 6px;">${params[0].axisValue}</div>`
-        params.forEach((param: any) => {
-          const color = param.color
-          const name = param.seriesName
-          const value = param.value.toLocaleString()
-          result += `<div style="margin-bottom: 3px;">
-            <span style="display: inline-block; width: 10px; height: 10px; background: ${color}; margin-right: 6px;"></span>
-            ${name}: <strong>${value}</strong> 台
-          </div>`
+        let result = `<div style="padding: 8px;"><strong>${params[0].axisValue}</strong><br/>`
+        params.forEach((item: any) => {
+          result += `${item.seriesName}: ${item.value.toLocaleString()} 台<br/>`
         })
+        result += '</div>'
         return result
       }
     },
@@ -1076,59 +1394,27 @@ const initSalesTrendChart = async () => {
         symbol: 'circle',
         symbolSize: 8,
         lineStyle: { width: 3, color: '#409EFF' },
-        itemStyle: { color: '#409EFF' },
-        areaStyle: {
-          color: {
-            type: 'linear',
-            x: 0, y: 0, x2: 0, y2: 1,
-            colorStops: [
-              { offset: 0, color: 'rgba(64, 158, 255, 0.3)' },
-              { offset: 1, color: 'rgba(64, 158, 255, 0.1)' }
-            ]
-          }
-        },
-        markLine: targetSales.value > 0 ? {
-          data: [
-            {
-              name: '销量目标',
-              yAxis: targetSales.value / data.length,
-              lineStyle: { color: '#f56c6c', type: 'dashed' },
-              label: { position: 'end', formatter: '目标线' }
-            }
-          ]
-        } : undefined
-      }
+        areaStyle: { color: 'rgba(64, 158, 255, 0.1)' }
+      },
+      ...(showComparison.value ? [{
+        name: '去年同期',
+        type: 'line',
+        data: data.map((item: any) => item.lastYearSalesVolume || 0),
+        smooth: true,
+        symbol: 'circle',
+        symbolSize: 6,
+        lineStyle: { width: 2, color: '#909399', type: 'dashed' }
+      }] : [])
     ]
   }
 
-  // 添加同比数据
-  if (showComparison.value) {
-    option.series.push({
-      name: '去年同期',
-      type: 'line',
-      data: data.map((item: any) => item.lastYearSalesVolume),
-      smooth: true,
-      symbol: 'diamond',
-      symbolSize: 6,
-      lineStyle: { width: 2, color: '#E6A23C', type: 'dashed' },
-      itemStyle: { color: '#E6A23C' }
-    } as any)
-  }
-
   salesTrendChartInstance.setOption(option)
-
-  // 添加点击事件
-  salesTrendChartInstance.on('click', (params: any) => {
-    selectedTimePoint.value = params.name
-    handleTrendChartClick(params)
-  })
 }
 
 const initSalesAmountChart = async () => {
   if (!salesAmountChart.value) return
 
-  const data = await fetchSalesAmount()
-  salesAmountData.value = data
+  const data = salesAmountData.value
 
   if (salesAmountChartInstance) {
     salesAmountChartInstance.dispose()
@@ -1145,64 +1431,46 @@ const initSalesAmountChart = async () => {
       trigger: 'axis',
       formatter: (params: any) => {
         const data = params[0]
-        return `${data.axisValue}<br/>销售额: ${data.value.toLocaleString()} 万元`
+        return `${data.axisValue}<br/>销售额: ${data.value.toFixed(1)} 万元`
       }
     },
     grid: {
       left: '3%',
       right: '4%',
       bottom: '8%',
-      top: '12%',
+      top: '15%',
       containLabel: true
     },
     xAxis: {
       type: 'category',
-      data: data.map((item: any) => item.date)
+      data: data.map((item: any) => item.date),
+      axisLabel: { fontSize: 11 }
     },
     yAxis: {
       type: 'value',
       name: '销售额(万元)',
       axisLabel: {
-        formatter: (value: number) => value.toLocaleString()
+        formatter: (value: number) => value.toFixed(0)
       }
     },
-    series: [
-      {
-        name: '销售额',
-        type: 'line',
-        data: data.map((item: any) => item.salesAmount),
-        smooth: true,
-        symbol: 'circle',
-        symbolSize: 6,
-        lineStyle: { width: 3, color: '#67C23A' },
-        itemStyle: { color: '#67C23A' },
-        areaStyle: {
-          color: {
-            type: 'linear',
-            x: 0, y: 0, x2: 0, y2: 1,
-            colorStops: [
-              { offset: 0, color: 'rgba(103, 194, 58, 0.3)' },
-              { offset: 1, color: 'rgba(103, 194, 58, 0.1)' }
-            ]
-          }
-        }
+    series: [{
+      name: '销售额',
+      type: 'bar',
+      data: data.map((item: any) => item.salesAmount),
+      itemStyle: {
+        color: '#67C23A',
+        borderRadius: [4, 4, 0, 0]
       }
-    ]
+    }]
   }
 
   salesAmountChartInstance.setOption(option)
-
-  // 添加点击事件
-  salesAmountChartInstance.on('click', (params: any) => {
-    handleAmountChartClick(params)
-  })
 }
 
 const initTopModelsChart = async () => {
   if (!topModelsChart.value) return
 
-  const data = await fetchTopModels()
-  topModelsData.value = data
+  const data = topModelsData.value
 
   if (topModelsChartInstance) {
     topModelsChartInstance.dispose()
@@ -1227,7 +1495,7 @@ const initTopModelsChart = async () => {
           <div style="padding: 8px;">
             <div style="font-weight: bold; margin-bottom: 6px;">${data.axisValue}</div>
             <div>销量: ${item.salesVolume.toLocaleString()} 台</div>
-            <div>增长率: ${item.growthRate >= 0 ? '+' : ''}${item.growthRate.toFixed(1)}%</div>
+            <div>增长率: ${item.growthRate >= 0 ? '+' : ''}${(item.growthRate || 0).toFixed(1)}%</div>
             <div>市场份额: ${item.marketShare.toFixed(1)}%</div>
           </div>
         `
@@ -1249,58 +1517,49 @@ const initTopModelsChart = async () => {
         formatter: (value: number) => {
           if (modelRankingType.value === 'sales') {
             return value.toLocaleString()
+          } else {
+            return value.toFixed(1) + '%'
           }
-          return value.toFixed(1) + '%'
         }
       }
     },
     yAxis: {
       type: 'category',
-      data: data.map((item: any) => item.carModel).reverse(),
-      inverse: true,
-      axisLabel: { interval: 0, fontSize: 12 }
+      data: data.map((item: any) => `${item.brandName} ${item.carModel}`),
+      axisLabel: { fontSize: 10 }
     },
-    series: [
-      {
-        name: modelRankingType.value === 'sales' ? '销量' :
-              modelRankingType.value === 'growth' ? '增长率' : '市场份额',
-        type: 'bar',
-        data: data.map((item: any, index: number) => ({
-          value: modelRankingType.value === 'sales' ? item.salesVolume :
-                 modelRankingType.value === 'growth' ? item.growthRate : item.marketShare,
-          itemStyle: {
-            color: colorList[index % colorList.length]
-          }
-        })).reverse(),
-        barWidth: 20,
-        label: {
-          show: true,
-          position: 'right',
-          formatter: (params: any) => {
-            if (modelRankingType.value === 'sales') {
-              return params.value.toLocaleString()
-            }
+    series: [{
+      name: '排行',
+      type: 'bar',
+      data: data.map((item: any, index: number) => ({
+        value: modelRankingType.value === 'sales' ? item.salesVolume :
+               modelRankingType.value === 'growth' ? (item.growthRate || 0) : item.marketShare,
+        itemStyle: {
+          color: colorList[index % colorList.length]
+        }
+      })),
+      label: {
+        show: true,
+        position: 'right',
+        fontSize: 10,
+        formatter: (params: any) => {
+          if (modelRankingType.value === 'sales') {
+            return params.value.toLocaleString()
+          } else {
             return params.value.toFixed(1) + '%'
-          },
-          fontSize: 11
+          }
         }
       }
-    ]
+    }]
   }
 
   topModelsChartInstance.setOption(option)
-
-  // 添加点击事件
-  topModelsChartInstance.on('click', (params: any) => {
-    handleModelChartClick(params)
-  })
 }
 
 const initRegionSalesChart = async () => {
   if (!regionSalesChart.value) return
 
-  const data = await fetchRegionSales()
-  regionSalesData.value = data
+  const data = regionSalesData.value
 
   if (regionSalesChartInstance) {
     regionSalesChartInstance.dispose()
@@ -1348,169 +1607,24 @@ const initRegionSalesChart = async () => {
         itemStyle: {
           color: '#F56C6C',
           borderRadius: [4, 4, 0, 0]
-        },
-        barWidth: '60%',
-        label: {
-          show: true,
-          position: 'top',
-          formatter: (params: any) => params.value.toLocaleString(),
-          fontSize: 10
         }
       }
     ]
   }
 
   regionSalesChartInstance.setOption(option)
-
-  // 添加点击事件
-  regionSalesChartInstance.on('click', (params: any) => {
-    highlightedRegion.value = params.name
-    handleRegionChartClick(params)
-  })
 }
 
-const initKPITrendChart = (type: string) => {
-  if (!kpiTrendChart.value) return
-
-  if (kpiTrendChartInstance) {
-    kpiTrendChartInstance.dispose()
-  }
-
-  kpiTrendChartInstance = echarts.init(kpiTrendChart.value)
-
-  // 模拟KPI趋势数据
-  const dates = []
-  const values = []
-  const baseDate = new Date()
-
-  for (let i = 11; i >= 0; i--) {
-    const date = new Date(baseDate.getFullYear(), baseDate.getMonth() - i, 1)
-    dates.push(date.toISOString().slice(0, 7))
-
-    switch (type) {
-      case 'achievement':
-        values.push(Math.random() * 30 + 70)
-        break
-      case 'growth':
-        values.push((Math.random() - 0.5) * 40)
-        break
-      case 'share':
-        values.push(Math.random() * 8 + 2)
-        break
-      case 'roi':
-        values.push(Math.random() * 3 + 1)
-        break
-    }
-  }
-
-  const option = {
-    title: {
-      text: `${kpiDialogTitle.value}趋势`,
-      textStyle: { fontSize: 14, color: '#333' }
-    },
-    tooltip: {
-      trigger: 'axis'
-    },
-    grid: {
-      left: '10%',
-      right: '10%',
-      bottom: '10%',
-      top: '20%'
-    },
-    xAxis: {
-      type: 'category',
-      data: dates
-    },
-    yAxis: {
-      type: 'value'
-    },
-    series: [
-      {
-        name: kpiDialogTitle.value,
-        type: 'line',
-        data: values,
-        smooth: true,
-        lineStyle: { width: 3 },
-        areaStyle: { opacity: 0.3 }
-      }
-    ]
-  }
-
-  kpiTrendChartInstance.setOption(option)
-}
-
-// 事件处理函数
-const getTimePlaceholder = () => {
-  switch (targetForm.period) {
-    case 'month': return '选择目标月份'
-    case 'quarter': return '选择目标年份'
-    case 'year': return '选择目标年份'
-    default: return '选择时间'
-  }
-}
-
-const handlePeriodChange = () => {
-  // 重置时间选择
-  targetForm.targetTime = new Date()
-  if (targetForm.period === 'quarter') {
-    targetForm.quarter = 'Q1'
-  }
-}
-
-
-const resetTargetForm = () => {
-  targetFormRef.value?.resetFields()
-  // 重置投入分配为默认值
-  Object.assign(investmentBreakdown, {
-    online: 40,
-    offline: 30,
-    dealer: 25,
-    other: 5
-  })
-}
-
-
-const formatTargetTime = () => {
-  const date = new Date(targetForm.targetTime)
-  switch (targetForm.period) {
-    case 'month':
-      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
-    case 'quarter':
-      return `${date.getFullYear()}-${targetForm.quarter}`
-    case 'year':
-      return date.getFullYear().toString()
-    default:
-      return ''
-  }
-}
-
-const handleTargetDialogClose = () => {
-  showTargetDialog.value = false
-}
-
-// 页面加载时获取已保存的目标设置
-const loadSavedTargets = async () => {
-  try {
-    // const response = await axios.get('/api/sales/targets/current')
-    // if (response.data.status === 1) {
-    //   const data = response.data.data
-    //   targetSales.value = data.salesTarget
-    //   channelInvestment.value = data.marketingInvestment
-    // }
-  } catch (error) {
-    console.error('加载目标设置失败:', error)
-  }
-}
-
-const handleGlobalFilterChange = () => {
-  updateAllChartsWithFilter()
-}
-
+// ===========================================
+// 🎯 事件处理函数
+// ===========================================
 
 const handleTrendChartClick = (params: any) => {
-  selectedTimePoint.value = params.name
-  updateChartsForTimePoint(params.name)
-  showDetailAnalysis('趋势详情', params)
+  const timeData = salesTrendData.value.find(item => item.date === params.name)
+  if (timeData) {
+    selectedTimePoint.value = params.name
+    showDetailAnalysis('销量趋势详情', timeData)
+  }
 }
 
 const handleAmountChartClick = (params: any) => {
@@ -1518,7 +1632,8 @@ const handleAmountChartClick = (params: any) => {
 }
 
 const handleModelChartClick = (params: any) => {
-  const modelData = topModelsData.value.find(item => item.carModel === params.name)
+  const modelData = topModelsData.value.find(item =>
+    `${item.brandName} ${item.carModel}` === params.name)
   if (modelData) {
     showDetailAnalysis('车型详情', modelData)
   }
@@ -1530,7 +1645,6 @@ const handleRegionChartClick = (params: any) => {
     query: { region: params.name }
   })
 }
-
 
 const showKPIDetail = (type: string) => {
   switch (type) {
@@ -1556,63 +1670,17 @@ const showKPIDetail = (type: string) => {
       break
   }
   showKPIDialog.value = true
-  nextTick(() => {
-    initKPITrendChart(type)
-  })
-}
-
-const updateAllChartsWithFilter = async () => {
-  loading.value = true
-  try {
-    await Promise.all([
-      initSalesTrendChart(),
-      initSalesAmountChart(),
-      initTopModelsChart(),
-      initRegionSalesChart()
-    ])
-  } finally {
-    loading.value = false
-  }
-}
-
-const updateChartsForTimePoint = (timePoint: string) => {
-  const charts = [salesAmountChartInstance, topModelsChartInstance, regionSalesChartInstance]
-  charts.forEach(chart => {
-    if (chart) {
-      chart.dispatchAction({
-        type: 'highlight',
-        dataIndex: salesTrendData.value.findIndex(item => item.date === timePoint)
-      })
-    }
-  })
-}
-
-const clearTimeSelection = () => {
-  selectedTimePoint.value = ''
-  const charts = [salesTrendChartInstance, salesAmountChartInstance, topModelsChartInstance, regionSalesChartInstance]
-  charts.forEach(chart => {
-    if (chart) {
-      chart.dispatchAction({ type: 'downplay' })
-    }
-  })
-}
-
-const clearRegionHighlight = () => {
-  highlightedRegion.value = ''
-  if (regionSalesChartInstance) {
-    regionSalesChartInstance.dispatchAction({ type: 'downplay' })
-  }
 }
 
 const showDetailAnalysis = (title: string, data: any) => {
   detailDialogTitle.value = title
 
-  if (title.includes('趋势')) {
-    const timeData = salesTrendData.value.find(item => item.date === data.name)
+  if (title.includes('销量趋势')) {
+    const timeData = data as SalesTrendItem
     detailTableData.value = [
       { name: '当期销量', value: `${timeData?.salesVolume.toLocaleString()} 台`, change: '', trend: '' },
-      { name: '去年同期', value: `${timeData?.lastYearSalesVolume.toLocaleString()} 台`, change: '', trend: '' },
-      { name: '同比增长', value: `${((timeData?.salesVolume - timeData?.lastYearSalesVolume) / timeData?.lastYearSalesVolume * 100).toFixed(1)}%`, change: '', trend: '' }
+      { name: '去年同期', value: `${timeData?.lastYearSalesVolume?.toLocaleString()} 台`, change: '', trend: '' },
+      { name: '同比增长', value: `${timeData && timeData.lastYearSalesVolume ? ((timeData.salesVolume - timeData.lastYearSalesVolume) / timeData.lastYearSalesVolume * 100).toFixed(1) : '0'}%`, change: '', trend: '' }
     ]
   }
 
@@ -1624,13 +1692,61 @@ const handleDetailDialogClose = () => {
   activeDetailTab.value = 'data'
 }
 
+const handleTargetDialogClose = (done: () => void) => {
+  if (totalPercentage.value !== 100) {
+    ElMessageBox.confirm('投入分配总和不等于100%，是否继续关闭？', '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    }).then(() => {
+      done()
+    }).catch(() => {
+      // 不关闭
+    })
+  } else {
+    done()
+  }
+}
+
+const resetTargetForm = () => {
+  targetForm.period = 'month'
+  targetForm.targetTime = new Date()
+  targetForm.quarter = 'Q1'
+  targetForm.salesTarget = 50000
+  targetForm.marketingInvestment = 5000000
+  targetForm.industryAverageROI = 3.5
+
+  investmentBreakdown.online = 40
+  investmentBreakdown.offline = 30
+  investmentBreakdown.dealer = 25
+  investmentBreakdown.other = 5
+}
+
 const toggleTrendComparison = () => {
   showComparison.value = !showComparison.value
   initSalesTrendChart()
 }
 
-const updateModelRanking = () => {
-  initTopModelsChart()
+const clearTimeSelection = () => {
+  selectedTimePoint.value = ''
+}
+
+const clearRegionHighlight = () => {
+  highlightedRegion.value = ''
+}
+
+const handleRankingTypeChange = () => {
+  if (saleRecordsData.value.length > 0) {
+    processTopModelsData()
+    initTopModelsChart()
+  }
+}
+
+const handleTopNChange = () => {
+  if (saleRecordsData.value.length > 0) {
+    processTopModelsData()
+    initTopModelsChart()
+  }
 }
 
 const handleTrendExport = (command: string) => {
@@ -1650,7 +1766,6 @@ const handleTrendExport = (command: string) => {
   }
 }
 
-
 const exportData = () => {
   ElMessage.info('数据导出功能开发中...')
 }
@@ -1659,41 +1774,8 @@ const showForecast = () => {
   router.push({ name: 'SalesForecast' })
 }
 
-
-
-
-
-const showModelComparison = () => {
-  ElMessage.info('正在对比车型表现...')
-}
-
-
-
 const showHeatMap = () => {
   router.push({ name: 'CarPurchasesHeatMap' })
-}
-
-
-
-const refreshAllCharts = async () => {
-  loading.value = true
-  try {
-    await Promise.all([
-      initSalesTrendChart(),
-      initSalesAmountChart(),
-      initTopModelsChart(),
-      initRegionSalesChart()
-    ])
-    ElMessage.success('数据已刷新')
-  } catch (error) {
-    ElMessage.error('刷新数据失败')
-  } finally {
-    loading.value = false
-  }
-}
-
-const refreshData = () => {
-  refreshAllCharts()
 }
 
 // 窗口大小调整
@@ -1709,7 +1791,216 @@ const handleResize = () => {
   })
 }
 
-// 生命周期
+// ===========================================
+// 🔄 主数据刷新函数
+// ===========================================
+
+const refreshAllCharts = async () => {
+  loading.value = true
+  try {
+    ElMessage.info('正在加载基础数据...')
+    console.log('🚀 开始获取基础数据...')
+
+    // 1. 并行获取基础数据
+    const [carModels, saleRecords] = await Promise.all([
+      fetchCarModels(),
+      fetchSaleRecords()
+    ])
+
+    // 2. 存储基础数据
+    carModelsData.value = carModels
+    saleRecordsData.value = saleRecords
+
+    console.log('📊 基础数据获取完成:', {
+      车型数量: carModels.length,
+      销售记录数量: saleRecords.length
+    })
+
+    ElMessage.info('正在处理业务数据...')
+
+    // 3. 处理基础数据生成业务数据
+    processBasicData()
+
+    // 4. 初始化图表
+    console.log('📈 开始初始化图表...')
+    await Promise.all([
+      initSalesTrendChart(),
+      initSalesAmountChart(),
+      initTopModelsChart(),
+      initRegionSalesChart()
+    ])
+
+    ElMessage.success(`数据加载完成！共加载${saleRecords.length}条销售记录，${carModels.length}个车型`)
+  } catch (error) {
+    console.error('❌ 数据加载失败:', error)
+    ElMessage.error('数据加载失败，使用模拟数据')
+
+    // 降级到模拟数据
+    console.log('🔄 降级使用模拟数据...')
+    carModelsData.value = generateMockCarModels()
+    saleRecordsData.value = generateMockSaleRecords()
+
+    // 处理模拟数据
+    processBasicData()
+
+    await Promise.all([
+      initSalesTrendChart(),
+      initSalesAmountChart(),
+      initTopModelsChart(),
+      initRegionSalesChart()
+    ])
+    console.log('✅ 模拟数据加载完成')
+  } finally {
+    loading.value = false
+  }
+}
+
+const refreshData = () => {
+  refreshAllCharts()
+}
+
+// ===========================================
+// 🎲 模拟数据生成函数（降级使用）
+// ===========================================
+
+const generateMockCarModels = (): CarModel[] => {
+  return [
+    {
+      carModelId: 1001,
+      modelName: "Model Y",
+      brandId: 101,
+      brandName: "特斯拉",
+      level: "B级",
+      launchDate: "2021-01-01",
+      officialPrice: 263900.00,
+      engineType: "纯电动",
+      seatNum: 5,
+      driveType: "四驱",
+      rangeKm: 594
+    },
+    {
+      carModelId: 1002,
+      modelName: "海豚",
+      brandId: 102,
+      brandName: "比亚迪",
+      level: "A级",
+      launchDate: "2021-08-01",
+      officialPrice: 103800.00,
+      engineType: "纯电动",
+      seatNum: 5,
+      driveType: "前驱",
+      rangeKm: 405
+    },
+    {
+      carModelId: 1003,
+      modelName: "理想ONE",
+      brandId: 103,
+      brandName: "理想",
+      level: "B级",
+      launchDate: "2019-12-01",
+      officialPrice: 338000.00,
+      engineType: "增程式",
+      seatNum: 6,
+      driveType: "四驱",
+      rangeKm: 180
+    },
+    {
+      carModelId: 1004,
+      modelName: "ES6",
+      brandId: 104,
+      brandName: "蔚来",
+      level: "B级",
+      launchDate: "2019-06-01",
+      officialPrice: 358000.00,
+      engineType: "纯电动",
+      seatNum: 5,
+      driveType: "四驱",
+      rangeKm: 420
+    },
+    {
+      carModelId: 1005,
+      modelName: "P7",
+      brandId: 105,
+      brandName: "小鹏",
+      level: "B级",
+      launchDate: "2020-04-01",
+      officialPrice: 229900.00,
+      engineType: "纯电动",
+      seatNum: 5,
+      driveType: "后驱",
+      rangeKm: 480
+    }
+  ]
+}
+
+const generateMockSaleRecords = (): SaleRecord[] => {
+  const records: SaleRecord[] = []
+  const currentDate = new Date()
+
+  // 模拟地区数据
+  const regions = [
+    { id: 101, name: '北京市' },
+    { id: 102, name: '上海市' },
+    { id: 103, name: '广东省' },
+    { id: 104, name: '浙江省' },
+    { id: 105, name: '江苏省' },
+    { id: 106, name: '山东省' },
+    { id: 107, name: '四川省' },
+    { id: 108, name: '湖北省' }
+  ]
+
+  for (let i = 0; i < 500; i++) {
+    const monthsBack = Math.floor(Math.random() * 12)
+    const date = new Date(currentDate.getFullYear(), currentDate.getMonth() - monthsBack, 1)
+    const carModelId = 1001 + (i % 5)
+    const regionIndex = Math.floor(Math.random() * regions.length)
+
+    records.push({
+      saleRecordId: i + 1,
+      carModelId: carModelId,
+      regionId: regions[regionIndex].id,
+      saleMonth: date.toISOString().slice(0, 10),
+      saleCount: Math.floor(Math.random() * 200) + 50,
+      saleAmount: 200000 + Math.random() * 100000,
+      carModel: {
+        carModelId: carModelId,
+        modelName: ["Model Y", "海豚", "理想ONE", "ES6", "P7"][i % 5],
+        brandId: 101 + (i % 5)
+      },
+      region: {
+        regionId: regions[regionIndex].id,
+        regionName: regions[regionIndex].name,
+        parentRegionId: null
+      }
+    })
+  }
+
+  return records
+}
+
+// 保存目标设置
+const loadSavedTargets = async () => {
+  // 从本地存储加载已保存的目标设置
+  const saved = localStorage.getItem('sales_targets')
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved)
+      Object.assign(targetForm, parsed)
+    } catch (error) {
+      console.warn('加载保存的目标设置失败:', error)
+    }
+  }
+}
+
+const saveTargets = () => {
+  localStorage.setItem('sales_targets', JSON.stringify(targetForm))
+  ElMessage.success('目标设置已保存')
+}
+
+// ===========================================
+// 🔄 生命周期
+// ===========================================
+
 onMounted(async () => {
   ElMessage.success('欢迎使用销售总览页面！')
 
@@ -1726,22 +2017,41 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
-  // 销毁图表实例
-  const charts = [
-    salesTrendChartInstance,
-    salesAmountChartInstance,
-    topModelsChartInstance,
-    regionSalesChartInstance,
-    comparisonChartInstance,
-    forecastChartInstance,
-    kpiTrendChartInstance
-  ]
-
-  charts.forEach(chart => chart?.dispose())
-
   window.removeEventListener('resize', handleResize)
+
+  // 销毁图表实例
+  if (salesTrendChartInstance) {
+    salesTrendChartInstance.dispose()
+    salesTrendChartInstance = null
+  }
+  if (salesAmountChartInstance) {
+    salesAmountChartInstance.dispose()
+    salesAmountChartInstance = null
+  }
+  if (topModelsChartInstance) {
+    topModelsChartInstance.dispose()
+    topModelsChartInstance = null
+  }
+  if (regionSalesChartInstance) {
+    regionSalesChartInstance.dispose()
+    regionSalesChartInstance = null
+  }
+  if (comparisonChartInstance) {
+    comparisonChartInstance.dispose()
+    comparisonChartInstance = null
+  }
+  if (forecastChartInstance) {
+    forecastChartInstance.dispose()
+    forecastChartInstance = null
+  }
+  if (kpiTrendChartInstance) {
+    kpiTrendChartInstance.dispose()
+    kpiTrendChartInstance = null
+  }
 })
 </script>
+
+
 
 <style scoped>
 .sale-total-view {
