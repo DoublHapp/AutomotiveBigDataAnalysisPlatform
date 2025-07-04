@@ -17,7 +17,6 @@ import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
-
 /**
  * 销售记录控制器
  */
@@ -77,8 +76,8 @@ public class SaleRecordController {
      */
     @GetMapping("/multiple")
     public ResponseEntity<ApiResponse<List<SaleRecordDTO>>> getMultipleSaleRecords(
-            @RequestParam List<Long> carModelIds,
-            @RequestParam List<Long> regionIds) {
+            @RequestParam(required = false) List<Long> carModelIds,
+            @RequestParam(required = false) List<Long> regionIds) {
         List<SaleRecordDTO> records = service.getMultipleSaleRecords(carModelIds, regionIds);
         return ResponseUtil.success(records);
     }

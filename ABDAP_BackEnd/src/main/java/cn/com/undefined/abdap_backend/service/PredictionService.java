@@ -1,9 +1,12 @@
 package cn.com.undefined.abdap_backend.service;
 
+import cn.com.undefined.abdap_backend.dto.ARIMAResultDTO;
+import cn.com.undefined.abdap_backend.dto.ProphetResultDTO;
 import cn.com.undefined.abdap_backend.dto.SaleRecordDTO;
 import cn.com.undefined.abdap_backend.entity.SaleRecord;
 import cn.com.undefined.abdap_backend.util.ARIMAUtil;
 import cn.com.undefined.abdap_backend.util.ProphetUtil;
+
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -32,7 +35,7 @@ public class PredictionService {
      * @throws IllegalArgumentException 当销售记录数据不足或格式不正确时抛出
      */
     public List<SaleRecordDTO> predictSalesWithARIMA(List<SaleRecord> saleRecords, int monthsToForecast) {
-        
+
         validatePredictionParameters(saleRecords, monthsToForecast);
 
         List<Double> salesData = extractAndValidateSalesData(saleRecords);
@@ -57,8 +60,9 @@ public class PredictionService {
      * @return List<SaleRecordDTO> 预测结果的销售记录DTO列表
      * @throws IllegalArgumentException 当销售记录数据不足或格式不正确时抛出
      */
-    public List<SaleRecordDTO> predictSalesWithARIMA(List<SaleRecord> saleRecords, int monthsToForecast, int p, int d, int q) {
-        
+    public List<SaleRecordDTO> predictSalesWithARIMA(List<SaleRecord> saleRecords, int monthsToForecast, int p, int d,
+            int q) {
+
         validatePredictionParameters(saleRecords, monthsToForecast);
 
         List<Double> salesData = extractAndValidateSalesData(saleRecords);
@@ -73,15 +77,71 @@ public class PredictionService {
     }
 
     /**
+     * 基于销售记录进行ARIMA时间序列预测
+     * 返回预测模型结果数据
+     * 
+     * @param saleRecords      销售记录列表，需按时间顺序排列
+     * @param monthsToForecast 预测月数，建议1-24个月
+     * @return ARIMAResultDTO 预测结果的销售记录DTO列表
+     * @throws IllegalArgumentException 当销售记录数据不足或格式不正确时抛出
+     */
+    public ARIMAResultDTO predictSalesWithARIMADetail(List<SaleRecord> saleRecords, int monthsToForecast) {
+
+        validatePredictionParameters(saleRecords, monthsToForecast);
+
+        List<Double> salesData = extractAndValidateSalesData(saleRecords);
+
+        // 进行ARIMA预测
+        ARIMAUtil.ARIMAResult arimaResult = ARIMAUtil.forecastCarSalesComplete(salesData, monthsToForecast);
+
+        return ARIMAResultDTO.fromARIMAResult(arimaResult);
+    }
+
+    /**
+     * 基于销售记录进行ARIMA时间序列预测（带模型参数版本）
+     * 返回预测模型结果数据
+     * 
+     * @param saleRecords      销售记录列表，需按时间顺序排列
+     * @param monthsToForecast 预测月数，建议1-24个月
+     * @return ARIMAResultDTO 预测结果的销售记录DTO列表
+     * @throws IllegalArgumentException 当销售记录数据不足或格式不正确时抛出
+     */
+
+    public ARIMAResultDTO predictSalesWithARIMADetail(List<SaleRecord> saleRecords, int monthsToForecast, int p, int d,
+            int q) {
+
+        validatePredictionParameters(saleRecords, monthsToForecast);
+
+        List<Double> salesData = extractAndValidateSalesData(saleRecords);
+
+        // 进行ARIMA预测
+        ARIMAUtil.ARIMAResult arimaResult = ARIMAUtil.forecastCarSalesComplete(salesData, monthsToForecast, p, d, q);
+
+        return ARIMAResultDTO.fromARIMAResult(arimaResult);
+    }
+
+    /**
      * 基于销售记录进行Prophet时间序列预测
+     * 返回预测模型结果数据
      * 
      * @param saleRecords      销售记录列表，需按时间顺序排列
      * @param monthsToForecast 预测月数，建议1-24个月
      * @return List<SaleRecordDTO> 预测结果的销售记录DTO列表
      * @throws IllegalArgumentException 当销售记录数据不足或格式不正确时抛出
      */
+    public ProphetResultDTO predictSalesWithProphetDetail(List<SaleRecord> saleRecords, int monthsToForecast) {
+        validatePredictionParameters(saleRecords, monthsToForecast);
+
+        List<Double> salesData = extractAndValidateSalesData(saleRecords);
+
+        // 进行Prophet预测
+        ProphetUtil.ProphetResult prophetResult = ProphetUtil.forecastCarSales(salesData, monthsToForecast);
+
+        return ProphetResultDTO.fromProphetResult(prophetResult);
+    }
+
     public List<SaleRecordDTO> predictSalesWithProphet(List<SaleRecord> saleRecords, int monthsToForecast) {
-        
+
         validatePredictionParameters(saleRecords, monthsToForecast);
 
         List<Double> salesData = extractAndValidateSalesData(saleRecords);
@@ -98,25 +158,25 @@ public class PredictionService {
     /**
      * 基于销售记录进行Prophet时间序列预测（带自定义配置版本）
      * 
-     * @param saleRecords          销售记录列表，需按时间顺序排列
-     * @param monthsToForecast     预测月数，建议1-24个月
-     * @param seasonalityPeriod    季节性周期
-     * @param seasonalityStrength  季节性强度 (0.0-1.0)
-     * @param trendFlexibility     趋势灵活性 (0.0-1.0)
+     * @param saleRecords         销售记录列表，需按时间顺序排列
+     * @param monthsToForecast    预测月数，建议1-24个月
+     * @param seasonalityPeriod   季节性周期
+     * @param seasonalityStrength 季节性强度 (0.0-1.0)
+     * @param trendFlexibility    趋势灵活性 (0.0-1.0)
      * @return List<SaleRecordDTO> 预测结果的销售记录DTO列表
      * @throws IllegalArgumentException 当销售记录数据不足或格式不正确时抛出
      */
     public List<SaleRecordDTO> predictSalesWithProphet(List<SaleRecord> saleRecords, int monthsToForecast,
-                                                       int seasonalityPeriod, double seasonalityStrength, 
-                                                       double trendFlexibility) {
-        
+            int seasonalityPeriod, double seasonalityStrength,
+            double trendFlexibility) {
+
         validatePredictionParameters(saleRecords, monthsToForecast);
 
         List<Double> salesData = extractAndValidateSalesData(saleRecords);
 
         // 创建自定义Prophet配置
         ProphetUtil.ProphetConfig config = ProphetUtil.createCustomConfig(
-            seasonalityPeriod, seasonalityStrength, trendFlexibility, false);
+                seasonalityPeriod, seasonalityStrength, trendFlexibility, false);
 
         // 进行Prophet预测
         double[] data = salesData.stream().mapToDouble(Double::doubleValue).toArray();
