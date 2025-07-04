@@ -69,6 +69,36 @@ public class SaleRecordService {
     }
 
     /**
+     * 指定多个车型id、多个地区id，只返回符合条件的销售记录
+     * 
+     * @param carModelIds
+     * @param regionIds
+     * @return 符合条件的销售记录DTO列表
+     */
+    public List<SaleRecordDTO> getMultipleSaleRecords(List<Long> carModelIds, List<Long> regionIds) {
+        List<SaleRecord> saleRecords;
+        // 根据参数情况选择不同的查询策略
+        if ((carModelIds == null || carModelIds.isEmpty()) && (regionIds == null || regionIds.isEmpty())) {
+            // 两个参数都为空，返回所有记录
+            saleRecords = repository.findAll();
+        } else if (carModelIds == null || carModelIds.isEmpty()) {
+            // 只有地区ID参数
+            saleRecords = repository.findByRegionIds(regionIds);
+        } else if (regionIds == null || regionIds.isEmpty()) {
+            // 只有车型ID参数
+            saleRecords = repository.findByCarModelIds(carModelIds);
+        } else {
+            // 两个参数都有值
+            saleRecords = repository.findByCarModelIdsAndRegionIds(carModelIds, regionIds);
+        }
+
+        // 转换为DTO并返回
+        return saleRecords.stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
+    /**
      * 根据地区名称查询销售记录
      */
     public List<SaleRecordDTO> findByRegionName(String regionName) {
