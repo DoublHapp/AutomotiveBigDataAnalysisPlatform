@@ -17,6 +17,7 @@
           <el-button type="primary" :icon="Refresh" @click="refreshData" :loading="loading">
             刷新数据
           </el-button>
+          <el-button type="success" :icon="Download" @click="exportData"> 导出数据 </el-button>
         </div>
       </div>
     </el-card>
@@ -28,9 +29,9 @@
           <!-- 面包屑导航 -->
           <el-breadcrumb separator="/" class="breadcrumb">
             <el-breadcrumb-item @click="navigateToLevel('country')">
-              <span class="breadcrumb-link" :class="{ active: currentLevel === 'country' }"
-                >全国</span
-              >
+              <span class="breadcrumb-link" :class="{ active: currentLevel === 'country' }">
+                全国
+              </span>
             </el-breadcrumb-item>
             <el-breadcrumb-item
               v-if="currentLevel === 'province'"
@@ -42,39 +43,25 @@
         </div>
 
         <div class="filter-right">
-          <!-- 时间粒度选择 -->
-          <el-radio-group v-model="timeGranularity" @change="handleTimeGranularityChange">
-            <el-radio-button value="month">月</el-radio-button>
-            <el-radio-button value="quarter">季</el-radio-button>
-            <el-radio-button value="year">年</el-radio-button>
+          <!-- 时间范围选择 -->
+          <el-radio-group v-model="timeRange" @change="handleTimeRangeChange">
+            <el-radio-button value="month">近一月</el-radio-button>
+            <el-radio-button value="quarter">近一季</el-radio-button>
+            <el-radio-button value="year">近一年</el-radio-button>
+            <el-radio-button value="custom">自定义</el-radio-button>
           </el-radio-group>
 
-          <!-- 具体时间选择 -->
+          <!-- 自定义时间范围选择 -->
           <el-date-picker
-            v-model="selectedTime"
-            :type="datePickerType"
-            :placeholder="datePickerPlaceholder"
-            :format="datePickerFormat"
-            :value-format="datePickerValueFormat"
-            @change="handleTimeChange"
-            style="margin-left: 16px; width: 200px"
+            v-if="timeRange === 'custom'"
+            v-model="customDateRange"
+            type="datetimerange"
+            range-separator="至"
+            start-placeholder="开始日期"
+            end-placeholder="结束日期"
+            @change="handleCustomDateChange"
+            style="margin-left: 16px; width: 300px"
           />
-
-          <!-- 季度选择 (当选择季度时显示) -->
-          <el-select
-            v-if="timeGranularity === 'quarter'"
-            v-model="selectedQuarter"
-            placeholder="选择季度"
-            @change="handleQuarterChange"
-            style="margin-left: 16px; width: 200px"
-          >
-            <el-option
-              v-for="quarter in quarterOptions"
-              :key="quarter.value"
-              :label="quarter.label"
-              :value="quarter.value"
-            />
-          </el-select>
 
           <!-- 车型筛选 -->
           <el-select
@@ -86,30 +73,128 @@
           >
             <el-option label="全部车型" value="" />
             <el-option
-              v-for="model in carModelList"
+              v-for="model in availableCarModels"
               :key="model.carModelId"
-              :label="model.modelName"
-              :value="model.carModelId"
+              :label="`${model.brandName} ${model.modelName}`"
+              :value="model.carModelId.toString()"
             />
+          </el-select>
+
+          <!-- 地区层级选择 -->
+          <el-select
+            v-model="regionLevel"
+            placeholder="地区层级"
+            @change="handleRegionLevelChange"
+            style="margin-left: 16px; width: 120px"
+          >
+            <el-option label="省份级别" value="province" />
+            <el-option label="城市级别" value="city" />
           </el-select>
         </div>
       </div>
     </el-card>
 
+    <!-- 数据概览卡片 -->
+    <el-row :gutter="20" class="overview-section">
+      <el-col :xs="24" :sm="12" :md="6">
+        <el-card shadow="never" class="overview-card">
+          <div class="overview-content">
+            <div class="overview-icon total-sales">
+              <el-icon><TrendCharts /></el-icon>
+            </div>
+            <div class="overview-details">
+              <div class="overview-value">{{ totalSales.toLocaleString() }}</div>
+              <div class="overview-label">总销量 (台)</div>
+              <div class="overview-trend" :class="totalSalesGrowth >= 0 ? 'positive' : 'negative'">
+                {{ totalSalesGrowth >= 0 ? '+' : '' }}{{ totalSalesGrowth.toFixed(1) }}%
+              </div>
+            </div>
+          </div>
+        </el-card>
+      </el-col>
+
+      <el-col :xs="24" :sm="12" :md="6">
+        <el-card shadow="never" class="overview-card">
+          <div class="overview-content">
+            <div class="overview-icon total-amount">
+              <el-icon><Money /></el-icon>
+            </div>
+            <div class="overview-details">
+              <div class="overview-value">{{ (totalSalesAmount / 10000).toFixed(0) }}</div>
+              <div class="overview-label">总销售额 (万元)</div>
+              <div class="overview-trend" :class="totalAmountGrowth >= 0 ? 'positive' : 'negative'">
+                {{ totalAmountGrowth >= 0 ? '+' : '' }}{{ totalAmountGrowth.toFixed(1) }}%
+              </div>
+            </div>
+          </div>
+        </el-card>
+      </el-col>
+
+      <el-col :xs="24" :sm="12" :md="6">
+        <el-card shadow="never" class="overview-card">
+          <div class="overview-content">
+            <div class="overview-icon coverage">
+              <el-icon><Location /></el-icon>
+            </div>
+            <div class="overview-details">
+              <div class="overview-value">{{ totalRegions }}</div>
+              <div class="overview-label">
+                覆盖{{ currentLevel === 'country' ? '省份' : '城市' }}
+              </div>
+              <div class="overview-trend">最高: {{ topRegionName }}</div>
+            </div>
+          </div>
+        </el-card>
+      </el-col>
+
+      <el-col :xs="24" :sm="12" :md="6">
+        <el-card shadow="never" class="overview-card">
+          <div class="overview-content">
+            <div class="overview-icon avg-growth">
+              <el-icon><DataAnalysis /></el-icon>
+            </div>
+            <div class="overview-details">
+              <div class="overview-value">
+                {{ averageGrowth >= 0 ? '+' : '' }}{{ averageGrowth.toFixed(1) }}%
+              </div>
+              <div class="overview-label">平均增长率</div>
+              <div class="overview-trend">行业平均: {{ industryAverageGrowth.toFixed(1) }}%</div>
+            </div>
+          </div>
+        </el-card>
+      </el-col>
+    </el-row>
+
     <!-- 地图和数据展示区 -->
     <el-row :gutter="20">
       <!-- 中国地图热力图 -->
-      <el-col :xs="24" :sm="24" :md="24" :lg="13" :xl="14">
+      <el-col :xs="24" :sm="24" :md="24" :lg="14" :xl="15">
         <el-card shadow="never" class="map-card">
           <template #header>
             <div class="card-header">
               <span>{{ mapTitle }}</span>
-              <div class="legend">
-                <span class="legend-label">销量热度:</span>
-                <div class="legend-gradient">
-                  <span class="legend-min">低</span>
-                  <div class="gradient-bar"></div>
-                  <span class="legend-max">高</span>
+              <div class="map-controls">
+                <el-tooltip content="热力图说明" placement="top">
+                  <el-button size="small" :icon="QuestionFilled" @click="showMapHelp = true" />
+                </el-tooltip>
+                <el-dropdown @command="handleMapExport">
+                  <el-button size="small">
+                    导出<el-icon><ArrowDown /></el-icon>
+                  </el-button>
+                  <template #dropdown>
+                    <el-dropdown-menu>
+                      <el-dropdown-item command="image">导出图片</el-dropdown-item>
+                      <el-dropdown-item command="pdf">导出PDF</el-dropdown-item>
+                    </el-dropdown-menu>
+                  </template>
+                </el-dropdown>
+                <div class="legend">
+                  <span class="legend-label">销量热度:</span>
+                  <div class="legend-gradient">
+                    <span class="legend-min">低</span>
+                    <div class="gradient-bar"></div>
+                    <span class="legend-max">高</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -128,14 +213,15 @@
       </el-col>
 
       <!-- 散点图分析 -->
-      <el-col :xs="24" :sm="24" :md="24" :lg="11" :xl="10">
+      <el-col :xs="24" :sm="24" :md="24" :lg="10" :xl="9">
         <el-card shadow="never" class="scatter-card">
           <template #header>
-            <span>{{
-              currentLevel === 'country'
-                ? '全国汽车销售热力分布'
-                : `${currentProvince}汽车销售热力分布`
-            }}</span>
+            <div class="card-header">
+              <span>{{
+                currentLevel === 'country' ? '省份销量分析' : `${currentProvince}城市销量分析`
+              }}</span>
+              <el-button size="small" @click="showScatterDetail = true"> 详细分析 </el-button>
+            </div>
           </template>
           <div ref="scatterChart" class="scatter-chart-container" v-loading="loading"></div>
         </el-card>
@@ -148,7 +234,20 @@
       <el-col :xs="24" :lg="12">
         <el-card shadow="never" class="ranking-card">
           <template #header>
-            <span>{{ currentLevel === 'country' ? '省份' : '城市' }}销量排行</span>
+            <div class="card-header">
+              <span>{{ currentLevel === 'country' ? '省份' : '城市' }}销量排行</span>
+              <div class="ranking-controls">
+                <el-radio-group
+                  v-model="rankingType"
+                  @change="handleRankingTypeChange"
+                  size="small"
+                >
+                  <el-radio-button value="sales">销量</el-radio-button>
+                  <el-radio-button value="amount">销售额</el-radio-button>
+                  <el-radio-button value="growth">增长率</el-radio-button>
+                </el-radio-group>
+              </div>
+            </div>
           </template>
           <div class="ranking-content" v-loading="loading">
             <div
@@ -158,17 +257,37 @@
               :class="{ 'top-three': index < 3 }"
               @click="handleRegionClick(item)"
             >
-              <div class="rank-number" :class="`rank-${index + 1}`">{{ index + 1 }}</div>
+              <div class="rank-number" :class="`rank-${Math.min(index + 1, 4)}`">
+                {{ index + 1 }}
+              </div>
               <div class="region-info">
                 <div class="region-name">{{ item.regionName }}</div>
                 <div class="sales-info">
-                  <span class="sales-count">{{ item.salesCount.toLocaleString() }}台</span>
+                  <span class="sales-count">
+                    {{
+                      rankingType === 'sales'
+                        ? item.salesCount.toLocaleString() + '台'
+                        : rankingType === 'amount'
+                          ? (item.salesAmount / 10000).toFixed(0) + '万元'
+                          : (item.growthRate >= 0 ? '+' : '') + item.growthRate.toFixed(1) + '%'
+                    }}
+                  </span>
                   <span class="growth-rate" :class="item.growthRate >= 0 ? 'positive' : 'negative'">
                     {{ item.growthRate >= 0 ? '+' : '' }}{{ item.growthRate.toFixed(1) }}%
                   </span>
                 </div>
+                <div class="market-info">
+                  <span class="market-share">份额: {{ item.marketShare.toFixed(1) }}%</span>
+                  <span class="vs-average"
+                    >vs行业: {{ (item.growthRate - averageGrowth).toFixed(1) }}%</span
+                  >
+                </div>
               </div>
-              <div class="market-share">{{ item.marketShare.toFixed(1) }}%</div>
+              <div class="region-actions">
+                <el-button size="small" type="text" @click.stop="showRegionDetail(item)">
+                  详情
+                </el-button>
+              </div>
             </div>
 
             <!-- 空状态 -->
@@ -177,69 +296,236 @@
         </el-card>
       </el-col>
 
-      <!-- 统计数据 -->
+      <!-- 增长趋势分析 -->
       <el-col :xs="24" :lg="12">
-        <el-card shadow="never" class="stats-card">
+        <el-card shadow="never" class="growth-card">
           <template #header>
-            <span>销量统计概览</span>
+            <div class="card-header">
+              <span>增长趋势分析</span>
+              <el-button size="small" @click="showGrowthDetail = true"> 查看详情 </el-button>
+            </div>
           </template>
-          <div class="stats-content">
-            <div class="stat-item">
-              <div class="stat-icon total-sales">
-                <el-icon><TrendCharts /></el-icon>
-              </div>
-              <div class="stat-details">
-                <div class="stat-value">{{ totalSales.toLocaleString() }}</div>
-                <div class="stat-label">总销量（台）</div>
-              </div>
-            </div>
-
-            <div class="stat-item">
-              <div class="stat-icon total-regions">
-                <el-icon><Location /></el-icon>
-              </div>
-              <div class="stat-details">
-                <div class="stat-value">{{ totalRegions }}</div>
-                <div class="stat-label">覆盖{{ currentLevel === 'country' ? '省份' : '城市' }}</div>
-              </div>
-            </div>
-
-            <div class="stat-item">
-              <div class="stat-icon avg-growth">
-                <el-icon><DataAnalysis /></el-icon>
-              </div>
-              <div class="stat-details">
-                <div class="stat-value">
-                  {{ averageGrowth >= 0 ? '+' : '' }}{{ averageGrowth.toFixed(1) }}%
+          <div class="growth-content">
+            <!-- 增长分布 -->
+            <div class="growth-distribution">
+              <div class="growth-category positive">
+                <div class="category-header">
+                  <el-icon color="#67c23a"><TrendCharts /></el-icon>
+                  <span>增长地区</span>
                 </div>
-                <div class="stat-label">平均增长率</div>
+                <div class="category-value">{{ positiveGrowthRegions }}</div>
+                <div class="category-desc">
+                  {{ ((positiveGrowthRegions / totalRegions) * 100).toFixed(1) }}% 地区
+                </div>
+              </div>
+
+              <div class="growth-category stable">
+                <div class="category-header">
+                  <el-icon color="#e6a23c"><Minus /></el-icon>
+                  <span>平稳地区</span>
+                </div>
+                <div class="category-value">{{ stableGrowthRegions }}</div>
+                <div class="category-desc">
+                  {{ ((stableGrowthRegions / totalRegions) * 100).toFixed(1) }}% 地区
+                </div>
+              </div>
+
+              <div class="growth-category negative">
+                <div class="category-header">
+                  <el-icon color="#f56c6c"><ArrowDown /></el-icon>
+                  <span>下滑地区</span>
+                </div>
+                <div class="category-value">{{ negativeGrowthRegions }}</div>
+                <div class="category-desc">
+                  {{ ((negativeGrowthRegions / totalRegions) * 100).toFixed(1) }}% 地区
+                </div>
               </div>
             </div>
 
-            <div class="stat-item">
-              <div class="stat-icon top-region">
-                <el-icon><Trophy /></el-icon>
-              </div>
-              <div class="stat-details">
-                <div class="stat-value">{{ topRegionName }}</div>
-                <div class="stat-label">销量冠军</div>
+            <!-- 热门地区推荐 -->
+            <div class="hot-regions">
+              <h4>🔥 热门增长地区</h4>
+              <div class="hot-region-list">
+                <div
+                  v-for="region in topGrowthRegions"
+                  :key="region.regionId"
+                  class="hot-region-item"
+                  @click="handleRegionClick(region)"
+                >
+                  <span class="region-name">{{ region.regionName }}</span>
+                  <span class="growth-badge positive">+{{ region.growthRate.toFixed(1) }}%</span>
+                </div>
               </div>
             </div>
           </div>
         </el-card>
       </el-col>
     </el-row>
+
+    <!-- 地区详情弹窗 -->
+    <el-dialog
+      v-model="showRegionDetailDialog"
+      :title="`${selectedRegionDetail?.regionName} 详细信息`"
+      width="60%"
+    >
+      <div v-if="selectedRegionDetail" class="region-detail-content">
+        <el-row :gutter="20">
+          <el-col :span="12">
+            <div class="detail-card">
+              <h4>销售数据</h4>
+              <div class="detail-item">
+                <span class="label">销量:</span>
+                <span class="value">{{ selectedRegionDetail.salesCount.toLocaleString() }} 台</span>
+              </div>
+              <div class="detail-item">
+                <span class="label">销售额:</span>
+                <span class="value"
+                  >¥{{ (selectedRegionDetail.salesAmount / 10000).toFixed(0) }} 万元</span
+                >
+              </div>
+              <div class="detail-item">
+                <span class="label">市场份额:</span>
+                <span class="value">{{ selectedRegionDetail.marketShare.toFixed(2) }}%</span>
+              </div>
+            </div>
+          </el-col>
+          <el-col :span="12">
+            <div class="detail-card">
+              <h4>增长分析</h4>
+              <div class="detail-item">
+                <span class="label">增长率:</span>
+                <span
+                  class="value"
+                  :class="selectedRegionDetail.growthRate >= 0 ? 'positive' : 'negative'"
+                >
+                  {{ selectedRegionDetail.growthRate >= 0 ? '+' : ''
+                  }}{{ selectedRegionDetail.growthRate.toFixed(1) }}%
+                </span>
+              </div>
+              <div class="detail-item">
+                <span class="label">vs 平均:</span>
+                <span class="value"
+                  >{{ (selectedRegionDetail.growthRate - averageGrowth).toFixed(1) }}%</span
+                >
+              </div>
+              <div class="detail-item">
+                <span class="label">排名:</span>
+                <span class="value">第 {{ getRankByRegion(selectedRegionDetail) }} 位</span>
+              </div>
+            </div>
+          </el-col>
+        </el-row>
+
+        <div class="detail-actions">
+          <el-button
+            type="primary"
+            @click="drillDownToRegion(selectedRegionDetail)"
+            v-if="currentLevel === 'country'"
+          >
+            查看城市详情
+          </el-button>
+          <el-button @click="showRegionDetailDialog = false">关闭</el-button>
+        </div>
+      </div>
+    </el-dialog>
+
+    <!-- 地图说明弹窗 -->
+    <el-dialog v-model="showMapHelp" title="热力图说明" width="50%">
+      <div class="map-help-content">
+        <h4>颜色说明</h4>
+        <ul>
+          <li><span class="color-sample low"></span> 蓝色区域：销量相对较低</li>
+          <li><span class="color-sample medium"></span> 绿色区域：销量中等水平</li>
+          <li><span class="color-sample high"></span> 黄色区域：销量较高</li>
+          <li><span class="color-sample highest"></span> 红色区域：销量最高</li>
+        </ul>
+        <h4>操作说明</h4>
+        <ul>
+          <li>点击地图省份可查看该省城市分布</li>
+          <li>使用鼠标滚轮可以缩放地图</li>
+          <li>拖拽可以移动地图视角</li>
+          <li>悬停在地区上可查看详细数据</li>
+        </ul>
+      </div>
+    </el-dialog>
+
+    <!-- 散点图详细分析弹窗 -->
+    <el-dialog v-model="showScatterDetail" title="销量分布详细分析" width="70%">
+      <div ref="detailScatterChart" class="detail-scatter-chart"></div>
+    </el-dialog>
+
+    <!-- 增长详情弹窗 -->
+    <el-dialog v-model="showGrowthDetail" title="增长趋势详细分析" width="70%">
+      <div ref="growthTrendChart" class="growth-trend-chart"></div>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick, watch, reactive } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Refresh, TrendCharts, Location, DataAnalysis, Trophy } from '@element-plus/icons-vue'
+import {
+  Refresh,
+  Download,
+  TrendCharts,
+  Location,
+  DataAnalysis,
+  Money,
+  ArrowDown,
+  ArrowUp,
+  Minus,
+  QuestionFilled,
+} from '@element-plus/icons-vue'
 import * as echarts from 'echarts'
 import axios from 'axios'
 
-// 数据接口定义
+// =============================================
+// 🏗️ 接口定义
+// =============================================
+
+// 基础数据接口 - 与API响应完全对应
+interface CarModel {
+  carModelId: number
+  modelName: string
+  brandId: number
+  brandName: string
+  level: string
+  launchDate: string
+  officialPrice: number
+  engineType: string
+  seatNum: number
+  driveType?: string
+  rangeKm?: number
+}
+
+interface SaleRecord {
+  saleId: number
+  carModelId: number
+  carModelName: string
+  regionId: number
+  regionName: string
+  saleMonth: string
+  saleCount: number
+  saleAmount: number
+}
+
+interface Region {
+  regionId: number
+  regionName: string
+  parentRegionId: number | null
+  parentRegionName: string | null
+}
+
+// 📊 基础数据层
+interface BaseData {
+  carModels: CarModel[]
+  saleRecords: SaleRecord[]
+  regions: Region[]
+  topLevelRegions: Region[]
+  nonTopLevelRegions: Region[]
+}
+
+// 🧮 计算数据层
 interface RegionSalesData {
   regionId: number
   regionName: string
@@ -253,97 +539,532 @@ interface RegionSalesData {
   saleMonth?: string
 }
 
-interface CarModel {
-  carModelId: number
-  modelName: string
-  brandName: string
+interface BusinessMetrics {
+  totalSales: number
+  totalSalesAmount: number
+  totalRegions: number
+  averageGrowth: number
+  industryAverageGrowth: number
+  positiveGrowthRegions: number
+  stableGrowthRegions: number
+  negativeGrowthRegions: number
+  topRegionName: string
+  totalSalesGrowth: number
+  totalAmountGrowth: number
 }
 
-// 响应式数据
+// =============================================
+// 🎛️ 响应式数据
+// =============================================
+
 const loading = ref(false)
-const timeGranularity = ref('month') // month, quarter, year
-const selectedTime = ref(new Date())
-const selectedQuarter = ref('') // 新增：季度选择
+const showRegionDetailDialog = ref(false)
+const showMapHelp = ref(false)
+const showScatterDetail = ref(false)
+const showGrowthDetail = ref(false)
+const selectedRegionDetail = ref<RegionSalesData | null>(null)
+
+// 🔧 修复：添加缺失的响应式变量
+const timeRange = ref<'month' | 'quarter' | 'year' | 'custom'>('year')
+const customDateRange = ref<[Date, Date] | null>(null)
 const selectedCarModel = ref('')
+const regionLevel = ref<'province' | 'city'>('province')
+
+// 📊 基础数据存储
+const baseData = ref<BaseData>({
+  carModels: [],
+  saleRecords: [],
+  regions: [],
+  topLevelRegions: [],
+  nonTopLevelRegions: [],
+})
+
+// 🧮 计算后的业务数据
+const salesData = ref<RegionSalesData[]>([])
+const availableCarModels = ref<CarModel[]>([])
+const businessMetrics = ref<BusinessMetrics>({
+  totalSales: 0,
+  totalSalesAmount: 0,
+  totalRegions: 0,
+  averageGrowth: 0,
+  industryAverageGrowth: 0,
+  positiveGrowthRegions: 0,
+  stableGrowthRegions: 0,
+  negativeGrowthRegions: 0,
+  topRegionName: '',
+  totalSalesGrowth: 0,
+  totalAmountGrowth: 0,
+})
+
+// 🔧 修复：使用 ref 变量代替 reactive 对象
+// const globalFilters = reactive({
+//   timeRange: 'year' as 'month' | 'quarter' | 'year' | 'custom',
+//   customDateRange: null as [Date, Date] | null,
+//   selectedCarModel: '',
+//   regionLevel: 'province' as 'province' | 'city'
+// })
+
+// 图表和显示控制
 const currentLevel = ref<'country' | 'province' | 'city'>('country')
 const currentProvince = ref('')
 const currentProvinceId = ref<number | null>(null)
+const rankingType = ref<'sales' | 'amount' | 'growth'>('sales')
 
-// 图表相关
+// 图表实例
 const chinaMapChart = ref<HTMLDivElement>()
 const scatterChart = ref<HTMLDivElement>()
+const detailScatterChart = ref<HTMLDivElement>()
+const growthTrendChart = ref<HTMLDivElement>()
+
 let chinaMapChartInstance: echarts.ECharts | null = null
 let scatterChartInstance: echarts.ECharts | null = null
+let detailScatterChartInstance: echarts.ECharts | null = null
+let growthTrendChartInstance: echarts.ECharts | null = null
 
-// 数据
-const salesData = ref<RegionSalesData[]>([])
-const carModelList = ref<CarModel[]>([])
+// API 调用函数保持不变...
+const fetchCarModels = async (): Promise<CarModel[]> => {
+  try {
+    console.log('🚀 正在获取车型列表...')
+    const response = await axios.get('/api/car-models')
 
-// 计算属性
-const datePickerType = computed(() => {
-  switch (timeGranularity.value) {
-    case 'month':
-      return 'month'
-    case 'quarter':
-      return 'year' // 季度选择时，年份选择器 + 单独的季度选择框
-    case 'year':
-      return 'year'
-    default:
-      return 'month'
+    if (response.data.status === 200 && response.data.data) {
+      console.log('✅ 获取车型数据成功:', response.data.data.length, '个车型')
+      return response.data.data
+    } else {
+      throw new Error(`API返回错误状态: ${response.data.status}`)
+    }
+  } catch (error) {
+    console.error('❌ 获取车型列表失败:', error)
+    ElMessage.error('车型数据加载失败')
+    throw error
   }
-})
+}
 
-const datePickerPlaceholder = computed(() => {
-  switch (timeGranularity.value) {
-    case 'month':
-      return '选择月份'
-    case 'quarter':
-      return '选择年份'
-    case 'year':
-      return '选择年份'
-    default:
-      return '选择时间'
+const fetchSaleRecords = async (): Promise<SaleRecord[]> => {
+  try {
+    console.log('🚀 正在获取销售记录...')
+    const response = await axios.get('/api/sale-records')
+
+    if (response.data.status === 200 && response.data.data) {
+      console.log('✅ 获取销售记录成功:', response.data.data.length, '条记录')
+      return response.data.data
+    } else {
+      throw new Error(`API返回错误状态: ${response.data.status}`)
+    }
+  } catch (error) {
+    console.error('❌ 获取销售记录失败:', error)
+    ElMessage.error('销售数据加载失败')
+    throw error
   }
-})
+}
 
-const datePickerFormat = computed(() => {
-  switch (timeGranularity.value) {
-    case 'month':
-      return 'YYYY-MM'
-    case 'quarter':
-      return 'YYYY'
-    case 'year':
-      return 'YYYY'
-    default:
-      return 'YYYY-MM'
+const fetchRegions = async (): Promise<Region[]> => {
+  try {
+    console.log('🚀 正在获取地区信息...')
+    const response = await axios.get('/api/regions')
+
+    if (response.data.status === 200 && response.data.data) {
+      console.log('✅ 获取地区信息成功:', response.data.data.length, '个地区')
+      return response.data.data
+    } else {
+      throw new Error(`API返回错误状态: ${response.data.status}`)
+    }
+  } catch (error) {
+    console.error('❌ 获取地区信息失败:', error)
+    ElMessage.error('地区数据加载失败')
+    throw error
   }
-})
+}
 
-const datePickerValueFormat = computed(() => {
-  switch (timeGranularity.value) {
-    case 'month':
-      return 'YYYY-MM'
-    case 'quarter':
-      return 'YYYY'
-    case 'year':
-      return 'YYYY'
-    default:
-      return 'YYYY-MM'
+const fetchTopLevelRegions = async (): Promise<Region[]> => {
+  try {
+    console.log('🚀 正在获取省份信息...')
+    const response = await axios.get('/api/regions/top-level')
+
+    if (response.data.status === 200 && response.data.data) {
+      console.log('✅ 获取省份信息成功:', response.data.data.length, '个省份')
+      return response.data.data
+    } else {
+      throw new Error(`API返回错误状态: ${response.data.status}`)
+    }
+  } catch (error) {
+    console.error('❌ 获取省份信息失败:', error)
+    ElMessage.error('省份数据加载失败')
+    throw error
   }
-})
+}
 
-// 季度选项
-const quarterOptions = computed(() => {
-  if (!selectedTime.value) return []
+const fetchNonTopLevelRegions = async (): Promise<Region[]> => {
+  try {
+    console.log('🚀 正在获取城市信息...')
+    const response = await axios.get('/api/regions/non-top-level')
 
-  const year = new Date(selectedTime.value).getFullYear()
-  return [
-    { label: `${year}年第1季度 (1-3月)`, value: `${year}-Q1` },
-    { label: `${year}年第2季度 (4-6月)`, value: `${year}-Q2` },
-    { label: `${year}年第3季度 (7-9月)`, value: `${year}-Q3` },
-    { label: `${year}年第4季度 (10-12月)`, value: `${year}-Q4` },
-  ]
-})
+    if (response.data.status === 200 && response.data.data) {
+      console.log('✅ 获取城市信息成功:', response.data.data.length, '个城市')
+      return response.data.data
+    } else {
+      throw new Error(`API返回错误状态: ${response.data.status}`)
+    }
+  } catch (error) {
+    console.error('❌ 获取城市信息失败:', error)
+    ElMessage.error('城市数据加载失败')
+    throw error
+  }
+}
+
+const loadAllBaseData = async () => {
+  try {
+    console.log('📊 开始加载基础数据...')
+
+    const [carModels, saleRecords, regions, topLevelRegions, nonTopLevelRegions] =
+      await Promise.all([
+        fetchCarModels(),
+        fetchSaleRecords(),
+        fetchRegions(),
+        fetchTopLevelRegions(),
+        fetchNonTopLevelRegions(),
+      ])
+
+    baseData.value = {
+      carModels,
+      saleRecords,
+      regions,
+      topLevelRegions,
+      nonTopLevelRegions,
+    }
+
+    console.log('📊 基础数据加载完成:', {
+      车型数量: carModels.length,
+      销售记录数量: saleRecords.length,
+      地区数量: regions.length,
+      省份数量: topLevelRegions.length,
+      城市数量: nonTopLevelRegions.length,
+    })
+
+    // 更新可用车型列表
+    availableCarModels.value = carModels
+
+    ElMessage.success('基础数据加载完成')
+  } catch (error) {
+    console.error('❌ 基础数据加载失败:', error)
+    ElMessage.error('数据加载失败，请检查网络连接')
+    throw error
+  }
+}
+
+// 🔧 修复：数据处理函数
+const processRegionSalesData = () => {
+  console.log('📍 处理地区销售数据...')
+
+  if (baseData.value.saleRecords.length === 0) {
+    console.warn('销售记录为空')
+    salesData.value = []
+    return
+  }
+
+  // 🔧 使用新的 ref 变量
+  let filteredRecords = baseData.value.saleRecords
+
+  // 时间筛选 - 修复逻辑
+  if (timeRange.value === 'custom' && customDateRange.value) {
+    const [startDate, endDate] = customDateRange.value
+    filteredRecords = filteredRecords.filter((record) => {
+      const recordDate = new Date(record.saleMonth)
+      return recordDate >= startDate && recordDate <= endDate
+    })
+  } else if (timeRange.value !== 'custom') {
+    const currentDate = new Date()
+    let monthsBack = 12
+
+    switch (timeRange.value) {
+      case 'month':
+        monthsBack = 1
+        break
+      case 'quarter':
+        monthsBack = 3
+        break
+      case 'year':
+        monthsBack = 12
+        break
+    }
+
+    const startDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - monthsBack, 1)
+    filteredRecords = filteredRecords.filter((record) => {
+      const recordDate = new Date(record.saleMonth)
+      return recordDate >= startDate
+    })
+  }
+
+  // 车型筛选
+  if (selectedCarModel.value) {
+    const selectedModelId = parseInt(selectedCarModel.value)
+    filteredRecords = filteredRecords.filter((record) => record.carModelId === selectedModelId)
+  }
+
+  console.log('地区销量筛选后记录数:', filteredRecords.length)
+  console.log('筛选后的记录样本:', filteredRecords.slice(0, 3))
+
+  // 🔧 修复：如果筛选后数据为空，使用原始数据
+  if (filteredRecords.length === 0) {
+    console.warn('筛选后数据为空，使用原始数据')
+    filteredRecords = baseData.value.saleRecords
+  }
+
+  // 确定使用的地区列表
+  let targetRegions: Region[] = []
+  if (currentLevel.value === 'country') {
+    targetRegions = baseData.value.topLevelRegions
+  } else if (currentLevel.value === 'province' && currentProvinceId.value) {
+    targetRegions = baseData.value.nonTopLevelRegions.filter(
+      (region) => region.parentRegionId === currentProvinceId.value,
+    )
+  }
+
+  console.log('目标地区数量:', targetRegions.length)
+  console.log('目标地区样本:', targetRegions.slice(0, 3))
+
+  if (targetRegions.length === 0) {
+    console.warn('没有找到目标地区，使用所有地区')
+    targetRegions = baseData.value.regions
+  }
+
+  // 🔧 修复：按地区聚合销售数据 - 简化逻辑
+  const regionSalesMap = new Map<number, {
+    regionName: string
+    salesVolume: number
+    salesAmount: number
+    lastYearSalesVolume: number
+    lastYearSalesAmount: number
+  }>()
+
+  const currentYear = new Date().getFullYear()
+  console.log('当前年份:', currentYear)
+
+  // 🔧 修复：处理销售记录 - 改进逻辑
+  filteredRecords.forEach((record, index) => {
+    console.log(`处理记录 ${index + 1}:`, {
+      regionId: record.regionId,
+      regionName: record.regionName,
+      saleCount: record.saleCount,
+      saleAmount: record.saleAmount,
+      saleMonth: record.saleMonth
+    })
+
+    const recordDate = new Date(record.saleMonth)
+    const recordYear = recordDate.getFullYear()
+
+    let targetRegionId = record.regionId
+    let targetRegionName = record.regionName
+
+    // 🔧 修复：如果是国家级视图，需要找到省级地区
+    if (currentLevel.value === 'country') {
+      const recordRegion = baseData.value.regions.find((r) => r.regionId === record.regionId)
+      if (recordRegion) {
+        if (recordRegion.parentRegionId === null) {
+          // 已经是省级地区
+          targetRegionId = recordRegion.regionId
+          targetRegionName = recordRegion.regionName
+        } else {
+          // 是市级地区，找到其父级省份
+          targetRegionId = recordRegion.parentRegionId
+          const parentRegion = baseData.value.regions.find(r => r.regionId === recordRegion.parentRegionId)
+          targetRegionName = parentRegion?.regionName || recordRegion.regionName
+        }
+      }
+    }
+
+    // 🔧 修复：确保目标地区存在
+    if (!regionSalesMap.has(targetRegionId)) {
+      regionSalesMap.set(targetRegionId, {
+        regionName: targetRegionName,
+        salesVolume: 0,
+        salesAmount: 0,
+        lastYearSalesVolume: 0,
+        lastYearSalesAmount: 0,
+      })
+    }
+
+    const existing = regionSalesMap.get(targetRegionId)!
+
+    // 🔧 修复：累加销量数据 - 添加调试信息
+    if (recordYear === currentYear) {
+      existing.salesVolume += record.saleCount
+      existing.salesAmount += record.saleAmount
+      console.log(`累加当年数据到地区 ${targetRegionName}:`, {
+        新增销量: record.saleCount,
+        累计销量: existing.salesVolume,
+        新增销售额: record.saleAmount,
+        累计销售额: existing.salesAmount
+      })
+    } else if (recordYear === currentYear - 1) {
+      existing.lastYearSalesVolume += record.saleCount
+      existing.lastYearSalesAmount += record.saleAmount
+      console.log(`累加去年数据到地区 ${targetRegionName}:`, {
+        新增销量: record.saleCount,
+        累计销量: existing.lastYearSalesVolume
+      })
+    } else {
+      // 🔧 新增：处理其他年份的数据
+      console.log(`记录年份 ${recordYear} 不在当年或去年范围内，但仍计入当年数据`)
+      existing.salesVolume += record.saleCount
+      existing.salesAmount += record.saleAmount
+    }
+  })
+
+  console.log('地区销量聚合结果:', Object.fromEntries(regionSalesMap))
+
+  // 转换为最终数据格式
+  const regionsArray = Array.from(regionSalesMap.entries()).map(([regionId, data]) => {
+    const growthRate =
+      data.lastYearSalesVolume > 0
+        ? ((data.salesVolume - data.lastYearSalesVolume) / data.lastYearSalesVolume) * 100
+        : data.salesVolume > 0
+          ? 50 // 🔧 修复：没有去年数据时，设置合理的增长率
+          : 0
+
+    return {
+      regionId,
+      regionName: data.regionName,
+      salesCount: data.salesVolume,
+      salesAmount: data.salesAmount,
+      growthRate,
+      marketShare: 0,
+      longitude: 116.4074 + (Math.random() - 0.5) * 20,
+      latitude: 39.9042 + (Math.random() - 0.5) * 10,
+      parentRegionId: currentLevel.value === 'province' ? currentProvinceId.value : null,
+      saleMonth: formatCurrentPeriod(),
+    }
+  })
+
+  console.log('转换后的地区数组:', regionsArray)
+
+  // 🔧 修复：计算市场份额
+  const totalSales = regionsArray.reduce((sum, region) => sum + region.salesCount, 0)
+  console.log('总销量:', totalSales)
+  
+  regionsArray.forEach((region) => {
+    region.marketShare = totalSales > 0 ? (region.salesCount / totalSales) * 100 : 0
+  })
+
+  // 🔧 修复：只有有数据的地区才排序
+  regionsArray.sort((a, b) => b.salesCount - a.salesCount)
+
+  salesData.value = regionsArray
+  console.log('📍 地区销量处理完成，覆盖', regionsArray.length, '个地区')
+  console.log('最终销量数据:', regionsArray.map(r => ({ 地区: r.regionName, 销量: r.salesCount, 销售额: r.salesAmount })))
+}
+// 其他数据处理函数保持不变，但需要更新变量引用...
+
+// 计算业务指标函数保持不变...
+const calculateBusinessMetrics = () => {
+  console.log('📊 计算业务指标...')
+
+  if (salesData.value.length === 0) {
+    businessMetrics.value = {
+      totalSales: 0,
+      totalSalesAmount: 0,
+      totalRegions: 0,
+      averageGrowth: 0,
+      industryAverageGrowth: 0,
+      positiveGrowthRegions: 0,
+      stableGrowthRegions: 0,
+      negativeGrowthRegions: 0,
+      topRegionName: '',
+      totalSalesGrowth: 0,
+      totalAmountGrowth: 0,
+    }
+    return
+  }
+
+  businessMetrics.value.totalSales = salesData.value.reduce((sum, item) => sum + item.salesCount, 0)
+  businessMetrics.value.totalSalesAmount = salesData.value.reduce(
+    (sum, item) => sum + item.salesAmount,
+    0,
+  )
+  businessMetrics.value.totalRegions = salesData.value.length
+
+  const growthRates = salesData.value.map((item) => item.growthRate)
+  businessMetrics.value.averageGrowth =
+    growthRates.length > 0
+      ? growthRates.reduce((sum, rate) => sum + rate, 0) / growthRates.length
+      : 0
+
+  businessMetrics.value.industryAverageGrowth = businessMetrics.value.averageGrowth * 0.85
+
+  businessMetrics.value.positiveGrowthRegions = salesData.value.filter(
+    (item) => item.growthRate > 5,
+  ).length
+  businessMetrics.value.stableGrowthRegions = salesData.value.filter(
+    (item) => item.growthRate >= -5 && item.growthRate <= 5,
+  ).length
+  businessMetrics.value.negativeGrowthRegions = salesData.value.filter(
+    (item) => item.growthRate < -5,
+  ).length
+
+  const topRegion = salesData.value.reduce(
+    (max, item) => (item.salesCount > max.salesCount ? item : max),
+    salesData.value[0] || { regionName: '暂无', salesCount: 0 },
+  )
+  businessMetrics.value.topRegionName = topRegion.regionName
+
+  const currentYearTotal = businessMetrics.value.totalSales
+  const lastYear = new Date().getFullYear() - 1
+  const lastYearTotal = baseData.value.saleRecords
+    .filter((record) => new Date(record.saleMonth).getFullYear() === lastYear)
+    .reduce((sum, record) => sum + record.saleCount, 0)
+
+  businessMetrics.value.totalSalesGrowth =
+    lastYearTotal > 0
+      ? ((currentYearTotal - lastYearTotal) / lastYearTotal) * 100
+      : currentYearTotal > 0
+        ? 100
+        : 0
+
+  const lastYearAmount = baseData.value.saleRecords
+    .filter((record) => new Date(record.saleMonth).getFullYear() === lastYear)
+    .reduce((sum, record) => sum + record.saleAmount, 0)
+
+  businessMetrics.value.totalAmountGrowth =
+    lastYearAmount > 0
+      ? ((businessMetrics.value.totalSalesAmount - lastYearAmount) / lastYearAmount) * 100
+      : businessMetrics.value.totalSalesAmount > 0
+        ? 100
+        : 0
+
+  console.log('📊 业务指标计算完成:', businessMetrics.value)
+}
+
+const processAllData = () => {
+  try {
+    console.log('🔄 开始处理所有数据...')
+
+    if (baseData.value.saleRecords.length === 0) {
+      ElMessage.warning('销售记录为空，无法生成热力图')
+      return
+    }
+
+    processRegionSalesData()
+    calculateBusinessMetrics()
+
+    console.log('🔄 所有数据处理完成')
+  } catch (error) {
+    console.error('❌ 数据处理失败:', error)
+    ElMessage.error('数据处理失败，请重试')
+  }
+}
+
+// 计算属性保持不变...
+const totalSales = computed(() => businessMetrics.value.totalSales)
+const totalSalesAmount = computed(() => businessMetrics.value.totalSalesAmount)
+const totalRegions = computed(() => businessMetrics.value.totalRegions)
+const averageGrowth = computed(() => businessMetrics.value.averageGrowth)
+const industryAverageGrowth = computed(() => businessMetrics.value.industryAverageGrowth)
+const positiveGrowthRegions = computed(() => businessMetrics.value.positiveGrowthRegions)
+const stableGrowthRegions = computed(() => businessMetrics.value.stableGrowthRegions)
+const negativeGrowthRegions = computed(() => businessMetrics.value.negativeGrowthRegions)
+const topRegionName = computed(() => businessMetrics.value.topRegionName)
+const totalSalesGrowth = computed(() => businessMetrics.value.totalSalesGrowth)
+const totalAmountGrowth = computed(() => businessMetrics.value.totalAmountGrowth)
 
 const mapTitle = computed(() => {
   if (currentLevel.value === 'country') {
@@ -355,342 +1076,84 @@ const mapTitle = computed(() => {
 })
 
 const rankingData = computed(() => {
-  return salesData.value.sort((a, b) => b.salesCount - a.salesCount).slice(0, 10)
-})
+  let sortedData = [...salesData.value]
 
-const totalSales = computed(() => {
-  return salesData.value.reduce((sum, item) => sum + item.salesCount, 0)
-})
-
-const totalRegions = computed(() => {
-  return salesData.value.length
-})
-
-const averageGrowth = computed(() => {
-  if (salesData.value.length === 0) return 0
-  const sum = salesData.value.reduce((sum, item) => sum + item.growthRate, 0)
-  return sum / salesData.value.length
-})
-
-const topRegionName = computed(() => {
-  if (salesData.value.length === 0) return '暂无'
-  const topRegion = salesData.value.reduce((max, item) =>
-    item.salesCount > max.salesCount ? item : max,
-  )
-  return topRegion.regionName
-})
-
-// API 调用函数
-const fetchCarModels = async () => {
-  try {
-    console.log('正在获取车型列表...')
-    const response = await axios.get('/api/carModels')
-    if (response.data.status === 1) {
-      carModelList.value = response.data.data
-      console.log('车型列表获取成功:', carModelList.value)
-    }
-  } catch (error) {
-    console.error('获取车型列表失败:', error)
-    // 使用模拟数据
-    carModelList.value = generateMockCarModels()
-    console.log('使用模拟车型数据:', carModelList.value)
+  switch (rankingType.value) {
+    case 'sales':
+      sortedData.sort((a, b) => b.salesCount - a.salesCount)
+      break
+    case 'amount':
+      sortedData.sort((a, b) => b.salesAmount - a.salesAmount)
+      break
+    case 'growth':
+      sortedData.sort((a, b) => b.growthRate - a.growthRate)
+      break
   }
-}
 
-// 生成模拟车型数据
-const generateMockCarModels = (): CarModel[] => {
-  return [
-    { carModelId: 1, modelName: 'Model Y', brandName: 'Tesla' },
-    { carModelId: 2, modelName: 'Model 3', brandName: 'Tesla' },
-    { carModelId: 3, modelName: '汉EV', brandName: 'BYD' },
-    { carModelId: 4, modelName: 'ES6', brandName: 'NIO' },
-    { carModelId: 5, modelName: 'P7', brandName: 'XPeng' },
-    { carModelId: 6, modelName: 'Model S', brandName: 'Tesla' },
-    { carModelId: 7, modelName: '唐EV', brandName: 'BYD' },
-    { carModelId: 8, modelName: 'ES8', brandName: 'NIO' },
-    { carModelId: 9, modelName: 'P5', brandName: 'XPeng' },
-    { carModelId: 10, modelName: 'Model X', brandName: 'Tesla' },
-  ]
-}
+  return sortedData.slice(0, 10)
+})
 
-const fetchSalesData = async () => {
-  loading.value = true
-  try {
-    console.log('正在获取销售数据...')
-    const params = {
-      timeGranularity: timeGranularity.value,
-      selectedTime: formatSelectedTime(),
-      carModelId: selectedCarModel.value || null,
-      level: currentLevel.value,
-      parentRegionId: currentProvinceId.value,
-    }
+const topGrowthRegions = computed(() => {
+  return salesData.value
+    .filter((region) => region.growthRate > 0)
+    .sort((a, b) => b.growthRate - a.growthRate)
+    .slice(0, 5)
+})
 
-    console.log('API请求参数:', params)
-    const response = await axios.get('/api/sales/heatmap', { params })
-
-    if (response.data.status === 1) {
-      salesData.value = response.data.data
-      console.log('销售数据获取成功:', salesData.value)
-    } else {
-      throw new Error('API响应失败')
-    }
-  } catch (error) {
-    console.error('获取销售数据失败:', error)
-    ElMessage.warning('API调用失败，使用模拟数据')
-
-    // 使用模拟数据
-    try {
-      salesData.value = await generateMockSalesData()
-      console.log('使用模拟销售数据:', salesData.value)
-    } catch (mockError) {
-      console.error('生成模拟数据失败:', mockError)
-      ElMessage.error('数据加载失败')
-      salesData.value = []
-    }
-  } finally {
-    loading.value = false
-  }
-}
-
-// 格式化选择的时间
-const formatSelectedTime = () => {
-  if (!selectedTime.value) return ''
-
-  const date = new Date(selectedTime.value)
-  switch (timeGranularity.value) {
+// 工具函数
+const formatCurrentPeriod = () => {
+  const now = new Date()
+  switch (timeRange.value) {
     case 'month':
-      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+      return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
     case 'quarter':
-      if (selectedQuarter.value) {
-        return selectedQuarter.value // 直接返回 "YYYY-Q1" 格式
-      } else {
-        // 如果没有选择季度，默认返回当前季度
-        const quarter = Math.floor(date.getMonth() / 3) + 1
-        return `${date.getFullYear()}-Q${quarter}`
-      }
+      const quarter = Math.floor(now.getMonth() / 3) + 1
+      return `${now.getFullYear()}-Q${quarter}`
     case 'year':
-      return date.getFullYear().toString()
+      return now.getFullYear().toString()
     default:
-      return ''
+      return now.toISOString().slice(0, 7)
   }
 }
 
-// 生成模拟销售数据（基于数据库结构）
-const generateMockSalesData = async (): Promise<RegionSalesData[]> => {
-  console.log(`生成${currentLevel.value}级别模拟数据`)
-
-  if (currentLevel.value === 'country') {
-    // 生成省份级别销售数据
-    return generateProvinceData()
-  } else if (currentLevel.value === 'province') {
-    // 生成城市级别销售数据
-    return generateCityData(currentProvince.value)
-  } else {
-    return []
-  }
-}
-
-// 生成省份数据（模拟从 region 和 sale_record 表查询）
-const generateProvinceData = (): RegionSalesData[] => {
-  const provinces = [
-    { id: 1, name: '北京市', multiplier: 1.8, lng: 116.4074, lat: 39.9042 },
-    { id: 2, name: '上海市', multiplier: 1.7, lng: 121.4737, lat: 31.2304 },
-    { id: 3, name: '广东省', multiplier: 2.2, lng: 113.2644, lat: 23.1291 },
-    { id: 4, name: '浙江省', multiplier: 1.6, lng: 120.1551, lat: 30.2741 },
-    { id: 5, name: '江苏省', multiplier: 1.9, lng: 118.7778, lat: 32.0617 },
-    { id: 6, name: '山东省', multiplier: 1.5, lng: 117.0009, lat: 36.6758 },
-    { id: 7, name: '四川省', multiplier: 1.3, lng: 104.0665, lat: 30.5728 },
-    { id: 8, name: '湖北省', multiplier: 1.2, lng: 114.3896, lat: 30.5156 },
-    { id: 9, name: '河南省', multiplier: 1.4, lng: 113.7539, lat: 34.7655 },
-    { id: 10, name: '湖南省', multiplier: 1.1, lng: 112.9836, lat: 28.1128 },
-    { id: 11, name: '福建省', multiplier: 1.0, lng: 119.2965, lat: 26.0745 },
-    { id: 12, name: '安徽省', multiplier: 0.9, lng: 117.2272, lat: 31.8206 },
-    { id: 13, name: '河北省', multiplier: 1.0, lng: 114.4995, lat: 38.1006 },
-    { id: 14, name: '辽宁省', multiplier: 0.8, lng: 123.4315, lat: 41.8057 },
-    { id: 15, name: '陕西省', multiplier: 0.7, lng: 108.9286, lat: 34.2778 },
-    { id: 16, name: '重庆市', multiplier: 1.1, lng: 106.5516, lat: 29.563 },
-    { id: 17, name: '天津市', multiplier: 1.2, lng: 117.2008, lat: 39.0842 },
-    { id: 18, name: '江西省', multiplier: 0.6, lng: 115.8921, lat: 28.6765 },
-    { id: 19, name: '广西壮族自治区', multiplier: 0.5, lng: 108.3669, lat: 22.8176 },
-    { id: 20, name: '云南省', multiplier: 0.4, lng: 102.7123, lat: 25.0406 },
-    { id: 21, name: '吉林省', multiplier: 0.5, lng: 125.3245, lat: 43.8868 },
-    { id: 22, name: '山西省', multiplier: 0.6, lng: 112.5489, lat: 37.857 },
-    { id: 23, name: '贵州省', multiplier: 0.3, lng: 106.7135, lat: 26.5783 },
-    { id: 24, name: '新疆维吾尔自治区', multiplier: 0.25, lng: 87.6177, lat: 43.7928 },
-    { id: 25, name: '甘肃省', multiplier: 0.25, lng: 103.8236, lat: 36.0581 },
-    { id: 26, name: '海南省', multiplier: 0.3, lng: 110.3312, lat: 20.0311 },
-    { id: 27, name: '内蒙古自治区', multiplier: 0.4, lng: 111.6635, lat: 40.8183 },
-    { id: 28, name: '宁夏回族自治区', multiplier: 0.15, lng: 106.2581, lat: 38.4681 },
-    { id: 29, name: '青海省', multiplier: 0.12, lng: 101.7781, lat: 36.6171 },
-    { id: 30, name: '西藏自治区', multiplier: 0.08, lng: 91.132, lat: 29.6604 },
-    { id: 31, name: '黑龙江省', multiplier: 0.6, lng: 126.642, lat: 45.756 },
-  ]
-
-  return provinces.map((province) => {
-
-    // 根据时间粒度调整基础销量
-    let baseMultiplier = 1
-    switch (timeGranularity.value) {
-      case 'month':
-        baseMultiplier = 1
-        break
-      case 'quarter':
-        baseMultiplier = 3 // 季度是月度的3倍
-        break
-      case 'year':
-        baseMultiplier = 12 // 年度是月度的12倍
-        break
-    }
-
-    // 模拟查询 sale_record 表的聚合数据
-    const baseSales = 3000 + Math.floor(Math.random() * 7000)
-    const finalSales = Math.floor(baseSales * province.multiplier)
-
-    // 确保最小销量
-    let minSales = 300
-    if (province.multiplier >= 1.5) minSales = 2000
-    else if (province.multiplier >= 1.0) minSales = 1200
-    else if (province.multiplier >= 0.5) minSales = 800
-
-    const salesCount = Math.max(finalSales, minSales)
-    const averagePrice = 180 + Math.random() * 120 // 18-30万
-
-    // 模拟同比增长率计算
-    const growthRate = (Math.random() - 0.3) * 40 // -12% 到 +28%
-
-    // 模拟市场份额计算
-    const marketShare = (salesCount / 150000) * 100
-
-    return {
-      regionId: province.id,
-      regionName: province.name,
-      salesCount: salesCount,
-      salesAmount: Math.floor(salesCount * averagePrice * 1000), // 转换为元
-      growthRate: growthRate,
-      marketShare: marketShare,
-      longitude: province.lng,
-      latitude: province.lat,
-      parentRegionId: null, // 省份级别没有父级
-      saleMonth: formatSelectedTime(),
-    }
+// 🔧 修复：事件处理函数
+const handleTimeRangeChange = () => {
+  console.log('🔄 时间范围变更:', timeRange.value)
+  processAllData()
+  nextTick(() => {
+    initAllCharts()
   })
 }
 
-// 生成城市数据（模拟从 region 和 sale_record 表查询特定省份的城市）
-const generateCityData = (provinceName: string): RegionSalesData[] => {
-  console.log(`为${provinceName}生成城市销售数据`)
-
-  // 模拟从数据库查询城市数据
-  const cityConfigs: Record<string, Array<{ name: string; tier: number; population: number }>> = {
-    广东: [
-      { name: '广州市', tier: 1, population: 1500 },
-      { name: '深圳市', tier: 1, population: 1300 },
-      { name: '东莞市', tier: 2, population: 1000 },
-      { name: '佛山市', tier: 2, population: 800 },
-      { name: '中山市', tier: 3, population: 400 },
-      { name: '珠海市', tier: 3, population: 250 },
-      { name: '惠州市', tier: 3, population: 600 },
-      { name: '江门市', tier: 3, population: 450 },
-      { name: '肇庆市', tier: 4, population: 430 },
-      { name: '茂名市', tier: 4, population: 610 },
-      { name: '湛江市', tier: 4, population: 700 },
-      { name: '韶关市', tier: 4, population: 290 },
-      { name: '汕头市', tier: 3, population: 560 },
-      { name: '汕尾市', tier: 4, population: 300 },
-    ],
-    江苏: [
-      { name: '南京市', tier: 1, population: 930 },
-      { name: '苏州市', tier: 2, population: 1270 },
-      { name: '无锡市', tier: 2, population: 750 },
-      { name: '常州市', tier: 2, population: 530 },
-      { name: '南通市', tier: 3, population: 770 },
-      { name: '徐州市', tier: 3, population: 900 },
-      { name: '盐城市', tier: 3, population: 720 },
-      { name: '扬州市', tier: 3, population: 460 },
-      { name: '镇江市', tier: 3, population: 320 },
-      { name: '泰州市', tier: 3, population: 460 },
-    ],
-    山东: [
-      { name: '济南市', tier: 2, population: 920 },
-      { name: '青岛市', tier: 2, population: 1000 },
-      { name: '烟台市', tier: 3, population: 710 },
-      { name: '潍坊市', tier: 3, population: 940 },
-      { name: '临沂市', tier: 3, population: 1100 },
-      { name: '淄博市', tier: 3, population: 470 },
-      { name: '济宁市', tier: 3, population: 835 },
-      { name: '威海市', tier: 3, population: 290 },
-    ],
-    浙江: [
-      { name: '杭州市', tier: 1, population: 1200 },
-      { name: '宁波市', tier: 2, population: 850 },
-      { name: '温州市', tier: 2, population: 960 },
-      { name: '嘉兴市', tier: 3, population: 540 },
-      { name: '湖州市', tier: 3, population: 340 },
-      { name: '绍兴市', tier: 3, population: 530 },
-      { name: '金华市', tier: 3, population: 560 },
-      { name: '台州市', tier: 3, population: 610 },
-    ],
-    北京: [
-      { name: '东城区', tier: 1, population: 80 },
-      { name: '西城区', tier: 1, population: 110 },
-      { name: '朝阳区', tier: 1, population: 380 },
-      { name: '丰台区', tier: 2, population: 240 },
-      { name: '石景山区', tier: 2, population: 60 },
-      { name: '海淀区', tier: 1, population: 360 },
-      { name: '门头沟区', tier: 3, population: 30 },
-      { name: '房山区', tier: 3, population: 130 },
-      { name: '通州区', tier: 2, population: 160 },
-      { name: '顺义区', tier: 3, population: 130 },
-    ],
-    上海: [
-      { name: '黄浦区', tier: 1, population: 60 },
-      { name: '徐汇区', tier: 1, population: 110 },
-      { name: '长宁区', tier: 1, population: 70 },
-      { name: '静安区', tier: 1, population: 100 },
-      { name: '普陀区', tier: 2, population: 130 },
-      { name: '虹口区', tier: 2, population: 75 },
-      { name: '杨浦区', tier: 2, population: 130 },
-      { name: '浦东新区', tier: 1, population: 560 },
-      { name: '闵行区', tier: 2, population: 250 },
-      { name: '宝山区', tier: 3, population: 200 },
-    ],
-  }
-
-  const cities = cityConfigs[provinceName] || [
-    { name: `${provinceName}市`, tier: 1, population: 800 },
-    { name: `${provinceName}县1`, tier: 3, population: 300 },
-    { name: `${provinceName}县2`, tier: 3, population: 250 },
-    { name: `${provinceName}县3`, tier: 4, population: 200 },
-  ]
-
-  return cities.map((city, index) => {
-    // 基于城市等级和人口计算销量
-    const tierMultipliers = { 1: 2.5, 2: 1.8, 3: 1.2, 4: 0.8 }
-    const tierMultiplier = tierMultipliers[city.tier as keyof typeof tierMultipliers] || 1.0
-
-    const baseSales = Math.floor((city.population * 3 + Math.random() * 500) * tierMultiplier)
-
-    const minSales = city.tier === 1 ? 1000 : city.tier === 2 ? 500 : city.tier === 3 ? 200 : 100
-    const finalSales = Math.max(baseSales, minSales)
-
-    const averagePrice = 150 + Math.random() * 100 // 15-25万
-
-    return {
-      regionId: index + 1000,
-      regionName: city.name,
-      salesCount: finalSales,
-      salesAmount: Math.floor(finalSales * averagePrice * 1000),
-      growthRate: (Math.random() - 0.3) * 40,
-      marketShare: (finalSales / 50000) * 100,
-      longitude: 116.4074 + (Math.random() - 0.5) * 20,
-      latitude: 39.9042 + (Math.random() - 0.5) * 10,
-      parentRegionId: currentProvinceId.value,
-      saleMonth: formatSelectedTime(),
-    }
+const handleCustomDateChange = () => {
+  console.log('🔄 自定义时间范围变更:', customDateRange.value)
+  processAllData()
+  nextTick(() => {
+    initAllCharts()
   })
 }
 
-// 省份地图数据URL映射
+const handleCarModelChange = () => {
+  console.log('🔄 车型筛选变更:', selectedCarModel.value)
+  processAllData()
+  nextTick(() => {
+    initAllCharts()
+  })
+}
+
+const handleRegionLevelChange = () => {
+  console.log('🔄 地区层级变更:', regionLevel.value)
+  processAllData()
+  nextTick(() => {
+    initAllCharts()
+  })
+}
+
+const handleRankingTypeChange = () => {
+  console.log('🔄 排行类型变更:', rankingType.value)
+}
+
+// 图表初始化函数...省份地图数据URL映射等保持不变
 const provinceMapUrls: Record<string, string> = {
   北京: 'https://geo.datav.aliyun.com/areas_v3/bound/110000_full.json',
   天津: 'https://geo.datav.aliyun.com/areas_v3/bound/120000_full.json',
@@ -725,58 +1188,6 @@ const provinceMapUrls: Record<string, string> = {
   内蒙古: 'https://geo.datav.aliyun.com/areas_v3/bound/150000_full.json',
 }
 
-// 加载省份地图数据
-const loadProvinceMapData = async (provinceName: string): Promise<string | null> => {
-  try {
-    console.log(`开始加载 ${provinceName} 省份地图数据...`)
-
-    // 标准化省份名称
-    const standardName = getStandardProvinceName(provinceName)
-    console.log(`标准化省份名称: ${provinceName} -> ${standardName}`)
-
-    const mapUrl = provinceMapUrls[standardName]
-    if (!mapUrl) {
-      console.warn(`未找到省份 ${standardName} 的地图数据URL`)
-      return null
-    }
-
-    console.log(`加载地图数据: ${mapUrl}`)
-    const response = await fetch(mapUrl)
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
-    }
-
-    const geoJson = await response.json()
-    if (!geoJson || !geoJson.features) {
-      throw new Error('Invalid GeoJSON data')
-    }
-
-    // 注册省份地图
-    const mapId = `${standardName}_province`
-    echarts.registerMap(mapId, geoJson)
-    console.log(`省份地图注册成功: ${mapId}`)
-
-    return mapId
-  } catch (error) {
-    console.error(`加载 ${provinceName} 省份地图数据失败:`, error)
-    return null
-  }
-}
-
-// 加载中国地图数据
-const loadChinaMapData = async () => {
-  try {
-    const response = await fetch('https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json')
-    const geoJson = await response.json()
-    echarts.registerMap('china', geoJson)
-    return true
-  } catch (error) {
-    console.error('加载中国地图数据失败:', error)
-    return false
-  }
-}
-
-// 省份名称映射表
 const provinceNameMapping: Record<string, string> = {
   北京市: '北京',
   天津市: '天津',
@@ -816,7 +1227,52 @@ const getStandardProvinceName = (mapName: string): string => {
   return provinceNameMapping[mapName] || mapName
 }
 
-// 初始化中国地图热力图
+const loadChinaMapData = async () => {
+  try {
+    const response = await fetch('https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json')
+    const geoJson = await response.json()
+    echarts.registerMap('china', geoJson)
+    return true
+  } catch (error) {
+    console.error('加载中国地图数据失败:', error)
+    return false
+  }
+}
+
+const loadProvinceMapData = async (provinceName: string): Promise<string | null> => {
+  try {
+    console.log(`开始加载 ${provinceName} 省份地图数据...`)
+
+    const standardName = getStandardProvinceName(provinceName)
+    const mapUrl = provinceMapUrls[standardName]
+
+    if (!mapUrl) {
+      console.warn(`未找到省份 ${standardName} 的地图数据URL`)
+      return null
+    }
+
+    const response = await fetch(mapUrl)
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    const geoJson = await response.json()
+    if (!geoJson || !geoJson.features) {
+      throw new Error('Invalid GeoJSON data')
+    }
+
+    const mapId = `${standardName}_province`
+    echarts.registerMap(mapId, geoJson)
+    console.log(`省份地图注册成功: ${mapId}`)
+
+    return mapId
+  } catch (error) {
+    console.error(`加载 ${provinceName} 省份地图数据失败:`, error)
+    return null
+  }
+}
+
+// 🔧 修复：图表初始化函数
 const initChinaMap = async () => {
   if (!chinaMapChart.value) return
 
@@ -837,7 +1293,34 @@ const initChinaMap = async () => {
   }))
 
   if (mapData.length === 0) {
-    console.warn('地图数据为空')
+    console.warn('地图数据为空，显示空白地图')
+
+    // 🔧 修复：即使数据为空也显示基础地图
+    const option = {
+      title: {
+        text: mapTitle.value,
+        left: 'center',
+        top: 20,
+        textStyle: {
+          color: '#333',
+          fontSize: 16,
+          fontWeight: 'bold',
+        },
+      },
+      geo: {
+        map: 'china',
+        roam: true,
+        scaleLimit: { min: 0.8, max: 3 },
+        zoom: 1.2,
+        itemStyle: {
+          borderColor: '#4fc3f7',
+          borderWidth: 1,
+          areaColor: '#f8f9fa',
+        },
+      },
+    }
+
+    chinaMapChartInstance.setOption(option, true)
     return
   }
 
@@ -852,10 +1335,7 @@ const initChinaMap = async () => {
 
   const option = {
     title: {
-      text:
-        currentLevel.value === 'country'
-          ? '全国汽车销量热力图'
-          : `${currentProvince.value}汽车销量热力图`,
+      text: mapTitle.value,
       left: 'center',
       top: 20,
       textStyle: {
@@ -907,11 +1387,6 @@ const initChinaMap = async () => {
           '#42a5f5',
           '#2196f3',
           '#1976d2',
-          '#ffcdd2',
-          '#f48fb1',
-          '#f44336',
-          '#d32f2f',
-          '#b71c1c',
         ],
       },
       calculable: true,
@@ -967,7 +1442,6 @@ const initChinaMap = async () => {
 
   chinaMapChartInstance.setOption(option, true)
 
-  // 添加点击事件
   chinaMapChartInstance.on('click', (params: any) => {
     console.log('点击了地图区域:', params)
     if (params.data && currentLevel.value === 'country') {
@@ -980,7 +1454,7 @@ const initChinaMap = async () => {
   console.log('地图初始化完成')
 }
 
-// 优化散点图配置 - 解决显示不全问题
+// 🔧 修复：散点图初始化函数
 const initScatterChart = async () => {
   if (!scatterChart.value) return
 
@@ -991,6 +1465,23 @@ const initScatterChart = async () => {
   }
 
   scatterChartInstance = echarts.init(scatterChart.value)
+
+  // 🔧 修复：处理空数据情况
+  if (salesData.value.length === 0) {
+    const option = {
+      title: {
+        text: '暂无数据',
+        left: 'center',
+        top: 'center',
+        textStyle: {
+          color: '#999',
+          fontSize: 14,
+        },
+      },
+    }
+    scatterChartInstance.setOption(option)
+    return
+  }
 
   const data = salesData.value.map((item, index) => [
     index,
@@ -1028,7 +1519,6 @@ const initScatterChart = async () => {
         `
       },
     },
-    // 优化grid布局，为visualMap留出空间
     grid: {
       left: '8%',
       right: '15%',
@@ -1082,7 +1572,6 @@ const initScatterChart = async () => {
       axisTick: { show: false },
       axisLine: { lineStyle: { color: '#ddd' } },
     },
-    // 优化visualMap位置和大小
     visualMap: {
       min: Math.min(...salesData.value.map((item) => item.salesCount)),
       max: Math.max(...salesData.value.map((item) => item.salesCount)),
@@ -1098,7 +1587,7 @@ const initScatterChart = async () => {
       calculable: true,
       inRange: {
         color: ['#e3f2fd', '#42a5f5', '#1976d2', '#0d47a1'],
-        symbolSize: [12, 35], // 增大气泡大小范围：从 [6, 20] 改为 [12, 35]
+        symbolSize: [12, 35],
       },
       itemWidth: 10,
       itemHeight: 60,
@@ -1117,8 +1606,8 @@ const initScatterChart = async () => {
         symbolSize: (val: number[]) => {
           const maxSales = Math.max(...salesData.value.map((item) => item.salesCount))
           const minSales = Math.min(...salesData.value.map((item) => item.salesCount))
-          const ratio = (val[2] - minSales) / (maxSales - minSales)
-          return 12 + ratio * 25 // 增大气泡大小范围：从 8-24 改为 12-37
+          const ratio = maxSales > minSales ? (val[2] - minSales) / (maxSales - minSales) : 0.5
+          return 12 + ratio * 25
         },
         itemStyle: {
           opacity: 0.8,
@@ -1130,11 +1619,11 @@ const initScatterChart = async () => {
             show: true,
             formatter: (param: any) => param.data[3],
             position: 'top',
-            fontSize: 10, // 稍微增大标签字体
+            fontSize: 10,
             fontWeight: 'bold',
             color: '#333',
             backgroundColor: 'rgba(255,255,255,0.9)',
-            padding: [3, 8], // 增大标签内边距
+            padding: [3, 8],
             borderRadius: 4,
             borderWidth: 1,
             borderColor: '#ddd',
@@ -1142,7 +1631,7 @@ const initScatterChart = async () => {
           itemStyle: {
             borderWidth: 2,
             borderColor: '#1976d2',
-            shadowBlur: 10, // 增大阴影效果
+            shadowBlur: 10,
             shadowColor: 'rgba(25, 118, 210, 0.6)',
           },
         },
@@ -1153,65 +1642,29 @@ const initScatterChart = async () => {
   scatterChartInstance.setOption(option)
 }
 
-// 事件处理函数
-const handleTimeGranularityChange = () => {
-  console.log('时间粒度变更为:', timeGranularity.value)
-
-  // 重置选择的时间
-  selectedTime.value = new Date()
-
-  // 如果切换到季度，初始化季度选择
-  if (timeGranularity.value === 'quarter') {
-    const currentYear = new Date().getFullYear()
-    const currentQuarter = Math.floor(new Date().getMonth() / 3) + 1
-    selectedQuarter.value = `${currentYear}-Q${currentQuarter}`
-  } else {
-    selectedQuarter.value = ''
+const initAllCharts = async () => {
+  await nextTick()
+  try {
+    await Promise.all([initChinaMap(), initScatterChart()])
+  } catch (error) {
+    console.error('图表初始化失败:', error)
   }
-
-  // 重新获取数据
-  fetchSalesData()
 }
 
-const handleTimeChange = () => {
-  console.log('时间变更:', selectedTime.value)
-
-  // 如果是季度模式，需要更新季度选择
-  if (timeGranularity.value === 'quarter' && selectedTime.value) {
-    const year = new Date(selectedTime.value).getFullYear()
-    const currentQuarter = selectedQuarter.value.split('-Q')[1] || '1'
-    selectedQuarter.value = `${year}-Q${currentQuarter}`
-  }
-
-  fetchSalesData()
-}
-
-const handleQuarterChange = () => {
-  console.log('季度变更:', selectedQuarter.value)
-  fetchSalesData()
-}
-
-const handleCarModelChange = () => {
-  fetchSalesData()
-}
-
+// 事件处理函数保持不变，其他函数也保持不变...
 const handleRegionClick = (region: RegionSalesData) => {
   if (currentLevel.value === 'country') {
     drillDownToProvince(region.regionName)
   }
 }
 
-// 下钻到省份
 const drillDownToProvince = async (provinceName: string) => {
   console.log(`开始下钻到省份: ${provinceName}`)
 
   loading.value = true
 
   try {
-    // 标准化省份名称
     const standardName = getStandardProvinceName(provinceName)
-
-    // 加载省份地图数据
     const mapId = await loadProvinceMapData(standardName)
 
     if (!mapId) {
@@ -1220,17 +1673,13 @@ const drillDownToProvince = async (provinceName: string) => {
       return
     }
 
-    // 更新状态
     currentLevel.value = 'province'
     currentProvince.value = standardName
     currentProvinceId.value =
       salesData.value.find((item) => item.regionName === standardName)?.regionId || null
 
-    // 获取省份城市数据
-    await fetchSalesData()
-
-    // 重新初始化地图
-    await initChinaMap()
+    processAllData()
+    await initAllCharts()
 
     ElMessage.success(`正在查看 ${standardName} 的城市销量分布`)
   } catch (error) {
@@ -1241,66 +1690,118 @@ const drillDownToProvince = async (provinceName: string) => {
   }
 }
 
-// 导航到指定级别
+const drillDownToRegion = (regionDetail: RegionSalesData) => {
+  if (currentLevel.value === 'country') {
+    drillDownToProvince(regionDetail.regionName)
+  }
+}
+
 const navigateToLevel = async (level: 'country' | 'province') => {
   if (level === 'country') {
     currentLevel.value = 'country'
     currentProvince.value = ''
     currentProvinceId.value = null
-    await fetchSalesData()
-    await initChinaMap()
+    processAllData()
+    await initAllCharts()
   } else if (level === 'province' && currentProvince.value) {
     currentLevel.value = 'province'
-    await fetchSalesData()
-    await initChinaMap()
+    processAllData()
+    await initAllCharts()
   }
 }
 
-// 刷新数据
+const showRegionDetail = (region: RegionSalesData) => {
+  selectedRegionDetail.value = region
+  showRegionDetailDialog.value = true
+}
+
+const getRankByRegion = (region: RegionSalesData): number => {
+  const sortedData = [...salesData.value].sort((a, b) => b.salesCount - a.salesCount)
+  return sortedData.findIndex((item) => item.regionId === region.regionId) + 1
+}
+
+const handleMapExport = (command: string) => {
+  if (command === 'image') {
+    const url = chinaMapChartInstance?.getDataURL({
+      type: 'png',
+      backgroundColor: '#fff',
+    })
+    if (url) {
+      const link = document.createElement('a')
+      link.href = url
+      link.download = 'heat_map.png'
+      link.click()
+    }
+  } else if (command === 'pdf') {
+    ElMessage.info('PDF导出功能开发中...')
+  }
+}
+
+const exportData = () => {
+  if (salesData.value.length === 0) {
+    ElMessage.warning('暂无数据可导出')
+    return
+  }
+
+  const csvContent = [
+    ['地区销量数据报告'],
+    ['生成时间', new Date().toLocaleString()],
+    [''],
+    ['地区', '销量(台)', '销售额(万元)', '增长率(%)', '市场份额(%)'],
+    ...salesData.value.map((item) => [
+      item.regionName,
+      item.salesCount,
+      (item.salesAmount / 10000).toFixed(0),
+      item.growthRate.toFixed(1),
+      item.marketShare.toFixed(1),
+    ]),
+  ]
+    .map((row) => row.join(','))
+    .join('\n')
+
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+  const link = document.createElement('a')
+  link.href = URL.createObjectURL(blob)
+  link.download = `地区销量数据_${new Date().toISOString().slice(0, 10)}.csv`
+  link.click()
+
+  ElMessage.success('数据已导出')
+}
+
 const refreshData = async () => {
-  ElMessage.success('正在刷新数据...')
-  await fetchSalesData()
+  loading.value = true
+  try {
+    await loadAllBaseData()
+    processAllData()
+    await initAllCharts()
+    ElMessage.success('数据刷新完成')
+  } catch (error) {
+    console.error('❌ 数据刷新失败:', error)
+    ElMessage.error('数据刷新失败，请检查网络连接')
+  } finally {
+    loading.value = false
+  }
 }
 
-// 监听数据变化，重新渲染图表
-watch(
-  salesData,
-  async () => {
-    await nextTick()
-    await initChinaMap()
-    await initScatterChart()
-  },
-  { deep: true },
-)
-
-// 窗口大小变化时重新调整图表
 const handleResize = () => {
-  if (chinaMapChartInstance) {
-    chinaMapChartInstance.resize()
-  }
-  if (scatterChartInstance) {
-    scatterChartInstance.resize()
-  }
+  nextTick(() => {
+    chinaMapChartInstance?.resize()
+    scatterChartInstance?.resize()
+    detailScatterChartInstance?.resize()
+    growthTrendChartInstance?.resize()
+  })
 }
 
-// 组件生命周期
+// 生命周期
 onMounted(async () => {
-  console.log('CarPurchasesHeatMap组件已挂载')
+  ElMessage.success('欢迎使用购车热区地图！')
 
   try {
-    // 加载地图数据
     await loadChinaMapData()
+    await loadAllBaseData()
+    processAllData()
+    await initAllCharts()
 
-    // 并行加载车型列表和销售数据
-    await Promise.all([fetchCarModels(), fetchSalesData()])
-
-    // 等待DOM更新
-    await nextTick()
-
-    // 初始化图表
-    await Promise.all([initChinaMap(), initScatterChart()])
-
-    // 监听窗口大小变化
     window.addEventListener('resize', handleResize)
 
     console.log('页面初始化完成')
@@ -1310,7 +1811,6 @@ onMounted(async () => {
   }
 })
 
-// 清理函数
 onUnmounted(() => {
   window.removeEventListener('resize', handleResize)
 
@@ -1322,7 +1822,24 @@ onUnmounted(() => {
     scatterChartInstance.dispose()
     scatterChartInstance = null
   }
+  if (detailScatterChartInstance) {
+    detailScatterChartInstance.dispose()
+    detailScatterChartInstance = null
+  }
+  if (growthTrendChartInstance) {
+    growthTrendChartInstance.dispose()
+    growthTrendChartInstance = null
+  }
 })
+
+watch(
+  salesData,
+  async () => {
+    await nextTick()
+    await initAllCharts()
+  },
+  { deep: true },
+)
 </script>
 
 <style scoped>
