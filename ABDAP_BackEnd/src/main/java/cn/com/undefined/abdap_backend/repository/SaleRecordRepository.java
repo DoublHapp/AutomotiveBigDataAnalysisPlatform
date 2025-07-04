@@ -69,7 +69,29 @@ public interface SaleRecordRepository extends JpaRepository<SaleRecord, Long> {
                      "WHERE sr.carModelId = :carModelId " +
                      "AND sr.saleMonth >= :startDate " +
                      "GROUP BY YEAR(sr.saleMonth), MONTH(sr.saleMonth) " +
-                     "ORDER BY YEAR(sr.saleMonth), MONTH(sr.saleMonth)")
-       List<Object[]> findMonthlyRevenueTrendByCarModelId(@Param("carModelId") Long carModelId,
+                     "ORDER BY YEAR(sr.saleMonth), MONTH(sr.saleMonth)")       List<Object[]> findMonthlyRevenueTrendByCarModelId(@Param("carModelId") Long carModelId,
                      @Param("startDate") LocalDate startDate);
+
+       /**
+        * 查询所有销售记录及其关联的车型和地区信息（用于DTO转换）
+        * @return 销售记录及关联信息列表
+        */
+       @Query("SELECT sr FROM SaleRecord sr LEFT JOIN FETCH sr.carModel LEFT JOIN FETCH sr.region")
+       List<SaleRecord> findAllWithCarModelAndRegion();
+
+       /**
+        * 根据车型ID查询销售记录及关联信息
+        * @param carModelId 车型ID
+        * @return 销售记录及关联信息列表
+        */
+       @Query("SELECT sr FROM SaleRecord sr LEFT JOIN FETCH sr.carModel LEFT JOIN FETCH sr.region WHERE sr.carModelId = :carModelId")
+       List<SaleRecord> findByCarModelIdWithDetails(@Param("carModelId") Long carModelId);
+
+       /**
+        * 根据地区ID查询销售记录及关联信息
+        * @param regionId 地区ID
+        * @return 销售记录及关联信息列表
+        */
+       @Query("SELECT sr FROM SaleRecord sr LEFT JOIN FETCH sr.carModel LEFT JOIN FETCH sr.region WHERE sr.regionId = :regionId")
+       List<SaleRecord> findByRegionIdWithDetails(@Param("regionId") Long regionId);
 }
