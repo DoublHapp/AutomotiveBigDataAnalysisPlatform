@@ -12,7 +12,6 @@ import java.util.stream.IntStream;
  * 所有方法都是静态方法，可直接通过类名调用
  */
 public class ARIMAUtil {
-
     /**
      * ARIMA预测结果包装类
      */
@@ -21,17 +20,24 @@ public class ARIMAUtil {
         private final double[] historicalData; // 原始历史数据
         private final double[] fittedValues; // 历史数据的拟合值
         private final double[] forecastValues; // 未来预测值
+        private final double[] forecastUpperBounds; // 预测值上界
+        private final double[] forecastLowerBounds; // 预测值下界
         private final double[] residuals; // 残差
         private final double mape; // 拟合误差
+        private final double confidenceLevel; // 置信度水平
         private final int forecastStartIndex; // 预测开始的索引位置
 
         public ARIMAResult(double[] historicalData, double[] fittedValues,
-                double[] forecastValues, double[] residuals, double mape) {
+                double[] forecastValues, double[] forecastUpperBounds, double[] forecastLowerBounds,
+                double[] residuals, double mape, double confidenceLevel) {
             this.historicalData = historicalData;
             this.fittedValues = fittedValues;
             this.forecastValues = forecastValues;
+            this.forecastUpperBounds = forecastUpperBounds;
+            this.forecastLowerBounds = forecastLowerBounds;
             this.residuals = residuals;
             this.mape = mape;
+            this.confidenceLevel = confidenceLevel;
             this.forecastStartIndex = historicalData.length;
         }
 
@@ -57,9 +63,78 @@ public class ARIMAUtil {
 
         @Override
         public String toString() {
-            return String.format("ARIMAResult{历史数据点数=%d, 预测点数=%d, 拟合MAPE=%.2f%%}",
-                    historicalData.length, forecastValues.length, mape);
+            return String.format("ARIMAResult{历史数据点数=%d, 预测点数=%d, 拟合MAPE=%.2f%%, 置信度=%.1f%%}",
+                    historicalData.length, forecastValues.length, mape, confidenceLevel * 100);
         }
+    }
+
+    /**
+     * 计算预测的置信区间
+     * 
+     * @param residuals       残差数组
+     * @param forecastPeriods 预测期数
+     * @param confidenceLevel 置信度水平 (例如0.95表示95%置信度)
+     * @return 置信区间的标准误差倍数
+     */
+    private static double calculateConfidenceMultiplier(double[] residuals, int forecastPeriods,
+            double confidenceLevel) {
+        // 计算残差标准差
+        double residualStd = calculateStandardDeviation(residuals);
+
+        // 根据置信度计算z值 (简化处理，使用正态分布近似)
+        double alpha = 1.0 - confidenceLevel;
+        double zValue = calculateZValue(alpha / 2.0);
+
+        return zValue * residualStd;
+    }
+
+    /**
+     * 计算标准差
+     */
+    private static double calculateStandardDeviation(double[] data) {
+        if (data.length <= 1)
+            return 0.0;
+
+        double mean = Arrays.stream(data).average().orElse(0.0);
+        double variance = Arrays.stream(data)
+                .map(x -> Math.pow(x - mean, 2))
+                .average().orElse(0.0);
+
+        return Math.sqrt(variance);
+    }
+
+    /**
+     * 计算Z值 (正态分布分位数的简化近似)
+     */
+    private static double calculateZValue(double alpha) {
+        // 常用置信度的Z值映射 (简化处理)
+        if (alpha <= 0.005)
+            return 2.576; // 99%置信度
+        if (alpha <= 0.025)
+            return 1.96; // 95%置信度
+        if (alpha <= 0.05)
+            return 1.645; // 90%置信度
+        return 1.0; // 默认值
+    }
+
+    /**
+     * 计算预测置信区间
+     */
+    private static double[][] calculateForecastConfidenceIntervals(double[] forecastValues,
+            double[] residuals, double confidenceLevel) {
+        double multiplier = calculateConfidenceMultiplier(residuals, forecastValues.length, confidenceLevel);
+
+        double[] upperBounds = new double[forecastValues.length];
+        double[] lowerBounds = new double[forecastValues.length];
+
+        for (int i = 0; i < forecastValues.length; i++) {
+            // 随着预测步数增加，不确定性增大
+            double stepMultiplier = multiplier * Math.sqrt(i + 1);
+            upperBounds[i] = Math.max(0, forecastValues[i] + stepMultiplier);
+            lowerBounds[i] = Math.max(0, forecastValues[i] - stepMultiplier);
+        }
+
+        return new double[][] { upperBounds, lowerBounds };
     }
 
     /**
@@ -100,6 +175,22 @@ public class ARIMAUtil {
      * @return 完整的ARIMA预测结果
      */
     public static ARIMAResult forecastWithARIMAComplete(double[] data, int p, int d, int q, int forecastPeriods) {
+        return forecastWithARIMAComplete(data, p, d, q, forecastPeriods, 0.95);
+    }
+
+    /**
+     * 使用ARIMA模型进行时间序列预测（返回完整结果，带置信度）
+     * 
+     * @param data            历史数据数组
+     * @param p               自回归阶数
+     * @param d               差分阶数
+     * @param q               移动平均阶数
+     * @param forecastPeriods 预测期数
+     * @param confidenceLevel 置信度水平 (例如0.95表示95%置信度)
+     * @return 完整的ARIMA预测结果
+     */
+    public static ARIMAResult forecastWithARIMAComplete(double[] data, int p, int d, int q,
+            int forecastPeriods, double confidenceLevel) {
         if (data == null || data.length < 10) {
             throw new IllegalArgumentException("数据长度至少需要10个点");
         }
@@ -119,10 +210,17 @@ public class ARIMAUtil {
             // 生成未来预测值
             double[] forecastValues = generateForecast(processedData, data, forecastPeriods, arCoeffs, maCoeffs);
 
+            // 计算预测置信区间
+            double[][] confidenceIntervals = calculateForecastConfidenceIntervals(forecastValues, residuals,
+                    confidenceLevel);
+            double[] upperBounds = confidenceIntervals[0];
+            double[] lowerBounds = confidenceIntervals[1];
+
             // 计算拟合误差
             double mape = calculateMAPE(data, fittedValues);
 
-            return new ARIMAResult(data, fittedValues, forecastValues, residuals, mape);
+            return new ARIMAResult(data, fittedValues, forecastValues, upperBounds, lowerBounds,
+                    residuals, mape, confidenceLevel);
 
         } catch (Exception e) {
             throw new RuntimeException("ARIMA预测失败: " + e.getMessage(), e);
@@ -463,12 +561,24 @@ public class ARIMAUtil {
      * @return 完整预测结果
      */
     public static ARIMAResult autoForecastComplete(double[] data, int forecastPeriods) {
+        return autoForecastComplete(data, forecastPeriods, 0.95);
+    }
+
+    /**
+     * 自动预测并返回完整结果（包含拟合值和置信区间）
+     * 
+     * @param data            历史数据
+     * @param forecastPeriods 预测期数
+     * @param confidenceLevel 置信度水平
+     * @return 完整预测结果
+     */
+    public static ARIMAResult autoForecastComplete(double[] data, int forecastPeriods, double confidenceLevel) {
         // 自动选择参数 (简化版本)
         int p = 2; // 自回归阶数
         int d = 1; // 差分阶数
         int q = 1; // 移动平均阶数
 
-        return forecastWithARIMAComplete(data, p, d, q, forecastPeriods);
+        return forecastWithARIMAComplete(data, p, d, q, forecastPeriods, confidenceLevel);
     }
 
     /**
@@ -479,8 +589,21 @@ public class ARIMAUtil {
      * @return 完整预测结果
      */
     public static ARIMAResult forecastCarSalesComplete(List<Double> monthlySales, int monthsToForecast) {
+        return forecastCarSalesComplete(monthlySales, monthsToForecast, 0.95);
+    }
+
+    /**
+     * 预测汽车销量（完整结果版本，带置信度）
+     * 
+     * @param monthlySales     月度销量数据
+     * @param monthsToForecast 预测月数
+     * @param confidenceLevel  置信度水平
+     * @return 完整预测结果
+     */
+    public static ARIMAResult forecastCarSalesComplete(List<Double> monthlySales, int monthsToForecast,
+            double confidenceLevel) {
         double[] data = monthlySales.stream().mapToDouble(Double::doubleValue).toArray();
-        return autoForecastComplete(data, monthsToForecast);
+        return autoForecastComplete(data, monthsToForecast, confidenceLevel);
     }
 
     /**
@@ -495,7 +618,23 @@ public class ARIMAUtil {
      */
     public static ARIMAResult forecastCarSalesComplete(List<Double> monthlySales, int monthsToForecast,
             int p, int d, int q) {
+        return forecastCarSalesComplete(monthlySales, monthsToForecast, p, d, q, 0.95);
+    }
+
+    /**
+     * 预测汽车销量（手动配置参数版本，带置信度）
+     * 
+     * @param monthlySales     月度销量数据
+     * @param monthsToForecast 预测月数
+     * @param p                自回归阶数
+     * @param d                差分阶数
+     * @param q                移动平均阶数
+     * @param confidenceLevel  置信度水平
+     * @return 完整预测结果
+     */
+    public static ARIMAResult forecastCarSalesComplete(List<Double> monthlySales, int monthsToForecast,
+            int p, int d, int q, double confidenceLevel) {
         double[] data = monthlySales.stream().mapToDouble(Double::doubleValue).toArray();
-        return forecastWithARIMAComplete(data, p, d, q, monthsToForecast);
+        return forecastWithARIMAComplete(data, p, d, q, monthsToForecast, confidenceLevel);
     }
 }
