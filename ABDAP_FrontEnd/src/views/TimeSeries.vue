@@ -8,35 +8,6 @@ import axios from 'axios'
 // 主筛选类型
 const compareMode = ref<'region' | 'carModel' | 'none'>('carModel')
 
-// // 地区
-// interface regionOption {
-//   label: string
-//   value: number | null
-// }
-
-// const regionOptionsAll: regionOption[] = [
-//   { label: '全国', value: null },
-//   { label: '北京省', value: 1 },
-//   { label: '上海省', value: 2 },
-//   { label: '广东省', value: 3 },
-//   { label: '浙江省', value: 4 },
-//   { label: '山东省', value: 5 }
-// ]
-// const regionOptionsNoAll = regionOptionsAll.slice(1) // 不含全国
-
-// // 车型
-// interface carModelOption {
-//   label: string
-//   value: number
-// }
-
-// const carModelOptions: carModelOption[] = [
-//   { label: '宝马X3', value: 1 },
-//   { label: '奔驰C200L', value: 2 },
-//   { label: '奥迪A4L', value: 3 },
-//   { label: '特斯拉Model 3', value: 4 },
-//   { label: '比亚迪汉EV', value: 5 }
-// ]
 // 选项
 // 地区
 interface regionOption {
@@ -206,64 +177,6 @@ watch(statsDetailVisible, (visible) => {
   }
 })
 
-// 生成模拟数据
-// function generateMockData() {
-//   const [start, end] = dateRange.value
-//   const dateList: string[] = []
-//   let cur = new Date(start + '-01')
-//   const endDate = new Date(end + '-01')
-//   if (dateRangeType.value === 'month') {
-//     while (cur <= endDate) {
-//       dateList.push(cur.toISOString().slice(0, 7))
-//       cur.setMonth(cur.getMonth() + 1)
-//     }
-//   } else if (dateRangeType.value === 'quarter') {
-//     while (cur <= endDate) {
-//       const year = cur.getFullYear()
-//       const month = cur.getMonth()
-//       const quarter = Math.floor(month / 3) + 1
-//       dateList.push(`${year}-Q${quarter}`)
-//       cur.setMonth(month + 3)
-//     }
-//   } else if (dateRangeType.value === 'year') {
-//     while (cur <= endDate) {
-//       dateList.push(cur.getFullYear().toString())
-//       cur.setFullYear(cur.getFullYear() + 1)
-//     }
-//   }
-
-//   let targets: { region: string, carModel: string }[] = []
-//   if (compareMode.value === 'region') {
-//     // 地区多选，车型单选
-//     regionTargets.value.forEach(region =>
-//       targets.push({ region, carModel: carModelTargets.value[0] })
-//     )
-//   } else if (compareMode.value === 'carModel') {
-//     // 车型多选，地区单选
-//     carModelTargets.value.forEach(carModel =>
-//       targets.push({ region: regionTargets.value[0], carModel })
-//     )
-//   } else {
-//     // 不限，地区和车型多选，耦合为独立项
-//     regionTargets.value.forEach(region =>
-//       carModelTargets.value.forEach(carModel =>
-//         targets.push({ region, carModel })
-//       )
-//     )
-//   }
-
-//   return targets.map((target, idx) => {
-//     const base = 2000 + Math.floor(Math.random() * 2000)
-//     const fluct = 500 + Math.floor(Math.random() * 500)
-//     const data = dateList.map((_d, i) => base + Math.floor(Math.sin(i / 2 + idx) * fluct + Math.random() * 200))
-//     return {
-//       name: `${target.region}-${target.carModel}`,
-//       data,
-//       dateList
-//     }
-//   })
-// }
-
 interface repsonseData {
   saleId: number;
   carModelId: number;
@@ -345,26 +258,6 @@ async function fetchTrendData() {
   }else{
     params.append('carModelIds', carModelSingle.value.toString());
   }
-  // getSafeCarModelArray().forEach(item => {
-  //   params.append('carModelIds', item.toString());
-  // });
-  // getSafeRegionArray().forEach(item => {
-  //   params.append('regionIds', item?.toString() || '');
-  // });
-
-  // if(Array.isArray(carModelTargets.value)){
-    
-  // }else{
-  //   [carModelTargets.value].forEach(item => {
-  //     params.append('carModelIds', item.toString());
-  //   });
-  // }
-  
-  // console.log(carModelTargets.value)
-  // if(regionTargets.value[0] !== 'null'){ 
-  //   console.log(regionTargets.value)
-    
-  // }
   
   console.log(`/api/sale-records/multiple?${params.toString()}`)
   const res = await axios.get(`/api/sale-records/multiple?${params.toString()}`)
