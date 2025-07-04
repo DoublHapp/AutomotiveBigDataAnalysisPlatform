@@ -3,6 +3,7 @@ package cn.com.undefined.abdap_backend.service;
 import cn.com.undefined.abdap_backend.dto.SaleRecordDTO;
 import cn.com.undefined.abdap_backend.entity.SaleRecord;
 import cn.com.undefined.abdap_backend.util.ARIMAUtil;
+import cn.com.undefined.abdap_backend.util.ProphetUtil;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -63,8 +64,64 @@ public class PredictionService {
         List<Double> salesData = extractAndValidateSalesData(saleRecords);
 
         // 进行ARIMA预测
-        ARIMAUtil.ARIMAResult arimaResult = ARIMAUtil.forecastCarSalesWithParams(salesData, monthsToForecast, p, d, q);
+        ARIMAUtil.ARIMAResult arimaResult = ARIMAUtil.forecastCarSalesComplete(salesData, monthsToForecast, p, d, q);
         double[] forecastValues = arimaResult.getForecastValues();
+
+        List<SaleRecordDTO> predictionResults = buildPredictionResults(saleRecords, forecastValues);
+
+        return predictionResults;
+    }
+
+    /**
+     * 基于销售记录进行Prophet时间序列预测
+     * 
+     * @param saleRecords      销售记录列表，需按时间顺序排列
+     * @param monthsToForecast 预测月数，建议1-24个月
+     * @return List<SaleRecordDTO> 预测结果的销售记录DTO列表
+     * @throws IllegalArgumentException 当销售记录数据不足或格式不正确时抛出
+     */
+    public List<SaleRecordDTO> predictSalesWithProphet(List<SaleRecord> saleRecords, int monthsToForecast) {
+        
+        validatePredictionParameters(saleRecords, monthsToForecast);
+
+        List<Double> salesData = extractAndValidateSalesData(saleRecords);
+
+        // 进行Prophet预测
+        ProphetUtil.ProphetResult prophetResult = ProphetUtil.forecastCarSales(salesData, monthsToForecast);
+        double[] forecastValues = prophetResult.getForecastValues();
+
+        List<SaleRecordDTO> predictionResults = buildPredictionResults(saleRecords, forecastValues);
+
+        return predictionResults;
+    }
+
+    /**
+     * 基于销售记录进行Prophet时间序列预测（带自定义配置版本）
+     * 
+     * @param saleRecords          销售记录列表，需按时间顺序排列
+     * @param monthsToForecast     预测月数，建议1-24个月
+     * @param seasonalityPeriod    季节性周期
+     * @param seasonalityStrength  季节性强度 (0.0-1.0)
+     * @param trendFlexibility     趋势灵活性 (0.0-1.0)
+     * @return List<SaleRecordDTO> 预测结果的销售记录DTO列表
+     * @throws IllegalArgumentException 当销售记录数据不足或格式不正确时抛出
+     */
+    public List<SaleRecordDTO> predictSalesWithProphet(List<SaleRecord> saleRecords, int monthsToForecast,
+                                                       int seasonalityPeriod, double seasonalityStrength, 
+                                                       double trendFlexibility) {
+        
+        validatePredictionParameters(saleRecords, monthsToForecast);
+
+        List<Double> salesData = extractAndValidateSalesData(saleRecords);
+
+        // 创建自定义Prophet配置
+        ProphetUtil.ProphetConfig config = ProphetUtil.createCustomConfig(
+            seasonalityPeriod, seasonalityStrength, trendFlexibility, false);
+
+        // 进行Prophet预测
+        double[] data = salesData.stream().mapToDouble(Double::doubleValue).toArray();
+        ProphetUtil.ProphetResult prophetResult = ProphetUtil.forecastWithProphet(data, monthsToForecast, config);
+        double[] forecastValues = prophetResult.getForecastValues();
 
         List<SaleRecordDTO> predictionResults = buildPredictionResults(saleRecords, forecastValues);
 

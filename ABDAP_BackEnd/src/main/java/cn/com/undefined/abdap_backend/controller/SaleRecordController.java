@@ -121,15 +121,16 @@ public class SaleRecordController {
      * ],
      * "regionSales": [
      * {
-     * "city": "广州市",
+     * "region": "广州市",
      * "salesVolume": 600
      * },
      * {
-     * "city": "深圳市",
+     * "region": "深圳市",
      * "salesVolume": 500
      * }
      * ]
      * 
+     * @param regionId 省份ID
      * @return
      */
     // TODO: 实现复杂数据结构的查询和返回
@@ -137,6 +138,10 @@ public class SaleRecordController {
     @GetMapping("/complex-structure")
     public ResponseEntity<ApiResponse<Object>> getComplexStructureDataByRegionId(@RequestParam Long regionId) {
         // 创建三种数据结构的局部内部类
+        /**
+         * 月度销售数据
+         * 合计每个月的销售量、销售额、预测量和预测额
+         */
         class MonthlySales {
             private String date;
             private int salesVolume;
@@ -144,13 +149,21 @@ public class SaleRecordController {
             private int predictedVolume;
             private int predictedAmount;
         }
+        /**
+         * 车型销售数据
+         * 合计每个车型的总销售量，展示品牌
+         */
         class BrandSales {
             private String brand;
             private String model;
             private int totalVolume;
         }
+        /**
+         * 市区销售数据
+         * 统计指定省份下每个市区的总销售量
+         */
         class RegionSales {
-            private String city;
+            private String region;
             private int salesVolume;
         }
         class ComplexData {
@@ -158,6 +171,7 @@ public class SaleRecordController {
             private List<BrandSales> brandSales;
             private List<RegionSales> regionSales;
         }
+        // TODO: 综合查询逻辑，获取数据并填充到 ComplexData 对象中
         return ResponseUtil.success(new ComplexData());
     }
 

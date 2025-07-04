@@ -493,7 +493,7 @@ public class ARIMAUtil {
      * @param q                移动平均阶数
      * @return 完整预测结果
      */
-    public static ARIMAResult forecastCarSalesWithParams(List<Double> monthlySales, int monthsToForecast,
+    public static ARIMAResult forecastCarSalesComplete(List<Double> monthlySales, int monthsToForecast,
             int p, int d, int q) {
         double[] data = monthlySales.stream().mapToDouble(Double::doubleValue).toArray();
         return forecastWithARIMAComplete(data, p, d, q, monthsToForecast);
