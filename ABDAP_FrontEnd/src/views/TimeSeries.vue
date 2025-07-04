@@ -19,20 +19,30 @@ const regionTargets = ref<string[]>(['全国'])
 const powerType = ref<string>('')
 
 // 计算当前可选项和选择方式
-const carModelMultiple = computed(() => compareMode.value == 'carModel')
-const regionMultiple = computed(() => compareMode.value == 'region')
+const carModelMultiple = computed(() => compareMode.value == 'carModel' || compareMode.value == 'none')
+const regionMultiple = computed(() => compareMode.value == 'region' || compareMode.value == 'none')
 const regionOptions = computed(() =>
   compareMode.value === 'region'
     ? regionOptionsNoAll
     : regionOptionsAll
 )
-
 // 图表实例
 const chartRef = ref<HTMLDivElement>()
 let chartInstance: echarts.ECharts | null = null
 
+const barChartRef = ref<HTMLDivElement | null>(null)
+let barChartInstance: echarts.ECharts | null = null
+
+
 // 统计数据
-const statsList = ref<{ name: string, min: number, max: number, avg: number }[]>([])
+const statsList = ref<{ name: string, min: number, max: number, avg: number, data: number[], dateList: string[] }[]>([])
+const statsDetailVisible = ref(false)
+const currentStats = ref<{ name: string, min: number, max: number, avg: number, data: number[], dateList: string[] } | null>(null)
+
+function showStatsDetail(stats: { name: string, min: number, max: number, avg: number, data: number[], dateList: string[] }) {
+  currentStats.value = stats
+  statsDetailVisible.value = true
+}
 
 // 监听筛选条件变化，刷新图表
 const handleFilterChange = () => {
@@ -53,6 +63,47 @@ watch(compareMode, (mode) => {
     // 不限，地区多选不含全国，车型多选
     regionTargets.value = [regionOptionsNoAll[0]]
     carModelTargets.value = [carModelOptions[0]]
+  }
+})
+
+// 监听弹窗打开时渲染柱状图
+watch(statsDetailVisible, async (visible) => {
+  if (visible && currentStats.value) {
+    await nextTick()
+    if (barChartRef.value) {
+      if (!barChartInstance) {
+        barChartInstance = echarts.init(barChartRef.value)
+      }
+      barChartInstance.setOption({
+        tooltip: { trigger: 'axis' },
+        xAxis: { type: 'category', data: currentStats.value.dateList },
+        yAxis: { type: 'value', name: '销量(台)' },
+        series: [{
+          type: 'bar',
+          data: currentStats.value.data,
+          animation: true, 
+          animationDuration: 1000, 
+          animationEasing: 'elasticOut', 
+          animationDelay: function (idx: number) { 
+            return idx * 100; 
+          },
+          label: {
+            show: true,
+            position: 'top'
+          },
+          itemStyle: { color: '#409EFF' }
+        }]
+      })
+      barChartInstance.resize()
+    }
+  }
+})
+
+// 弹窗关闭时销毁实例释放内存
+watch(statsDetailVisible, (visible) => {
+  if (!visible && barChartInstance) {
+    barChartInstance.dispose()
+    barChartInstance = null
   }
 })
 
@@ -132,7 +183,7 @@ async function fetchDataAndRender() {
     const min = Math.min(...item.data)
     const max = Math.max(...item.data)
     const avg = Math.round(item.data.reduce((a: number, b: number) => a + b, 0) / item.data.length)
-    return { name: item.name, min, max, avg }
+    return { name: item.name, min, max, avg, data: item.data, dateList: item.dateList }
   })
 
   // 定义颜色数组
@@ -174,6 +225,9 @@ async function fetchDataAndRender() {
       smooth: true,
       symbol: 'circle',
       symbolSize: 6,
+      animation: true,
+      animationDuration: 1000,
+      animationEasing: 'elasticOut',
       lineStyle: { width: 2 },
       itemStyle: { 
         color: (params: any) => colorList[params.dataIndex % colorList.length],
@@ -232,7 +286,7 @@ watch([dateRangeType, dateRange, carModelTargets, regionTargets, powerType], fet
           <!-- 主筛选类型选择 -->
           <el-radio-group v-model="compareMode" @change="handleFilterChange">
             <el-radio-button label="carModel">以车型为主</el-radio-button>
-            <el-radio-button label="region">以地区为主</el-radio-button> 
+            <el-radio-button label="region">以地区为主</el-radio-button>
             <el-radio-button label="none">不限</el-radio-button>
           </el-radio-group>
           <!-- 车型选择 -->
@@ -281,20 +335,45 @@ watch([dateRangeType, dateRange, carModelTargets, regionTargets, powerType], fet
       </div>
     </el-card>
 
-    <el-card class="chart-card" shadow="never" style="margin-top: 20px;">
-      <template #header>
-        <span>销量趋势对比</span>
-      </template>
-      <div ref="chartRef" class="chart-container" style="height: 420px;"></div>
-      <div class="stats-summary" v-if="statsList.length">
-        <div v-for="(stats, idx) in statsList" :key="idx" class="stats-item">
-          <span class="stats-label">{{ stats.name }}</span>
-          <span class="stats-value">最小值: {{ stats.min }}</span>
-          <span class="stats-value">最大值: {{ stats.max }}</span>
-          <span class="stats-value">平均值: {{ stats.avg }}</span>
-        </div>
-      </div>
-    </el-card>
+    <el-row :gutter="16" class="chart-summary-row" style="margin-top: 20px;">
+      <el-col :lg="19" :md="16" :sm="24" class="chart-col">
+        <el-card class="chart-card" shadow="never">
+          <template #header>
+            <span>销量趋势对比</span>
+          </template>
+          <div ref="chartRef" class="chart-container" style="height: 420px;"></div>
+        </el-card>
+      </el-col>
+      <el-col :lg="5" :md="8" :sm="24" class="summary-col">
+        <el-card class="stats-card" shadow="never">
+          <template #header>
+            <span>关键数据</span>
+          </template>
+          <div class="stats-summary">
+            <div
+              v-for="(stats, idx) in statsList"
+              :key="idx"
+              class="stats-item clickable"
+              @click="showStatsDetail(stats)"
+            >
+              <span class="stats-label">{{ stats.name }}</span>
+              <span class="stats-value">最小值: {{ stats.min }}</span>
+              <span class="stats-value">最大值: {{ stats.max }}</span>
+              <span class="stats-value">平均值: {{ stats.avg }}</span>
+            </div>
+            <el-dialog v-model="statsDetailVisible" title="详细信息" width="700px" append-to-body>
+              <div v-if="currentStats">
+                <p><b>名称：</b>{{ currentStats.name }}</p>
+                <p><b>最小值：</b>{{ currentStats.min }}</p>
+                <p><b>最大值：</b>{{ currentStats.max }}</p>
+                <p><b>平均值：</b>{{ currentStats.avg }}</p>
+                <div ref="barChartRef" class="chart-container" style="width:100%;height:360px;margin-top:16px;"></div>
+              </div>
+            </el-dialog>
+          </div>
+        </el-card>
+      </el-col>
+    </el-row>
   </div>
 </template>
 
@@ -320,4 +399,92 @@ watch([dateRangeType, dateRange, carModelTargets, regionTargets, powerType], fet
   margin-top: 10px;
 }
 
+.stats-item.clickable {
+  cursor: pointer;
+  transition: box-shadow 0.2s, background 0.2s;
+}
+
+.stats-item.clickable:hover {
+  background: #e6f7ff;
+  box-shadow: 0 2px 8px rgba(64,158,255,0.12);
+}
+
+.stats-label {
+  font-weight: bold;
+  color: #409EFF;
+  margin-right: 8px;
+}
+
+.stats-value {
+  margin-left: 8px;
+  white-space: nowrap;
+}
+
+.chart-summary-row {
+  width: 100%;
+}
+
+.chart-col {
+  min-width: 0;
+}
+
+.summary-col {
+  min-width: 0;
+}
+
+.stats-card {
+  height: 100%;
+  min-height: 420px;
+  display: flex;
+  flex-direction: column;
+}
+
+.stats-summary {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 12px;
+  max-height: 380px;
+  overflow-y: auto;
+  padding: 4px 0;
+  margin-top: 18px;
+}
+
+.stats-item {
+  background: #f5f7fa;
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-size: 14px;
+  color: #333;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  width: 100%;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+  cursor: pointer;
+  transition: box-shadow 0.2s, background 0.2s;
+}
+
+.stats-item.clickable:hover {
+  background: #e6f7ff;
+  box-shadow: 0 2px 8px rgba(64,158,255,0.12);
+}
+
+.stats-label {
+  font-weight: bold;
+  color: #409EFF;
+  margin-bottom: 2px;
+}
+
+.stats-value {
+  white-space: nowrap;
+  font-size: 13px;
+  color: #666;
+}
+
+.el-dialog {
+  width: 700px !important;
+  max-width: 90vw !important;
+}
 </style>
