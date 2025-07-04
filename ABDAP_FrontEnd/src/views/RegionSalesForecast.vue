@@ -37,30 +37,6 @@ interface RegionInfo {
   carOwnership: number
 }
 
-interface ChannelEfficiency {
-  channelName: string
-  salesVolume: number
-  efficiency: number
-  costPerLead: number
-  conversionRate: number
-  suggestion: {
-    type: 'success' | 'warning' | 'danger'
-    text: string
-  }
-}
-
-interface TerritoryAllocation {
-  territory: string
-  teamSize: number
-  targetSales: number
-  coverage: number
-  efficiency: number
-  incentive: {
-    type: 'success' | 'warning' | 'danger'
-    text: string
-  }
-}
-
 interface RegionalCompetitor {
   brand: string
   marketShare: number
@@ -89,18 +65,9 @@ interface OptimizationResult {
   reasoning: string
 }
 
-interface TeamPlanResult {
-  territory: string
-  teamMembers: number
-  salesTarget: number
-  workload: number
-  incentiveStrategy: string
-}
-
 // 响应式数据
 const loading = ref(false)
 const analyzing = ref(false)
-const optimizing = ref(false)
 
 // 区域选择与配置
 const selectedRegion = ref<string[]>([])
@@ -123,14 +90,6 @@ const currentRegion = ref<RegionInfo>({
 // 分析结果状态
 const hasResults = ref(false)
 
-// 市场潜力指标
-const marketSaturation = ref(65)
-const growthPotential = ref(3)
-const competitionLevel = ref({
-  type: 'warning' as const,
-  text: '中等激烈',
-})
-
 // 预测指标
 const predictedSales = ref(15800)
 const marketShare = ref(12.5)
@@ -141,12 +100,6 @@ const industryGrowth = ref(1.8)
 const forecastAccuracy = ref(89.2)
 const confidenceLevel = ref(85)
 
-// 渠道数据
-const channelEfficiency = ref<ChannelEfficiency[]>([])
-
-// 团队管理数据
-const territoryAllocation = ref<TerritoryAllocation[]>([])
-
 // 竞争分析数据
 const regionalCompetition = ref<RegionalCompetitor[]>([])
 
@@ -155,34 +108,18 @@ const inventoryRecommendations = ref<InventoryRecommendation[]>([])
 
 // 弹窗控制
 const showRegionMap = ref(false)
-const showChannelOptimizer = ref(false)
-const showTeamPlanner = ref(false)
 
 // 地图配置
 const mapDisplayMode = ref('sales')
 const mapTimeRange = ref('6M')
 
-// 优化器配置
-const optimizationTarget = ref('max_sales')
-const budgetConstraint = ref(500)
-const optimizationResults = ref<OptimizationResult[] | null>(null)
-
-// 团队规划配置
-const totalTeamSize = ref(25)
-const coverageTarget = ref(85)
-const teamPlanResults = ref<TeamPlanResult[] | null>(null)
-
 // 图表实例
 const regionTrendChart = ref<HTMLDivElement>()
-const channelChart = ref<HTMLDivElement>()
-const teamChart = ref<HTMLDivElement>()
 const competitionChart = ref<HTMLDivElement>()
 const inventoryChart = ref<HTMLDivElement>()
 const regionMapChart = ref<HTMLDivElement>()
 
 let regionTrendChartInstance: echarts.ECharts | null = null
-let channelChartInstance: echarts.ECharts | null = null
-let teamChartInstance: echarts.ECharts | null = null
 let competitionChartInstance: echarts.ECharts | null = null
 let inventoryChartInstance: echarts.ECharts | null = null
 let regionMapChartInstance: echarts.ECharts | null = null
@@ -202,31 +139,6 @@ const salesGrowthType = computed(() => {
   if (salesGrowth.value >= 0) return 'text-warning'
   return 'text-danger'
 })
-
-// 工具函数
-const getConsumptionType = (level: number) => {
-  if (level >= 80) return 'success'
-  if (level >= 60) return 'warning'
-  return 'danger'
-}
-
-const getSaturationColor = (value: number) => {
-  if (value >= 80) return '#f56c6c'
-  if (value >= 60) return '#e6a23c'
-  return '#67c23a'
-}
-
-const getEfficiencyType = (efficiency: number) => {
-  if (efficiency >= 8) return 'success'
-  if (efficiency >= 6) return 'warning'
-  return 'danger'
-}
-
-const getWorkloadColor = (workload: number) => {
-  if (workload >= 90) return '#f56c6c'
-  if (workload >= 70) return '#e6a23c'
-  return '#67c23a'
-}
 
 // API调用函数
 const fetchRegionTree = async () => {
@@ -320,78 +232,6 @@ const generateMockRegionAnalysis = () => {
     consumptionText: '高消费',
     carOwnership: 89,
   }
-
-  // 生成渠道效率数据
-  channelEfficiency.value = [
-    {
-      channelName: '4S店',
-      salesVolume: 5800,
-      efficiency: 8.5,
-      costPerLead: 1200,
-      conversionRate: 15.2,
-      suggestion: { type: 'success', text: '继续加强' },
-    },
-    {
-      channelName: '线上直销',
-      salesVolume: 4200,
-      efficiency: 9.2,
-      costPerLead: 800,
-      conversionRate: 18.6,
-      suggestion: { type: 'success', text: '扩大投入' },
-    },
-    {
-      channelName: '经销商网络',
-      salesVolume: 3600,
-      efficiency: 6.8,
-      costPerLead: 1500,
-      conversionRate: 12.1,
-      suggestion: { type: 'warning', text: '优化培训' },
-    },
-    {
-      channelName: '企业团购',
-      salesVolume: 2200,
-      efficiency: 7.9,
-      costPerLead: 950,
-      conversionRate: 22.3,
-      suggestion: { type: 'success', text: '重点开发' },
-    },
-  ]
-
-  // 生成团队配置数据
-  territoryAllocation.value = [
-    {
-      territory: '核心商圈',
-      teamSize: 8,
-      targetSales: 6200,
-      coverage: 92.5,
-      efficiency: 9.1,
-      incentive: { type: 'success', text: '绩效奖金' },
-    },
-    {
-      territory: '新兴区域',
-      teamSize: 6,
-      targetSales: 4800,
-      coverage: 78.3,
-      efficiency: 7.8,
-      incentive: { type: 'warning', text: '开拓奖励' },
-    },
-    {
-      territory: '传统社区',
-      teamSize: 5,
-      targetSales: 3200,
-      coverage: 85.7,
-      efficiency: 8.3,
-      incentive: { type: 'success', text: '稳定提成' },
-    },
-    {
-      territory: '企业客户',
-      teamSize: 6,
-      targetSales: 1600,
-      coverage: 68.9,
-      efficiency: 6.5,
-      incentive: { type: 'warning', text: '项目奖金' },
-    },
-  ]
 
   // 生成竞争对手数据
   regionalCompetition.value = [
@@ -524,8 +364,6 @@ const exportReport = () => {
     period: forecastPeriod.value,
     predictedSales: predictedSales.value,
     marketShare: marketShare.value,
-    channelEfficiency: channelEfficiency.value,
-    territoryAllocation: territoryAllocation.value,
     exportTime: new Date().toISOString(),
   }
 
@@ -544,8 +382,6 @@ const exportReport = () => {
 const initAllCharts = async () => {
   await Promise.all([
     initRegionTrendChart(),
-    initChannelChart(),
-    initTeamChart(),
     initCompetitionChart(),
     initInventoryChart(),
   ])
@@ -614,103 +450,6 @@ const initRegionTrendChart = async () => {
   }
 
   regionTrendChartInstance.setOption(option)
-}
-
-const initChannelChart = async () => {
-  if (!channelChart.value) return
-
-  await nextTick()
-
-  if (channelChartInstance) {
-    channelChartInstance.dispose()
-  }
-
-  channelChartInstance = echarts.init(channelChart.value)
-
-  const option = {
-    title: {
-      text: '渠道效率分析',
-      left: 'center',
-      textStyle: { fontSize: 14 },
-    },
-    tooltip: {
-      trigger: 'axis',
-      axisPointer: { type: 'shadow' },
-    },
-    grid: {
-      left: '3%',
-      right: '4%',
-      bottom: '3%',
-      top: '20%',
-      containLabel: true,
-    },
-    xAxis: {
-      type: 'category',
-      data: channelEfficiency.value.map((item) => item.channelName),
-    },
-    yAxis: {
-      type: 'value',
-      name: '效率评分',
-    },
-    series: [
-      {
-        name: '渠道效率',
-        type: 'bar',
-        data: channelEfficiency.value.map((item) => ({
-          value: item.efficiency,
-          itemStyle: {
-            color: item.efficiency >= 8 ? '#67c23a' : item.efficiency >= 6 ? '#e6a23c' : '#f56c6c',
-          },
-        })),
-        barWidth: '60%',
-      },
-    ],
-  }
-
-  channelChartInstance.setOption(option)
-}
-
-const initTeamChart = async () => {
-  if (!teamChart.value) return
-
-  await nextTick()
-
-  if (teamChartInstance) {
-    teamChartInstance.dispose()
-  }
-
-  teamChartInstance = echarts.init(teamChart.value)
-
-  const option = {
-    title: {
-      text: '团队配置分析',
-      left: 'center',
-      textStyle: { fontSize: 14 },
-    },
-    tooltip: {
-      trigger: 'item',
-    },
-    series: [
-      {
-        name: '团队配置',
-        type: 'pie',
-        radius: ['40%', '70%'],
-        data: territoryAllocation.value.map((item) => ({
-          name: item.territory,
-          value: item.teamSize,
-        })),
-        emphasis: {
-          itemStyle: {
-            shadowBlur: 10,
-            shadowOffsetX: 0,
-            shadowColor: 'rgba(0, 0, 0, 0.5)',
-          },
-        },
-      },
-    ],
-  }
-
-  teamChartInstance.setOption(option)
 }
 
 const initCompetitionChart = async () => {
@@ -843,124 +582,6 @@ const downloadMap = () => {
   ElMessage.success('地图下载功能开发中...')
 }
 
-const runOptimization = async () => {
-  optimizing.value = true
-
-  try {
-    // 模拟优化计算
-    await new Promise((resolve) => setTimeout(resolve, 2000))
-
-    optimizationResults.value = [
-      {
-        channel: '4S店',
-        currentInvestment: 200,
-        recommendedInvestment: 180,
-        expectedROI: 15.2,
-        reasoning: '当前投入过高，建议适度减少并优化运营效率',
-      },
-      {
-        channel: '线上直销',
-        currentInvestment: 120,
-        recommendedInvestment: 160,
-        expectedROI: 22.8,
-        reasoning: '线上渠道效率高，建议增加投入扩大规模',
-      },
-      {
-        channel: '经销商网络',
-        currentInvestment: 150,
-        recommendedInvestment: 130,
-        reasoning: '需要加强培训提升效率，适度控制投入',
-        expectedROI: 12.5,
-      },
-      {
-        channel: '企业团购',
-        currentInvestment: 80,
-        recommendedInvestment: 110,
-        expectedROI: 18.9,
-        reasoning: '企业客户转化率高，建议增加资源投入',
-      },
-    ]
-
-    ElMessage.success('渠道优化分析完成!')
-  } catch (error) {
-    ElMessage.error('优化分析失败')
-  } finally {
-    optimizing.value = false
-  }
-}
-
-const applyOptimization = () => {
-  ElMessageBox.confirm('确定要应用这些优化建议吗？', '确认应用', {
-    confirmButtonText: '确定',
-    cancelButtonText: '取消',
-    type: 'warning',
-  })
-    .then(() => {
-      ElMessage.success('优化建议已应用')
-      showChannelOptimizer.value = false
-    })
-    .catch(() => {
-      // 用户取消
-    })
-}
-
-const generateTeamPlan = async () => {
-  try {
-    // 模拟生成团队规划
-    await new Promise((resolve) => setTimeout(resolve, 1500))
-
-    teamPlanResults.value = [
-      {
-        territory: '核心商圈',
-        teamMembers: Math.ceil(totalTeamSize.value * 0.32),
-        salesTarget: 6200,
-        workload: 85,
-        incentiveStrategy: '绩效奖金 + 股权激励',
-      },
-      {
-        territory: '新兴区域',
-        teamMembers: Math.ceil(totalTeamSize.value * 0.24),
-        salesTarget: 4800,
-        workload: 78,
-        incentiveStrategy: '开拓奖励 + 提成加成',
-      },
-      {
-        territory: '传统社区',
-        teamMembers: Math.ceil(totalTeamSize.value * 0.2),
-        salesTarget: 3200,
-        workload: 72,
-        incentiveStrategy: '稳定提成 + 年终奖',
-      },
-      {
-        territory: '企业客户',
-        teamMembers: Math.ceil(totalTeamSize.value * 0.24),
-        salesTarget: 1600,
-        workload: 65,
-        incentiveStrategy: '项目奖金 + 团队奖励',
-      },
-    ]
-
-    ElMessage.success('团队规划方案已生成')
-  } catch (error) {
-    ElMessage.error('生成规划失败')
-  }
-}
-
-const applyTeamPlan = () => {
-  ElMessageBox.confirm('确定要应用这个团队规划方案吗？', '确认应用', {
-    confirmButtonText: '确定',
-    cancelButtonText: '取消',
-    type: 'warning',
-  })
-    .then(() => {
-      ElMessage.success('团队规划方案已应用')
-      showTeamPlanner.value = false
-    })
-    .catch(() => {
-      // 用户取消
-    })
-}
-
 const generateInventoryPlan = () => {
   ElMessage.info('正在生成库存优化计划...')
   setTimeout(() => {
@@ -972,8 +593,6 @@ const generateInventoryPlan = () => {
 const handleResize = () => {
   const chartInstances = [
     regionTrendChartInstance,
-    channelChartInstance,
-    teamChartInstance,
     competitionChartInstance,
     inventoryChartInstance,
     regionMapChartInstance,
@@ -1005,8 +624,6 @@ onUnmounted(() => {
   // 销毁所有图表实例
   const chartInstances = [
     regionTrendChartInstance,
-    channelChartInstance,
-    teamChartInstance,
     competitionChartInstance,
     inventoryChartInstance,
     regionMapChartInstance,
@@ -1106,65 +723,9 @@ onUnmounted(() => {
 
     <!-- 主要分析结果 -->
     <div v-if="hasResults">
-      <!-- 区域市场概览与预测趋势 -->
+      <!-- 区域预测趋势 -->
       <el-row :gutter="20">
-        <el-col :xs="24" :lg="8">
-          <el-card shadow="never" class="region-overview-card">
-            <template #header>
-              <span>{{ currentRegion.name }} 市场概览</span>
-            </template>
-            <div class="region-overview">
-              <!-- 基础经济指标 -->
-              <div class="economic-indicators">
-                <h5>区域经济指标</h5>
-                <div class="indicator-list">
-                  <div class="indicator-item">
-                    <span class="label">人口规模:</span>
-                    <span class="value">{{ currentRegion.population.toLocaleString() }} 万</span>
-                  </div>
-                  <div class="indicator-item">
-                    <span class="label">人均GDP:</span>
-                    <span class="value">¥{{ currentRegion.gdpPerCapita.toLocaleString() }}</span>
-                  </div>
-                  <div class="indicator-item">
-                    <span class="label">消费水平:</span>
-                    <el-tag :type="getConsumptionType(currentRegion.consumptionLevel)">
-                      {{ currentRegion.consumptionText }}
-                    </el-tag>
-                  </div>
-                  <div class="indicator-item">
-                    <span class="label">汽车保有量:</span>
-                    <span class="value">{{ currentRegion.carOwnership.toLocaleString() }} 万辆</span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- 市场潜力指标 -->
-              <div class="market-potential">
-                <h5>市场潜力评估</h5>
-                <div class="potential-metrics">
-                  <div class="metric-item">
-                    <span class="metric-label">市场饱和度:</span>
-                    <el-progress
-                      :percentage="marketSaturation"
-                      :color="getSaturationColor(marketSaturation)"
-                    />
-                  </div>
-                  <div class="metric-item">
-                    <span class="metric-label">增长潜力:</span>
-                    <el-rate v-model="growthPotential" disabled show-score />
-                  </div>
-                  <div class="metric-item">
-                    <span class="metric-label">竞争激烈度:</span>
-                    <el-tag :type="competitionLevel.type">{{ competitionLevel.text }}</el-tag>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </el-card>
-        </el-col>
-
-        <el-col :xs="24" :lg="16">
+        <el-col :xs="24" :lg="24">
           <el-card shadow="never" class="forecast-trend-card">
             <template #header>
               <div class="card-header">
@@ -1228,119 +789,6 @@ onUnmounted(() => {
                     </div>
                   </el-col>
                 </el-row>
-              </div>
-            </div>
-          </el-card>
-        </el-col>
-      </el-row>
-
-      <!-- 渠道效率分析与销售团队管理 -->
-      <el-row :gutter="20">
-        <el-col :xs="24" :lg="12">
-          <el-card shadow="never" class="channel-efficiency-card">
-            <template #header>
-              <div class="card-header">
-                <span>渠道效率分析</span>
-                <el-button size="small" type="primary" @click="showChannelOptimizer = true">
-                  渠道优化
-                </el-button>
-              </div>
-            </template>
-
-            <div class="channel-analysis">
-              <!-- 渠道效率图表 -->
-              <div class="efficiency-chart">
-                <div ref="channelChart" class="chart-container" style="height: 280px;"></div>
-              </div>
-
-              <!-- 渠道效率表格 -->
-              <div class="efficiency-table">
-                <el-table :data="channelEfficiency" size="small" style="width: 100%">
-                  <el-table-column prop="channelName" label="渠道" width="120" />
-                  <el-table-column prop="salesVolume" label="销量" width="100">
-                    <template #default="{ row }">
-                      {{ row.salesVolume.toLocaleString() }}台
-                    </template>
-                  </el-table-column>
-                  <el-table-column prop="efficiency" label="效率评分" width="100">
-                    <template #default="{ row }">
-                      <el-tag :type="getEfficiencyType(row.efficiency)" size="small">
-                        {{ row.efficiency.toFixed(1) }}
-                      </el-tag>
-                    </template>
-                  </el-table-column>
-                  <el-table-column prop="costPerLead" label="获客成本" width="100">
-                    <template #default="{ row }">
-                      ¥{{ row.costPerLead.toLocaleString() }}
-                    </template>
-                  </el-table-column>
-                  <el-table-column prop="conversionRate" label="转化率" width="100">
-                    <template #default="{ row }">
-                      {{ row.conversionRate.toFixed(1) }}%
-                    </template>
-                  </el-table-column>
-                  <el-table-column label="优化建议" min-width="150">
-                    <template #default="{ row }">
-                      <el-tag :type="row.suggestion.type" size="small">
-                        {{ row.suggestion.text }}
-                      </el-tag>
-                    </template>
-                  </el-table-column>
-                </el-table>
-              </div>
-            </div>
-          </el-card>
-        </el-col>
-
-        <el-col :xs="24" :lg="12">
-          <el-card shadow="never" class="team-management-card">
-            <template #header>
-              <div class="card-header">
-                <span>销售团队管理</span>
-                <el-button size="small" type="success" @click="showTeamPlanner = true">
-                  团队规划
-                </el-button>
-              </div>
-            </template>
-
-            <div class="team-analysis">
-              <!-- 团队配置图表 -->
-              <div class="team-chart">
-                <div ref="teamChart" class="chart-container" style="height: 280px;"></div>
-              </div>
-
-              <!-- 团队配置表格 -->
-              <div class="team-allocation">
-                <el-table :data="territoryAllocation" size="small" style="width: 100%">
-                  <el-table-column prop="territory" label="销售区域" width="120" />
-                  <el-table-column prop="teamSize" label="团队规模" width="100">
-                    <template #default="{ row }">
-                      {{ row.teamSize }}人
-                    </template>
-                  </el-table-column>
-                  <el-table-column prop="targetSales" label="销量目标" width="100">
-                    <template #default="{ row }">
-                      {{ row.targetSales.toLocaleString() }}台
-                    </template>
-                  </el-table-column>
-                  <el-table-column prop="coverage" label="覆盖率" width="100">
-                    <template #default="{ row }">
-                      {{ row.coverage.toFixed(1) }}%
-                    </template>
-                  </el-table-column>
-                  <el-table-column prop="efficiency" label="团队效率" width="100">
-                    <template #default="{ row }">
-                      {{ row.efficiency.toFixed(1) }}
-                    </template>
-                  </el-table-column>
-                  <el-table-column label="激励策略" min-width="150">
-                    <template #default="{ row }">
-                      <el-tag :type="row.incentive.type" size="small">
-                        {{ row.incentive.text }}
-                      </el-tag>
-                    </template>
-                  </el-table-column>
-                </el-table>
               </div>
             </div>
           </el-card>
@@ -1489,144 +937,6 @@ onUnmounted(() => {
         <div class="dialog-footer">
           <el-button @click="showRegionMap = false">关闭</el-button>
           <el-button type="primary" @click="downloadMap">下载地图</el-button>
-        </div>
-      </template>
-    </el-dialog>
-
-    <!-- 渠道优化器弹窗 -->
-    <el-dialog
-      v-model="showChannelOptimizer"
-      title="渠道优化器"
-      width="70%"
-    >
-      <div class="channel-optimizer-content">
-        <!-- 优化设置 -->
-        <div class="optimizer-settings">
-          <el-row :gutter="16">
-            <el-col :span="8">
-              <el-form-item label="优化目标:">
-                <el-select v-model="optimizationTarget">
-                  <el-option label="最大化销量" value="max_sales" />
-                  <el-option label="最大化效率" value="max_efficiency" />
-                  <el-option label="最小化成本" value="min_cost" />
-                </el-select>
-              </el-form-item>
-            </el-col>
-            <el-col :span="8">
-              <el-form-item label="预算约束:">
-                <el-input-number
-                  v-model="budgetConstraint"
-                  :min="0"
-                  :step="10000"
-                  placeholder="万元"
-                  style="width: 100%"
-                />
-              </el-form-item>
-            </el-col>
-            <el-col :span="8">
-              <el-button type="primary" @click="runOptimization" :loading="optimizing">
-                运行优化
-              </el-button>
-            </el-col>
-          </el-row>
-        </div>
-
-        <!-- 优化结果 -->
-        <div class="optimization-results" v-if="optimizationResults">
-          <h5>渠道优化建议</h5>
-          <el-table :data="optimizationResults" style="width: 100%">
-            <el-table-column prop="channel" label="渠道" width="120" />
-            <el-table-column prop="currentInvestment" label="当前投入" width="120">
-              <template #default="{ row }">
-                ¥{{ row.currentInvestment.toLocaleString() }}万
-              </template>
-            </el-table-column>
-            <el-table-column prop="recommendedInvestment" label="建议投入" width="120">
-              <template #default="{ row }">
-                ¥{{ row.recommendedInvestment.toLocaleString() }}万
-              </template>
-            </el-table-column>
-            <el-table-column prop="expectedROI" label="预期ROI" width="100">
-              <template #default="{ row }">
-                {{ row.expectedROI.toFixed(1) }}%
-              </template>
-            </el-table-column>
-            <el-table-column prop="reasoning" label="优化理由" min-width="200" />
-          </el-table>
-        </div>
-      </div>
-
-      <template #footer>
-        <div class="dialog-footer">
-          <el-button @click="showChannelOptimizer = false">取消</el-button>
-          <el-button type="primary" @click="applyOptimization" :disabled="!optimizationResults">
-            应用优化
-          </el-button>
-        </div>
-      </template>
-    </el-dialog>
-
-    <!-- 团队规划器弹窗 -->
-    <el-dialog
-      v-model="showTeamPlanner"
-      title="销售团队规划器"
-      width="75%"
-    >
-      <div class="team-planner-content">
-        <!-- 规划设置 -->
-        <div class="planner-settings">
-          <el-row :gutter="16">
-            <el-col :span="8">
-              <el-form-item label="总团队规模:">
-                <el-input-number v-model="totalTeamSize" :min="1" :max="100" />
-                <span style="margin-left: 8px;">人</span>
-              </el-form-item>
-            </el-col>
-            <el-col :span="8">
-              <el-form-item label="覆盖目标:">
-                <el-input-number v-model="coverageTarget" :min="50" :max="100" />
-                <span style="margin-left: 8px;">%</span>
-              </el-form-item>
-            </el-col>
-            <el-col :span="8">
-              <el-button type="primary" @click="generateTeamPlan">
-                生成规划方案
-              </el-button>
-            </el-col>
-          </el-row>
-        </div>
-
-        <!-- 规划结果 -->
-        <div class="team-plan-results" v-if="teamPlanResults">
-          <h5>团队分配方案</h5>
-          <el-table :data="teamPlanResults" style="width: 100%">
-            <el-table-column prop="territory" label="销售区域" width="120" />
-            <el-table-column prop="teamMembers" label="团队人数" width="100">
-              <template #default="{ row }">
-                {{ row.teamMembers }}人
-              </template>
-            </el-table-column>
-            <el-table-column prop="salesTarget" label="销量目标" width="120">
-              <template #default="{ row }">
-                {{ row.salesTarget.toLocaleString() }}台
-              </template>
-            </el-table-column>
-            <el-table-column prop="workload" label="工作负荷" width="100">
-              <template #default="{ row }">
-                <el-progress :percentage="row.workload" :color="getWorkloadColor(row.workload)" />
-              </template>
-            </el-table-column>
-            <el-table-column prop="incentiveStrategy" label="激励策略" min-width="200" />
-          </el-table>
-        </div>
-      </div>
-
-      <template #footer>
-        <div class="dialog-footer">
-          <el-button @click="showTeamPlanner = false">关闭</el-button>
-          <el-button type="primary" @click="applyTeamPlan" :disabled="!teamPlanResults">
-            应用方案
-          </el-button>
         </div>
       </template>
     </el-dialog>
@@ -1906,29 +1216,6 @@ onUnmounted(() => {
 .metric-card .metric-confidence {
   font-size: 12px;
   color: #909399;
-}
-
-/* 渠道效率分析 */
-.channel-analysis,
-.team-analysis {
-  padding: 8px 0;
-}
-
-.efficiency-chart,
-.team-chart {
-  padding: 20px;
-  border-bottom: 1px solid #f0f2f5;
-}
-
-.efficiency-table,
-.team-allocation {
-  padding: 20px;
-}
-
-.efficiency-table .el-table,
-.team-allocation .el-table {
-  border-radius: 8px;
-  overflow: hidden;
 }
 
 /* 竞争分析样式 */

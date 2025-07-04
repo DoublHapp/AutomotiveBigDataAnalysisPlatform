@@ -49,15 +49,6 @@ interface VersionForecast {
   suggestions: string[]
 }
 
-interface OptionsForecast {
-  name: string
-  adoptionRate: number
-  growth: number
-  profitContribution: number
-  trend: 'success' | 'warning' | 'danger'
-  trendText: string
-}
-
 interface CompetitorThreat {
   modelId: number
   modelName: string
@@ -135,7 +126,6 @@ const expectedLifecycle = ref(48)
 
 // 配置组合数据
 const versionForecast = ref<VersionForecast[]>([])
-const optionsForecast = ref<OptionsForecast[]>([])
 
 // 定价策略数据
 const priceElasticity = ref(-1.8)
@@ -166,14 +156,12 @@ const simulationResults = ref<SimulationResult | null>(null)
 
 // 图表实例
 const configurationChart = ref<HTMLDivElement>()
-const colorChart = ref<HTMLDivElement>()
 const elasticityChart = ref<HTMLDivElement>()
 const inventoryChart = ref<HTMLDivElement>()
 const competitorChart = ref<HTMLDivElement>()
 const simulationChart = ref<HTMLDivElement>()
 
 let configurationChartInstance: echarts.ECharts | null = null
-let colorChartInstance: echarts.ECharts | null = null
 let elasticityChartInstance: echarts.ECharts | null = null
 let inventoryChartInstance: echarts.ECharts | null = null
 let competitorChartInstance: echarts.ECharts | null = null
@@ -399,42 +387,6 @@ const generateMockModelAnalysis = () => {
     },
   ]
 
-  // 生成选装配置预测数据
-  optionsForecast.value = [
-    {
-      name: '自动驾驶套装',
-      adoptionRate: 32.5,
-      growth: 15.2,
-      profitContribution: 8.7,
-      trend: 'success',
-      trendText: '增长',
-    },
-    {
-      name: '全景天窗',
-      adoptionRate: 78.3,
-      growth: 2.1,
-      profitContribution: 3.2,
-      trend: 'warning',
-      trendText: '稳定',
-    },
-    {
-      name: '音响系统升级',
-      adoptionRate: 45.8,
-      growth: 8.9,
-      profitContribution: 4.1,
-      trend: 'success',
-      trendText: '增长',
-    },
-    {
-      name: '座椅按摩',
-      adoptionRate: 28.7,
-      growth: -3.2,
-      profitContribution: 2.8,
-      trend: 'danger',
-      trendText: '下降',
-    },
-  ]
-
   // 生成竞品定价数据
   competitorPricing.value = [
     {
@@ -506,7 +458,6 @@ const generateMockModelAnalysis = () => {
       expectedDuration: 48,
     },
     versions: versionForecast.value,
-    options: optionsForecast.value,
     pricing: {
       elasticity: -1.8,
       optimal: 258000,
@@ -560,7 +511,6 @@ const resetSelection = () => {
   // 清理图表
   const chartInstances = [
     configurationChartInstance,
-    colorChartInstance,
     elasticityChartInstance,
     inventoryChartInstance,
     competitorChartInstance,
@@ -595,7 +545,6 @@ const startModelAnalysis = async () => {
 
     // 更新其他数据
     versionForecast.value = results.versions
-    optionsForecast.value = results.options
     priceElasticity.value = results.pricing.elasticity
     optimalPrice.value = results.pricing.optimal
     maxProfitMargin.value = results.pricing.maxMargin
@@ -889,7 +838,6 @@ const showCounterStrategy = (threat: CompetitorThreat) => {
 const initAllCharts = async () => {
   await Promise.all([
     initConfigurationChart(),
-    initColorChart(),
     initElasticityChart(),
     initInventoryChart(),
     initCompetitorChart(),
@@ -953,68 +901,6 @@ const initConfigurationChart = async () => {
   }
 
   configurationChartInstance.setOption(option)
-}
-
-const initColorChart = async () => {
-  if (!colorChart.value) return
-
-  await nextTick()
-
-  if (colorChartInstance) {
-    colorChartInstance.dispose()
-  }
-
-  colorChartInstance = echarts.init(colorChart.value)
-
-  const colorData = [
-    { name: '珍珠白', value: 35, color: '#FFFFFF' },
-    { name: '深海蓝', value: 25, color: '#1E3A8A' },
-    { name: '曜石黑', value: 20, color: '#000000' },
-    { name: '炫酷银', value: 12, color: '#C0C0C0' },
-    { name: '烈焰红', value: 8, color: '#DC2626' },
-  ]
-
-  const option = {
-    title: {
-      text: '颜色偏好分析',
-      left: 'center',
-      textStyle: { fontSize: 14 },
-    },
-    tooltip: {
-      trigger: 'item',
-      formatter: '{a} <br/>{b}: {c}% ({d}%)',
-    },
-    series: [
-      {
-        name: '颜色偏好',
-        type: 'pie',
-        radius: ['40%', '70%'],
-        avoidLabelOverlap: false,
-        label: {
-          show: true,
-          position: 'outside',
-        },
-        emphasis: {
-          label: {
-            show: true,
-            fontSize: '14',
-            fontWeight: 'bold',
-          },
-        },
-        data: colorData.map((item) => ({
-          name: item.name,
-          value: item.value,
-          itemStyle: {
-            color: item.color,
-            borderColor: '#fff',
-            borderWidth: 2,
-          },
-        })),
-      },
-    ],
-  }
-
-  colorChartInstance.setOption(option)
 }
 
 const initElasticityChart = async () => {
@@ -1347,7 +1233,6 @@ const initSimulationChart = async () => {
 const handleResize = () => {
   const chartInstances = [
     configurationChartInstance,
-    colorChartInstance,
     elasticityChartInstance,
     inventoryChartInstance,
     competitorChartInstance,
@@ -1389,7 +1274,6 @@ onUnmounted(() => {
   // 销毁所有图表实例
   const chartInstances = [
     configurationChartInstance,
-    colorChartInstance,
     elasticityChartInstance,
     inventoryChartInstance,
     competitorChartInstance,
@@ -1442,7 +1326,7 @@ onUnmounted(() => {
         <!-- 主要分析车型 -->
         <div class="primary-model-section">
           <h4>主要分析车型</h4>
-          <el-row :gutter="16">
+          <el-row :gutter="32">
             <el-col :span="8">
               <el-form-item label="选择车型:">
                 <el-select
@@ -1461,7 +1345,7 @@ onUnmounted(() => {
                 </el-select>
               </el-form-item>
             </el-col>
-            <el-col :span="6">
+            <el-col :span="7">
               <el-form-item label="预测周期:">
                 <el-select v-model="forecastPeriod" @change="handlePeriodChange">
                   <el-option label="未来3个月" value="3M" />
@@ -1471,11 +1355,10 @@ onUnmounted(() => {
                 </el-select>
               </el-form-item>
             </el-col>
-            <el-col :span="6">
+            <el-col :span="5">
               <el-form-item label="预测粒度:">
                 <el-radio-group v-model="forecastGranularity" @change="handleGranularityChange">
                   <el-radio-button value="monthly">月度</el-radio-button>
-                  <el-radio-button value="weekly">周度</el-radio-button>
                 </el-radio-group>
               </el-form-item>
             </el-col>
@@ -1655,48 +1538,14 @@ onUnmounted(() => {
                     </el-table>
                   </div>
                 </el-tab-pane>
-
-                <el-tab-pane label="颜色偏好" name="colors">
-                  <div class="color-analysis">
-                    <div ref="colorChart" class="chart-container" style="height: 300px"></div>
-                  </div>
-                </el-tab-pane>
-
-                <el-tab-pane label="选装配置" name="options">
-                  <div class="options-analysis">
-                    <div class="options-grid">
-                      <div v-for="option in optionsForecast" :key="option.name" class="option-item">
-                        <div class="option-header">
-                          <span class="option-name">{{ option.name }}</span>
-                          <el-tag :type="option.trend">{{ option.trendText }}</el-tag>
-                        </div>
-                        <div class="option-metrics">
-                          <div class="metric">
-                            <span>选装率:</span>
-                            <strong>{{ option.adoptionRate.toFixed(1) }}%</strong>
-                          </div>
-                          <div class="metric">
-                            <span>预测增长:</span>
-                            <strong :class="option.growth >= 0 ? 'text-success' : 'text-danger'">
-                              {{ option.growth >= 0 ? '+' : '' }}{{ option.growth.toFixed(1) }}%
-                            </strong>
-                          </div>
-                          <div class="metric">
-                            <span>利润贡献:</span>
-                            <strong>{{ option.profitContribution.toFixed(1) }}%</strong>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </el-tab-pane>
               </el-tabs>
             </div>
           </div>
         </el-card>
       </el-col>
     </el-row>
-
+    <br>
+    
     <!-- 定价策略与库存规划 -->
     <el-row :gutter="20" v-if="modelResults">
       <el-col :xs="24" :lg="12">
@@ -1792,56 +1641,6 @@ onUnmounted(() => {
               <div ref="inventoryChart" class="chart-container" style="height: 250px"></div>
             </div>
 
-            <!-- 库存优化建议 -->
-            <div class="inventory-optimization">
-              <h5>库存优化建议</h5>
-              <div class="optimization-grid">
-                <div class="optimization-item">
-                  <div class="item-header">
-                    <el-icon><Box /></el-icon>
-                    <span>安全库存</span>
-                  </div>
-                  <div class="item-content">
-                    <div class="item-value">{{ safetyStock.toLocaleString() }} 台</div>
-                    <div class="item-description">基于需求波动的安全库存建议</div>
-                  </div>
-                </div>
-
-                <div class="optimization-item">
-                  <div class="item-header">
-                    <el-icon><Refresh /></el-icon>
-                    <span>周转目标</span>
-                  </div>
-                  <div class="item-content">
-                    <div class="item-value">{{ targetTurnover.toFixed(1) }} 次/年</div>
-                    <div class="item-description">优化后的库存周转率目标</div>
-                  </div>
-                </div>
-
-                <div class="optimization-item">
-                  <div class="item-header">
-                    <el-icon><Clock /></el-icon>
-                    <span>补货周期</span>
-                  </div>
-                  <div class="item-content">
-                    <div class="item-value">{{ replenishmentCycle }} 天</div>
-                    <div class="item-description">最优补货周期建议</div>
-                  </div>
-                </div>
-
-                <div class="optimization-item">
-                  <div class="item-header">
-                    <el-icon><Money /></el-icon>
-                    <span>资金占用</span>
-                  </div>
-                  <div class="item-content">
-                    <div class="item-value">¥{{ (inventoryValue / 10000).toFixed(0) }}万</div>
-                    <div class="item-description">预期库存资金占用</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
             <!-- 季节性调整 -->
             <div class="seasonal-adjustment">
               <h5>季节性库存调整</h5>
@@ -1864,6 +1663,7 @@ onUnmounted(() => {
         </el-card>
       </el-col>
     </el-row>
+    <br>
 
     <!-- 竞品影响分析 -->
     <el-card
@@ -2223,6 +2023,7 @@ onUnmounted(() => {
 
 /* 生命周期分析卡片 */
 .lifecycle-card {
+  height: 100%;
   border-radius: 16px;
   box-shadow: 0 6px 30px rgba(0, 0, 0, 0.08);
   border: 1px solid #e8eaed;
@@ -2378,7 +2179,8 @@ onUnmounted(() => {
 }
 
 /* 配置组合卡片 */
-.configuration-card {
+.configuration-card { 
+  height: 100%;
   border-radius: 16px;
   box-shadow: 0 6px 30px rgba(0, 0, 0, 0.08);
   border: 1px solid #e8eaed;
@@ -2491,6 +2293,7 @@ onUnmounted(() => {
 /* 定价策略卡片 */
 .pricing-card,
 .inventory-card {
+  height: 100%;
   border-radius: 16px;
   box-shadow: 0 6px 30px rgba(0, 0, 0, 0.08);
   border: 1px solid #e8eaed;
