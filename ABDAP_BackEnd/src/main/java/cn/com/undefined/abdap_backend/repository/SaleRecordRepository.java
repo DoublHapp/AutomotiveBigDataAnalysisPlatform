@@ -30,6 +30,25 @@ public interface SaleRecordRepository extends JpaRepository<SaleRecord, Long> {
        List<SaleRecord> findByCarModelIdAndRegionId(Long carModelId, Long regionId);
 
        /**
+        * 指定多个车型id、只返回符合条件的销售记录
+        */
+       @Query("SELECT sr FROM SaleRecord sr WHERE sr.carModelId IN :carModelIds")
+       List<SaleRecord> findByCarModelIds(@Param("carModelIds") List<Long> carModelIds);
+
+       /**
+        * 指定多个地区id、只返回符合条件的销售记录
+        */
+       @Query("SELECT sr FROM SaleRecord sr WHERE sr.regionId IN :regionIds")
+       List<SaleRecord> findByRegionIds(@Param("regionIds") List<Long> regionIds);
+
+       /**
+        * 指定多个车型id、多个地区id，只返回符合条件的销售记录
+        */
+       @Query("SELECT sr FROM SaleRecord sr WHERE sr.carModelId IN :carModelIds AND sr.regionId IN :regionIds")
+       List<SaleRecord> findByCarModelIdsAndRegionIds(@Param("carModelIds") List<Long> carModelIds,
+                                                      @Param("regionIds") List<Long> regionIds);
+
+       /**
         * 查询热门车型排行 - 按销量总和排序（指定时间范围）
         */
        @Query("SELECT sr.carModelId, SUM(sr.saleCount) as totalSales " +

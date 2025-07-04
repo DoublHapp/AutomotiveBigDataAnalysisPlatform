@@ -38,24 +38,4 @@ public class OpinionDTO {
      * 评分
      */
     private BigDecimal score;
-    
-    /**
-     * 评分显示文本（格式化后的评分，如：4.5分）
-     */
-    private String scoreDisplayText;
-    
-    /**
-     * 评分等级（优秀、良好、一般、较差、很差）
-     */
-    private String scoreLevel;
-    
-    /**
-     * 是否为高分评价
-     */
-    private Boolean isHighScore;
-    
-    /**
-     * 是否为低分评价
-     */
-    private Boolean isLowScore;
 }

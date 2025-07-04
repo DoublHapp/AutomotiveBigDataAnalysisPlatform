@@ -14,6 +14,9 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.util.List;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+
 
 /**
  * 销售记录控制器
@@ -66,6 +69,96 @@ public class SaleRecordController {
             @RequestParam Long regionId) {
         List<SaleRecordDTO> records = service.getSaleRecordsByCarModelIdAndRegionId(carModelId, regionId);
         return ResponseUtil.success(records);
+    }
+
+    /**
+     * 获取指定多个车型id、多个地区id下的销售数据
+     * GET /api/sale-records/multiple?carModelIds={carModelIds}&regionIds={regionIds}
+     */
+    @GetMapping("/multiple")
+    public ResponseEntity<ApiResponse<List<SaleRecordDTO>>> getMultipleSaleRecords(
+            @RequestParam List<Long> carModelIds,
+            @RequestParam List<Long> regionIds) {
+        List<SaleRecordDTO> records = service.getMultipleSaleRecords(carModelIds, regionIds);
+        return ResponseUtil.success(records);
+    }
+
+    /**
+     * 
+     * 按照如下数据结构的查询和返回：
+     * 请求参数：
+     * {
+     * "regionId": "1",
+     * }
+     * 返回的data结构：
+     * "monthlySales": [
+     * {
+     * "date": "2025-04",
+     * "salesVolume": 1200,
+     * "salesAmount": 1800000,
+     * "predictedVolume": 1250,
+     * "predictedAmount": 1900000
+     * },
+     * {
+     * "date": "2025-05",
+     * "salesVolume": 1100,
+     * "salesAmount": 1700000,
+     * "predictedVolume": 1150,
+     * "predictedAmount": 1750000
+     * }
+     * ],
+     * "brandSales": [
+     * {
+     * "brand": "丰田",
+     * "model": "卡罗拉",
+     * "totalVolume": 300
+     * },
+     * {
+     * "brand": "比亚迪",
+     * "model": "汉",
+     * "totalVolume": 260
+     * }
+     * ],
+     * "regionSales": [
+     * {
+     * "city": "广州市",
+     * "salesVolume": 600
+     * },
+     * {
+     * "city": "深圳市",
+     * "salesVolume": 500
+     * }
+     * ]
+     * 
+     * @return
+     */
+    // TODO: 实现复杂数据结构的查询和返回
+    // ---以下为未验证接口---
+    @GetMapping("/complex-structure")
+    public ResponseEntity<ApiResponse<Object>> getComplexStructureDataByRegionId(@RequestParam Long regionId) {
+        // 创建三种数据结构的局部内部类
+        class MonthlySales {
+            private String date;
+            private int salesVolume;
+            private int salesAmount;
+            private int predictedVolume;
+            private int predictedAmount;
+        }
+        class BrandSales {
+            private String brand;
+            private String model;
+            private int totalVolume;
+        }
+        class RegionSales {
+            private String city;
+            private int salesVolume;
+        }
+        class ComplexData {
+            private List<MonthlySales> monthlySales;
+            private List<BrandSales> brandSales;
+            private List<RegionSales> regionSales;
+        }
+        return ResponseUtil.success(new ComplexData());
     }
 
     /**

@@ -51,10 +51,6 @@ public class OpinionService {
         
         // 设置评分相关信息
         dto.setScore(opinion.getScore());
-        dto.setScoreDisplayText(opinion.getScoreDisplayText());
-        dto.setScoreLevel(opinion.getScoreLevel());
-        dto.setIsHighScore(opinion.isHighScore());
-        dto.setIsLowScore(opinion.isLowScore());
         
         return dto;
     }
