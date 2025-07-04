@@ -289,12 +289,12 @@ async function fetchTrendData() {
   // 这里实际应调用后端接口
   const params = new URLSearchParams();
   carModelTargets.value.forEach(item => {
-    params.append('itemId', item.toString());
+    params.append('carModelIds', item.toString());
   });
   regionTargets.value.forEach(item => {
-    params.append('regionId', item?.toString() || '');
+    params.append('regionIds', item?.toString() || '[]');
   });
-  const res = await axios.get(`/api/sale-records?${params.toString()}`)
+  const res = await axios.get(`/api/sale-records/multiple?${params.toString()}`)
   console.log('请求参数:', res.data)
   return processResponseData(res.data.data)
   // return generateMockData()
