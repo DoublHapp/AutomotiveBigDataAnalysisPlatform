@@ -237,12 +237,6 @@
                 <span class="rating-count">({{ car.reviewCount }}评价)</span>
               </div>
             </div>
-            <div class="stat-item">
-              <span class="label">关注度</span>
-              <span class="value attention" :class="getAttentionLevel(car.attention)">
-                {{ car.attention.toLocaleString() }}
-              </span>
-            </div>
           </div>
 
           <!-- 操作按钮区 -->
@@ -260,10 +254,6 @@
               <el-button size="small" :icon="MoreFilled" />
               <template #dropdown>
                 <el-dropdown-menu>
-                  <el-dropdown-item @click="addToWishlist(car)">
-                    <el-icon><Star /></el-icon>
-                    加入心愿单
-                  </el-dropdown-item>
                   <el-dropdown-item @click="viewTrendChart(car)">
                     <el-icon><TrendCharts /></el-icon>
                     查看趋势
@@ -277,11 +267,6 @@
             </el-dropdown>
           </div>
 
-          <!-- 价格提醒标识 -->
-          <div class="price-alert" v-if="car.priceAlert">
-            <el-icon class="alert-icon"><Bell /></el-icon>
-            <span class="alert-text">{{ car.priceAlert }}</span>
-          </div>
         </div>
 
         <!-- 空状态 -->
@@ -297,39 +282,6 @@
           layout="prev, pager, next, jumper, total"
           @current-change="handlePageChange"
         />
-      </div>
-    </el-card>
-
-    <!-- 个性化推荐区域 -->
-    <el-card
-      shadow="never"
-      class="recommendation-card"
-      v-if="personalizedRecommendations.length > 0"
-    >
-      <template #header>
-        <div class="recommendation-header">
-          <span>猜你喜欢</span>
-          <el-button size="small" type="text" @click="refreshRecommendations"> 换一批 </el-button>
-        </div>
-      </template>
-
-      <div class="recommendation-list">
-        <div
-          v-for="recommendation in personalizedRecommendations"
-          :key="recommendation.id"
-          class="recommendation-item"
-          @click="viewDetails(recommendation)"
-        >
-          <img :src="recommendation.image" :alt="recommendation.name" class="rec-image" />
-          <div class="rec-info">
-            <h4>{{ recommendation.brand }} {{ recommendation.name }}</h4>
-            <p class="rec-reason">{{ recommendation.reason }}</p>
-            <div class="rec-stats">
-              <span class="rec-price">{{ recommendation.priceRange }}</span>
-              <span class="rec-score">匹配度: {{ recommendation.matchScore }}%</span>
-            </div>
-          </div>
-        </div>
       </div>
     </el-card>
 
@@ -386,7 +338,6 @@
           <el-button type="primary" size="large" @click="addToComparison(selectedCarDetail)">
             加入对比
           </el-button>
-          <el-button size="large" @click="setPriceAlert(selectedCarDetail)"> 价格提醒 </el-button>
         </div>
       </div>
     </el-drawer>
@@ -431,12 +382,12 @@ interface CarModel {
   engine: string
   transmission: string
   priceRange: string
+  avgPrice?: number      // 新增：平均价格字段
   sales: number
   hotIndex: number
   valueScore: number
   rating: number
   reviewCount: number
-  attention: number
   salesGrowth: number
   rankChange: number
   trendDirection: 'up' | 'down' | 'stable'
@@ -444,7 +395,6 @@ interface CarModel {
   isHot: boolean
   isNew: boolean
   keyFeatures: string[]
-  priceAlert?: string
 }
 
 interface SelectedModel {
@@ -455,15 +405,6 @@ interface SelectedModel {
   image: string
 }
 
-interface PersonalizedRecommendation {
-  id: number
-  name: string
-  brand: string
-  priceRange: string
-  image: string
-  reason: string
-  matchScore: number
-}
 
 // 响应式数据
 const loading = ref(false)
@@ -484,7 +425,6 @@ const currentPage = ref(1)
 // 车型数据
 const hotCarList = ref<CarModel[]>([])
 const selectedModels = ref<SelectedModel[]>([])
-const personalizedRecommendations = ref<PersonalizedRecommendation[]>([])
 
 // 详情抽屉
 const showDetailDrawer = ref(false)
@@ -509,14 +449,108 @@ const getChangeType = (value: number) => {
   return 'neutral'
 }
 
-const getAttentionLevel = (attention: number) => {
-  if (attention > 10000) return 'high'
-  if (attention > 5000) return 'medium'
-  return 'low'
-}
 
 const isSelected = (carId: number) => {
   return selectedModels.value.some((model) => model.id === carId)
+}
+
+// 热度指数计算函数
+const calculateHotIndex = (car: any) => {
+  const baseHotIndex = 500 // 统一基础分
+
+  // 销量影响 (40%权重)
+  const salesImpact = (car.sales / 1000) * 20
+
+  // 增长趋势影响 (25%权重)
+  let trendImpact = 0
+  const growth = car.salesGrowth || 0
+  if (growth > 20) {
+    trendImpact = 150
+  } else if (growth > 10) {
+    trendImpact = 100
+  } else if (growth > 0) {
+    trendImpact = 50
+  } else if (growth > -10) {
+    trendImpact = -30
+  } else {
+    trendImpact = -100
+  }
+
+  // 用户评分影响 (10%权重)
+  const rating = car.rating || 3.0
+  const ratingImpact = (rating - 3.0) * 50
+
+  return Math.floor(baseHotIndex + salesImpact + trendImpact + ratingImpact)
+}
+
+
+// 性价比评分计算函数
+const calculateValueScore = (avgPrice: number, engineType: string) => {
+  // 1. 配置价值分 (满分100分)
+  const configValueScore = calculateConfigValueScore(engineType)
+  
+  // 2. 使用成本分 (满分100分) 
+  const usageCostScore = calculateUsageCostScore(engineType, avgPrice)
+  
+  // 3. 价格调整系数
+  const priceAdjustmentFactor = calculatePriceAdjustmentFactor(avgPrice)
+  
+  // 4. 最终性价比评分 = (配置价值分 + 使用成本分) / 价格调整系数
+  const finalScore = (configValueScore + usageCostScore) / priceAdjustmentFactor
+  
+  // 限制在0-10分范围内
+  return Math.min(10, Math.max(0, finalScore))
+}
+
+// 配置价值分计算
+const calculateConfigValueScore = (engineType: string): number => {
+  const baseConfigScore = Math.random() * 30 + 60 // 基础配置分60-90
+  
+  // 根据动力类型调整配置价值
+  const engineBonus = {
+    '纯电动': 15,      // 新能源科技配置加分
+    '混合动力': 10,    // 混动技术加分
+    '2.0T': 5,         // 涡轮增压技术加分
+    '1.5T': 3,         // 小排量涡轮加分
+    '3.0L': 0          // 传统大排量无加分
+  }
+  
+  return Math.min(100, baseConfigScore + (engineBonus[engineType] || 0))
+}
+
+// 使用成本分计算 (成本越低分数越高)
+const calculateUsageCostScore = (engineType: string, avgPrice: number): number => {
+  const baseCostScore = 70 // 基础使用成本分
+  
+  // 根据动力类型调整使用成本分
+  const engineCostScore = {
+    '纯电动': 30,      // 电费便宜，使用成本低
+    '混合动力': 20,    // 油电混合，成本中等
+    '1.5T': 10,        // 小排量省油
+    '2.0T': 0,         // 中等排量正常成本
+    '3.0L': -15        // 大排量油耗高，成本高
+  }
+  
+  // 价格越高的车，保养成本通常越高
+  const priceCostPenalty = avgPrice > 40 ? -10 : avgPrice > 25 ? -5 : 0
+  
+  const finalCostScore = baseCostScore + (engineCostScore[engineType] || 0) + priceCostPenalty
+  
+  return Math.min(100, Math.max(0, finalCostScore))
+}
+
+// 价格调整系数计算
+const calculatePriceAdjustmentFactor = (avgPrice: number): number => {
+  // 根据价格区间设定不同的调整系数
+  if (avgPrice <= 15) {
+    return 1.8        // 经济型车价格期望较低，系数较大
+  } else if (avgPrice <= 25) {
+    return 2.0        // 主流车型标准系数
+  } else if (avgPrice <= 40) {
+    return 2.3        // 中高端车型期望较高
+  } else {
+    return 2.6        // 豪华车型期望很高
+  }
 }
 
 // API 调用函数
@@ -529,12 +563,17 @@ const fetchHotCarList = async () => {
       carType: carType.value,
       region: region.value,
       rankingType: rankingType.value,
-      limit: 50, // 获取更多数据用于分页
+      limit: 50,
     }
 
     const response = await axios.get('/api/rankings/cars', { params })
     if (response.data.status === 1) {
-      hotCarList.value = response.data.data
+      // 对后端返回的数据计算热度指数和性价比评分
+      hotCarList.value = response.data.data.map((car) => ({
+        ...car,
+        hotIndex: calculateHotIndex(car),
+        valueScore: calculateValueScore(car.avgPrice || parseAvgPrice(car.priceRange), car.engine)
+      }))
     } else {
       hotCarList.value = generateMockCarList()
     }
@@ -544,23 +583,21 @@ const fetchHotCarList = async () => {
   }
 }
 
-const fetchPersonalizedRecommendations = async () => {
-  try {
-    const response = await axios.get('/api/recommendations/personalized')
-    if (response.data.status === 1) {
-      personalizedRecommendations.value = response.data.data
-    } else {
-      personalizedRecommendations.value = generateMockRecommendations()
-    }
-  } catch (error) {
-    console.error('获取个性化推荐失败:', error)
-    personalizedRecommendations.value = generateMockRecommendations()
+// 从价格区间字符串解析平均价格
+const parseAvgPrice = (priceRange: string): number => {
+  const match = priceRange.match(/(\d+\.?\d*)-(\d+\.?\d*)万/)
+  if (match) {
+    const min = parseFloat(match[1])
+    const max = parseFloat(match[2])
+    return (min + max) / 2
   }
+  return 25 // 默认值
 }
+
 
 // 模拟数据生成
 const generateMockCarList = (): CarModel[] => {
-  const brands = [
+ const brands = [
     'Tesla',
     'BYD',
     'NIO',
@@ -592,8 +629,36 @@ const generateMockCarList = (): CarModel[] => {
     const brand = brands[index % brands.length]
     const model = models[index % models.length]
     const sales = Math.floor(Math.random() * 10000) + 1000
-    const hotIndex = Math.floor(Math.random() * 1000) + 100
-    const valueScore = Math.random() * 10
+    const salesGrowth = (Math.random() - 0.3) * 50 // -15% 到 +35%
+    const userRating = Math.random() * 2 + 3 // 3-5星
+    
+    // 模拟车型价格（万元）
+    const priceMin = Math.random() * 40 + 10 // 10-50万
+    const priceMax = priceMin + Math.random() * 20 + 10 // 比最低价高10-30万
+    const avgPrice = (priceMin + priceMax) / 2
+
+    // 计算热度指数（保持原有逻辑）
+    const baseHotIndex = 500
+    const salesImpact = (sales / 1000) * 20
+    
+    let trendImpact = 0
+    if (salesGrowth > 20) {
+      trendImpact = 150
+    } else if (salesGrowth > 10) {
+      trendImpact = 100
+    } else if (salesGrowth > 0) {
+      trendImpact = 50
+    } else if (salesGrowth > -10) {
+      trendImpact = -30
+    } else {
+      trendImpact = -100
+    }
+    
+    const ratingImpact = (userRating - 3.0) * 50
+    const hotIndex = Math.floor(baseHotIndex + salesImpact + trendImpact + ratingImpact)
+
+    // 计算性价比评分：(配置价值分 + 使用成本分) / 价格调整系数
+    const valueScore = calculateValueScore(avgPrice, engines[index % engines.length])
 
     return {
       id: index + 1,
@@ -602,18 +667,18 @@ const generateMockCarList = (): CarModel[] => {
       type: types[index % types.length],
       engine: engines[index % engines.length],
       transmission: transmissions[index % transmissions.length],
-      priceRange: `${(Math.random() * 50 + 10).toFixed(0)}-${(Math.random() * 30 + 60).toFixed(0)}万`,
+      priceRange: `${priceMin.toFixed(0)}-${priceMax.toFixed(0)}万`,
+      avgPrice: avgPrice, // 添加平均价格字段用于计算
       sales: sales,
       hotIndex: hotIndex,
       valueScore: valueScore,
-      rating: Math.random() * 2 + 3, // 3-5星
+      rating: userRating,
       reviewCount: Math.floor(Math.random() * 5000) + 100,
-      attention: Math.floor(Math.random() * 20000) + 1000,
-      salesGrowth: (Math.random() - 0.3) * 50, // -15% 到 +35%
-      rankChange: Math.floor((Math.random() - 0.5) * 10), // -5 到 +5
-      trendDirection: Math.random() > 0.5 ? 'up' : Math.random() > 0.3 ? 'down' : 'stable',
+      salesGrowth: salesGrowth,
+      rankChange: Math.floor((Math.random() - 0.5) * 10),
+      trendDirection: salesGrowth > 5 ? 'up' : salesGrowth < -5 ? 'down' : 'stable',
       image: `https://picsum.photos/300/200?random=${index}`,
-      isHot: Math.random() > 0.7,
+      isHot: hotIndex > 800,
       isNew: Math.random() > 0.8,
       keyFeatures: [
         '智能驾驶',
@@ -627,24 +692,10 @@ const generateMockCarList = (): CarModel[] => {
       ]
         .sort(() => Math.random() - 0.5)
         .slice(0, 3),
-      priceAlert: Math.random() > 0.8 ? '降价2万' : undefined,
     }
   })
 }
 
-const generateMockRecommendations = (): PersonalizedRecommendation[] => {
-  const reasons = ['基于您的浏览历史', '同价位热门选择', '性价比突出', '新能源推荐', '豪华品牌精选']
-
-  return Array.from({ length: 5 }, (_, index) => ({
-    id: index + 100,
-    name: `推荐车型${index + 1}`,
-    brand: ['Tesla', 'BYD', 'NIO', 'XPeng', 'BMW'][index],
-    priceRange: `${(Math.random() * 40 + 20).toFixed(0)}-${(Math.random() * 20 + 50).toFixed(0)}万`,
-    image: `https://picsum.photos/300/200?random=${index + 50}`,
-    reason: reasons[index],
-    matchScore: Math.floor(Math.random() * 30) + 70, // 70-100%
-  }))
-}
 
 // 事件处理函数
 const handleFilterChange = async () => {
@@ -664,6 +715,16 @@ const handleRankingTypeChange = async () => {
   loading.value = true
   try {
     await fetchHotCarList()
+
+    // 根据排行榜类型进行排序
+    if (rankingType.value === 'sales') {
+      hotCarList.value.sort((a, b) => b.sales - a.sales)
+    } else if (rankingType.value === 'hot') {
+      hotCarList.value.sort((a, b) => b.hotIndex - a.hotIndex)
+    } else if (rankingType.value === 'value') {
+      hotCarList.value.sort((a, b) => b.valueScore - a.valueScore)
+    }
+
     ElMessage.info(
       `已切换到${rankingType.value === 'sales' ? '销量' : rankingType.value === 'hot' ? '热度' : '性价比'}排行`,
     )
@@ -755,21 +816,9 @@ const handleCarItemClick = (car: CarModel) => {
   ElMessage.info(`查看 ${car.brand} ${car.name} 的详细信息`)
 }
 
-const viewDetails = (car: CarModel | PersonalizedRecommendation) => {
-  if ('sales' in car) {
-    // 如果是完整的CarModel对象
-    selectedCarDetail.value = car as CarModel
-  } else {
-    // 如果是推荐对象，需要获取完整信息
-    const fullCarData = hotCarList.value.find((c) => c.id === car.id)
-    if (fullCarData) {
-      selectedCarDetail.value = fullCarData
-    } else {
-      ElMessage.warning('车型详情加载失败')
-      return
-    }
-  }
-
+// 修改为只处理CarModel
+const viewDetails = (car: CarModel) => {
+  selectedCarDetail.value = car
   showDetailDrawer.value = true
 }
 
@@ -778,26 +827,6 @@ const addToComparison = (car: CarModel) => {
   showDetailDrawer.value = false
 }
 
-const setPriceAlert = (car: CarModel) => {
-  ElMessageBox.prompt('请输入期望价格(万元)', '价格提醒设置', {
-    confirmButtonText: '设置提醒',
-    cancelButtonText: '取消',
-    inputPattern: /^\d+(\.\d{1,2})?$/,
-    inputErrorMessage: '请输入有效的价格',
-  })
-    .then(({ value }) => {
-      ElMessage.success(`已为 ${car.brand} ${car.name} 设置价格提醒: ${value}万元`)
-      // 这里可以调用API保存价格提醒
-    })
-    .catch(() => {
-      // 用户取消
-    })
-}
-
-const addToWishlist = (car: CarModel) => {
-  ElMessage.success(`${car.brand} ${car.name} 已加入心愿单`)
-  // 这里可以调用API保存到心愿单
-}
 
 const viewTrendChart = async (car: CarModel) => {
   showTrendDialog.value = true
@@ -837,7 +866,7 @@ const handleImageError = (event: Event) => {
 const refreshData = async () => {
   loading.value = true
   try {
-    await Promise.all([fetchHotCarList(), fetchPersonalizedRecommendations()])
+    await fetchHotCarList()
     ElMessage.success('数据已刷新')
   } catch (error) {
     ElMessage.error('数据刷新失败')
@@ -846,14 +875,6 @@ const refreshData = async () => {
   }
 }
 
-const refreshRecommendations = async () => {
-  try {
-    await fetchPersonalizedRecommendations()
-    ElMessage.success('推荐已更新')
-  } catch (error) {
-    ElMessage.error('推荐更新失败')
-  }
-}
 
 const exportRanking = () => {
   if (hotCarList.value.length === 0) {
@@ -862,7 +883,7 @@ const exportRanking = () => {
   }
 
   const csvContent = [
-    ['排名', '车型', '品牌', '销量', '价格区间', '用户评分', '关注度'],
+    ['排名', '车型', '品牌', '销量', '价格区间', '用户评分'],
     ...hotCarList.value
       .slice(0, displayCount.value)
       .map((car, index) => [
@@ -870,9 +891,9 @@ const exportRanking = () => {
         car.name,
         car.brand,
         car.sales,
+        car.hotIndex,
         car.priceRange,
         car.rating.toFixed(1),
-        car.attention,
       ]),
   ]
     .map((row) => row.join(','))
@@ -979,7 +1000,7 @@ onMounted(async () => {
   ElMessage.success('欢迎使用热门车型排行榜！')
 
   try {
-    await Promise.all([fetchHotCarList(), fetchPersonalizedRecommendations()])
+    await fetchHotCarList()
     window.addEventListener('resize', handleResize)
   } catch (error) {
     console.error('页面初始化失败:', error)
@@ -1475,20 +1496,6 @@ onUnmounted(() => {
   color: #909399;
 }
 
-.value.attention.high {
-  color: #f56c6c;
-  font-weight: 700;
-}
-
-.value.attention.medium {
-  color: #e6a23c;
-  font-weight: 600;
-}
-
-.value.attention.low {
-  color: #909399;
-}
-
 /* 操作按钮区 */
 .car-actions {
   display: flex;
@@ -1511,26 +1518,6 @@ onUnmounted(() => {
   width: 100%;
 }
 
-/* 价格提醒标识 */
-.price-alert {
-  position: absolute;
-  top: 12px;
-  left: 12px;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 8px;
-  background: rgba(245, 108, 108, 0.9);
-  color: white;
-  border-radius: 6px;
-  font-size: 11px;
-  font-weight: 600;
-  backdrop-filter: blur(4px);
-}
-
-.alert-icon {
-  font-size: 12px;
-}
 
 /* 分页样式 */
 .pagination-wrapper {
@@ -1545,94 +1532,6 @@ onUnmounted(() => {
   --el-pagination-button-border-radius: 8px;
 }
 
-/* 个性化推荐卡片 */
-.recommendation-card {
-  margin-bottom: 24px;
-  border-radius: 16px;
-  box-shadow: 0 6px 30px rgba(0, 0, 0, 0.08);
-  border: 1px solid #e8eaed;
-  overflow: hidden;
-}
-
-.recommendation-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-weight: 600;
-  color: #1a1a1a;
-  font-size: 16px;
-}
-
-.recommendation-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 16px;
-  padding: 8px 0;
-}
-
-.recommendation-item {
-  display: flex;
-  gap: 12px;
-  padding: 16px;
-  background: white;
-  border-radius: 12px;
-  border: 1px solid #e8eaed;
-  transition: all 0.3s ease;
-  cursor: pointer;
-}
-
-.recommendation-item:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
-  border-color: #4facfe;
-}
-
-.rec-image {
-  width: 80px;
-  height: 60px;
-  object-fit: cover;
-  border-radius: 8px;
-}
-
-.rec-info {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.rec-info h4 {
-  margin: 0;
-  font-size: 14px;
-  font-weight: 600;
-  color: #1a1a1a;
-  line-height: 1.2;
-}
-
-.rec-reason {
-  margin: 0;
-  font-size: 12px;
-  color: #909399;
-  line-height: 1.3;
-}
-
-.rec-stats {
-  display: flex;
-  justify-content: space-between;
-  margin-top: auto;
-}
-
-.rec-price {
-  font-size: 13px;
-  font-weight: 600;
-  color: #4facfe;
-}
-
-.rec-score {
-  font-size: 11px;
-  color: #67c23a;
-  font-weight: 500;
-}
 
 /* 详情抽屉样式 */
 .detail-content {
@@ -1903,9 +1802,6 @@ onUnmounted(() => {
     min-width: 200px;
   }
 
-  .recommendation-list {
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  }
 }
 
 @media (max-width: 768px) {
@@ -1974,20 +1870,6 @@ onUnmounted(() => {
     flex-direction: column;
   }
 
-  .recommendation-list {
-    grid-template-columns: 1fr;
-  }
-
-  .recommendation-item {
-    flex-direction: column;
-    text-align: center;
-  }
-
-  .rec-image {
-    width: 100%;
-    height: 120px;
-    margin: 0 auto;
-  }
 
   .detail-header {
     flex-direction: column;
@@ -2051,16 +1933,8 @@ onUnmounted(() => {
   .filter-card,
   .quick-compare-card,
   .ranking-card,
-  .recommendation-card {
-    background: #2d2d2d;
-    border-color: #404040;
-  }
 
   .car-item,
-  .recommendation-item {
-    background: #2d2d2d;
-    border-color: #404040;
-  }
 
   .car-item.top-three {
     background: #3d3d2d;
@@ -2133,10 +2007,6 @@ onUnmounted(() => {
     background: white !important;
     color: black !important;
     border: 1px solid #ccc !important;
-  }
-
-  .recommendation-list {
-    grid-template-columns: repeat(2, 1fr);
   }
 }
 

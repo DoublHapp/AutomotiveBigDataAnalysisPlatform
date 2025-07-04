@@ -877,9 +877,6 @@ const shareToSocial = () => {
   }
 }
 
-const bookTestDrive = () => {
-  ElMessage.info('试驾预约功能开发中...')
-}
 
 const handleImageError = (event: Event) => {
   const img = event.target as HTMLImageElement
@@ -1418,7 +1415,6 @@ onUnmounted(() => {
               保存对比结果
             </el-button>
             <el-button size="large" @click="shareComparison"> 分享对比 </el-button>
-            <el-button size="large" @click="bookTestDrive"> 预约试驾 </el-button>
           </div>
         </div>
       </el-card>

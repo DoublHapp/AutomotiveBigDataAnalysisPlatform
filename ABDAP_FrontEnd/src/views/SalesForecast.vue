@@ -259,13 +259,20 @@
             </el-form-item>
 
             <!-- 预测模型选择 -->
-            <el-form-item label="预测模型">
-              <el-radio-group v-model="forecastConfig.modelType" @change="handleModelChange">
-                <el-radio value="ARIMA">ARIMA</el-radio>
-                <el-radio value="Prophet">Prophet</el-radio>
-                <el-radio value="AUTO">智能推荐</el-radio>
-              </el-radio-group>
-            </el-form-item>
+           <el-form-item label="预测模型">
+  <el-radio-group v-model="forecastConfig.modelType" @change="handleModelChange">
+    <el-radio value="ARIMA">ARIMA</el-radio>
+    <el-radio value="Prophet">Prophet</el-radio>
+  </el-radio-group>
+  <div class="model-description" style="margin-top: 8px; font-size: 12px; color: #666;">
+    <div v-if="forecastConfig.modelType === 'ARIMA'">
+      ARIMA模型适用于平稳时间序列的短期预测，精度较高
+    </div>
+    <div v-else-if="forecastConfig.modelType === 'Prophet'">
+      Prophet模型擅长处理季节性和节假日效应，适合长期预测
+    </div>
+  </div>
+</el-form-item>
 
             <!-- 操作按钮 -->
             <el-form-item class="action-buttons">
@@ -369,17 +376,17 @@
           </el-col>
 
           <el-col :xs="24" :sm="12" :md="6">
-            <div class="metric-item">
-              <div class="metric-icon inventory-turnover">
-                <el-icon><Box /></el-icon>
-              </div>
-              <div class="metric-details">
-                <div class="metric-value">{{ inventoryTurnover.toFixed(1) }}</div>
-                <div class="metric-label">预期库存周转</div>
-                <div class="metric-benchmark">目标: 6.0 次/年</div>
-              </div>
-            </div>
-          </el-col>
+  <div class="metric-item">
+    <div class="metric-icon inventory-suggestion">
+      <el-icon><Box /></el-icon>
+    </div>
+    <div class="metric-details">
+      <div class="metric-value">{{ recommendedInventory.toLocaleString() }}</div>
+      <div class="metric-label">库存数量建议</div>
+      <div class="metric-benchmark">安全库存: {{ safetyStock.toLocaleString() }} 台</div>
+    </div>
+  </div>
+</el-col>
 
           <el-col :xs="24" :sm="12" :md="6">
             <div class="metric-item">
@@ -408,79 +415,6 @@
           </el-col>
         </el-row>
       </el-card>
-
-      <!-- 渠道分配建议 -->
-      <el-row :gutter="20">
-        <el-col :xs="24" :lg="12">
-          <el-card shadow="never" class="channel-card">
-            <template #header>
-              <span>渠道分配建议</span>
-            </template>
-            <div class="channel-recommendations">
-              <div
-                v-for="channel in channelRecommendations"
-                :key="channel.name"
-                class="channel-item"
-              >
-                <div class="channel-header">
-                  <span class="channel-name">{{ channel.name }}</span>
-                  <el-tag :type="channel.priority">{{ channel.priorityText }}</el-tag>
-                </div>
-                <div class="channel-metrics">
-                  <div class="channel-metric">
-                    <span>建议分配:</span>
-                    <strong>{{ channel.allocation }}%</strong>
-                  </div>
-                  <div class="channel-metric">
-                    <span>预期销量:</span>
-                    <strong>{{ channel.expectedSales.toLocaleString() }} 台</strong>
-                  </div>
-                  <div class="channel-metric">
-                    <span>效率评分:</span>
-                    <el-rate v-model="channel.efficiency" disabled show-score />
-                  </div>
-                </div>
-                <div class="channel-suggestions">
-                  <el-tag size="small" v-for="suggestion in channel.suggestions" :key="suggestion">
-                    {{ suggestion }}
-                  </el-tag>
-                </div>
-              </div>
-            </div>
-          </el-card>
-        </el-col>
-
-        <el-col :xs="24" :lg="12">
-          <el-card shadow="never" class="risk-card">
-            <template #header>
-              <span>风险预警与建议</span>
-            </template>
-            <div class="risk-alerts">
-              <div
-                v-for="alert in riskAlerts"
-                :key="alert.id"
-                class="risk-item"
-                :class="alert.level"
-              >
-                <div class="risk-icon">
-                  <el-icon v-if="alert.level === 'high'"><Warning /></el-icon>
-                  <el-icon v-else-if="alert.level === 'medium'"><QuestionFilled /></el-icon>
-                  <el-icon v-else><InfoFilled /></el-icon>
-                </div>
-                <div class="risk-content">
-                  <div class="risk-title">{{ alert.title }}</div>
-                  <div class="risk-description">{{ alert.description }}</div>
-                  <div class="risk-actions">
-                    <el-button size="small" type="primary" @click="handleRiskAction(alert)">
-                      {{ alert.actionText }}
-                    </el-button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </el-card>
-        </el-col>
-      </el-row>
     </div>
 
     <!-- 高级配置弹窗 -->
@@ -662,29 +596,24 @@
       </template>
     </el-dialog>
 
-    <!-- 业务洞察弹窗 -->
-    <el-dialog v-model="showBusinessInsights" title="业务洞察与建议" width="80%">
-      <div class="business-insights-content">
-        <el-row :gutter="20">
-          <el-col :xs="24" :md="8" v-for="insight in businessInsights" :key="insight.id">
-            <div class="insight-card" :class="insight.type">
-              <div class="insight-header">
-                <el-icon><component :is="insight.icon" /></el-icon>
-                <span class="insight-title">{{ insight.title }}</span>
-              </div>
-              <div class="insight-content">
-                <p>{{ insight.content }}</p>
-                <div class="insight-actions">
-                  <el-button size="small" type="primary" @click="handleInsightAction(insight)">
-                    {{ insight.actionText }}
-                  </el-button>
-                </div>
-              </div>
-            </div>
-          </el-col>
-        </el-row>
-      </div>
-    </el-dialog>
+   <!-- 业务洞察弹窗 -->
+<el-dialog v-model="showBusinessInsights" title="业务洞察与建议" width="80%">
+  <div class="business-insights-content">
+    <el-row :gutter="20">
+      <el-col :xs="24" :md="8" v-for="insight in businessInsights" :key="insight.id">
+        <div class="insight-card" :class="insight.type">
+          <div class="insight-header">
+            <el-icon><component :is="insight.icon" /></el-icon>
+            <span class="insight-title">{{ insight.title }}</span>
+          </div>
+          <div class="insight-content">
+            <p>{{ insight.content }}</p>
+          </div>
+        </div>
+      </el-col>
+    </el-row>
+  </div>
+</el-dialog>
 
     <!-- 历史预测记录 -->
     <el-card v-if="predictionHistory.length > 0" shadow="never" class="history-card">
@@ -768,7 +697,7 @@ interface Region {
 interface ForecastConfig {
   carModelId: number | null
   regionId: number | null
-  modelType: 'ARIMA' | 'Prophet' | 'AUTO'
+  modelType: 'ARIMA' | 'Prophet'
   period: string
   arimaParams: {
     p: number
@@ -804,23 +733,6 @@ interface PredictionRecord {
   predResult: string
 }
 
-interface ChannelRecommendation {
-  name: string
-  allocation: number
-  expectedSales: number
-  efficiency: number
-  priority: 'success' | 'warning' | 'danger'
-  priorityText: string
-  suggestions: string[]
-}
-
-interface RiskAlert {
-  id: string
-  level: 'high' | 'medium' | 'low'
-  title: string
-  description: string
-  actionText: string
-}
 
 interface BusinessInsight {
   id: string
@@ -828,7 +740,6 @@ interface BusinessInsight {
   icon: string
   title: string
   content: string
-  actionText: string
 }
 
 // 响应式数据
@@ -881,7 +792,7 @@ const scenarioConfig = reactive({
 const forecastConfig = ref<ForecastConfig>({
   carModelId: null,
   regionId: null,
-  modelType: 'AUTO',
+  modelType: 'ARIMA',
   period: '6M',
   arimaParams: {
     p: 1,
@@ -961,11 +872,19 @@ const salesChangeType = computed(() => {
   return 'warning'
 })
 
-// 库存周转率
-const inventoryTurnover = computed(() => {
+// 替换为库存数量建议计算属性
+const recommendedInventory = computed(() => {
   if (!predictionResults.value) return 0
   const avgMonthlySales = predictedTotalSales.value / predictionResults.value.length
-  return (avgMonthlySales * 12) / (avgMonthlySales * 2) // 假设库存为2个月销量
+  // 基于预测销量和安全系数计算建议库存
+  const safetyFactor = salesGrowth.value > 10 ? 1.8 : salesGrowth.value < -10 ? 2.2 : 2.0
+  return Math.floor(avgMonthlySales * safetyFactor)
+})
+
+const safetyStock = computed(() => {
+  if (!predictionResults.value) return 0
+  const avgMonthlySales = predictedTotalSales.value / predictionResults.value.length
+  return Math.floor(avgMonthlySales * 1.5) // 安全库存为1.5倍月均销量
 })
 
 // 预测收入
@@ -992,86 +911,6 @@ const riskLevel = computed(() => {
   }
 })
 
-// 渠道分配建议
-const channelRecommendations = computed((): ChannelRecommendation[] => {
-  const totalSales = predictedTotalSales.value
-
-  return [
-    {
-      name: '线上直销',
-      allocation: 35,
-      expectedSales: Math.floor(totalSales * 0.35),
-      efficiency: 4.2,
-      priority: 'success',
-      priorityText: '高优先级',
-      suggestions: ['扩大数字化营销', '优化在线体验', '增加社交媒体投入'],
-    },
-    {
-      name: '经销商网络',
-      allocation: 45,
-      expectedSales: Math.floor(totalSales * 0.45),
-      efficiency: 3.8,
-      priority: 'warning',
-      priorityText: '中优先级',
-      suggestions: ['提升服务质量', '增强培训', '优化激励机制'],
-    },
-    {
-      name: '企业客户',
-      allocation: 15,
-      expectedSales: Math.floor(totalSales * 0.15),
-      efficiency: 4.5,
-      priority: 'success',
-      priorityText: '高优先级',
-      suggestions: ['定制化方案', '长期合作', '批量优惠'],
-    },
-    {
-      name: '其他渠道',
-      allocation: 5,
-      expectedSales: Math.floor(totalSales * 0.05),
-      efficiency: 3.2,
-      priority: 'danger',
-      priorityText: '低优先级',
-      suggestions: ['评估效果', '考虑调整', '资源重新分配'],
-    },
-  ]
-})
-
-// 风险预警
-const riskAlerts = computed((): RiskAlert[] => {
-  const alerts: RiskAlert[] = []
-
-  if (fitScore.value < 0.8) {
-    alerts.push({
-      id: 'low_accuracy',
-      level: 'high',
-      title: '预测精度偏低',
-      description: `当前拟合优度仅${(fitScore.value * 100).toFixed(1)}%，建议调整模型参数或增加历史数据`,
-      actionText: '优化模型',
-    })
-  }
-
-  if (salesGrowth.value < -10) {
-    alerts.push({
-      id: 'negative_growth',
-      level: 'high',
-      title: '销量下滑风险',
-      description: `预测显示销量将下降${Math.abs(salesGrowth.value).toFixed(1)}%，需要制定应对策略`,
-      actionText: '制定对策',
-    })
-  }
-
-  if (inventoryTurnover.value < 4) {
-    alerts.push({
-      id: 'slow_turnover',
-      level: 'medium',
-      title: '库存周转缓慢',
-      description: `预期库存周转率${inventoryTurnover.value.toFixed(1)}次/年，低于行业标准`,
-      actionText: '优化库存',
-    })
-  }
-
-  return alerts
-})
 
 // 业务洞察
 const businessInsights = computed((): BusinessInsight[] => {
@@ -1084,7 +923,7 @@ const businessInsights = computed((): BusinessInsight[] => {
       icon: 'TrendCharts',
       title: '强劲增长机会',
       content: `预测显示销量将增长${salesGrowth.value.toFixed(1)}%，建议加大产能投入和渠道扩张`,
-      actionText: '制定增长策略',
+      
     })
   }
 
@@ -1095,22 +934,23 @@ const businessInsights = computed((): BusinessInsight[] => {
       icon: 'Warning',
       title: '市场调整风险',
       content: '高可信度预测显示市场下行趋势，建议提前调整产品策略和定价策略',
-      actionText: '风险应对',
+      
     })
   }
 
-  const bestChannel = channelRecommendations.value.reduce((best, current) =>
-    current.efficiency > best.efficiency ? current : best,
-  )
-
-  insights.push({
-    id: 'channel_optimization',
-    type: 'recommendation',
-    icon: 'DataAnalysis',
-    title: '渠道优化建议',
-    content: `${bestChannel.name}表现最佳（效率${bestChannel.efficiency}），建议增加资源配置`,
-    actionText: '优化渠道',
-  })
+  
+      // 库存优化建议
+  if (recommendedInventory.value > 0) {
+    const inventoryStatus = recommendedInventory.value > safetyStock.value * 1.3 ? '充足' : '紧张'
+    insights.push({
+      id: 'inventory_optimization',
+      type: 'recommendation',
+      icon: 'Box',
+      title: '库存优化建议',
+      content: `建议库存${recommendedInventory.value.toLocaleString()}台，当前库存状态${inventoryStatus}。建议根据季节性需求和市场变化及时调整库存策略。`,
+      
+    })
+  }
 
   return insights
 })
@@ -1295,9 +1135,7 @@ const handleRegionChange = () => {
 }
 
 const handleModelChange = () => {
-  if (forecastConfig.value.modelType === 'AUTO') {
-    ElMessage.info('系统将自动选择最优预测模型')
-  }
+  ElMessage.info(`已切换到${forecastConfig.value.modelType}预测模型`)
 }
 
 const startPrediction = async () => {
@@ -1314,17 +1152,18 @@ const startPrediction = async () => {
 
     // 构建预测参数
     const params = {
-      carModelId: forecastConfig.value.carModelId,
-      regionId: forecastConfig.value.regionId,
-      modelType: forecastConfig.value.modelType,
-      period: forecastConfig.value.period,
-      scenario: forecastScenario.value,
-      scenarioParams: getScenarioParams(),
-      externalFactors: externalFactors,
-      modelParams:
-        forecastConfig.value.modelType === 'ARIMA'
-          ? forecastConfig.value.arimaParams
-          : forecastConfig.value.prophetParams,
+        carModelId: forecastConfig.value.carModelId,
+  regionId: forecastConfig.value.regionId,
+  modelType: forecastConfig.value.modelType,
+  period: forecastConfig.value.period,
+  scenario: forecastScenario.value,
+  scenarioParams: getScenarioParams(),
+  externalFactors: externalFactors,
+  // 根据选择的模型类型传递对应参数
+  modelParams:
+    forecastConfig.value.modelType === 'ARIMA'
+      ? forecastConfig.value.arimaParams
+      : forecastConfig.value.prophetParams,
     }
 
     const response = await axios.post('/api/predictions/forecast', params)
@@ -1445,23 +1284,24 @@ const savePrediction = async () => {
 
   try {
     const params = {
-      carModelId: forecastConfig.value.carModelId,
-      regionId: forecastConfig.value.regionId,
-      scenario: forecastScenario.value,
-      modelType: forecastConfig.value.modelType,
-      period: forecastConfig.value.period,
-      modelParams: JSON.stringify(
-        forecastConfig.value.modelType === 'ARIMA'
-          ? forecastConfig.value.arimaParams
-          : forecastConfig.value.prophetParams,
-      ),
-      scenarioParams: JSON.stringify(getScenarioParams()),
-      externalFactors: JSON.stringify(externalFactors),
-      predResult: JSON.stringify(predictionResults.value),
-      fitScore: fitScore.value,
-      predictedTotalSales: predictedTotalSales.value,
-      salesGrowth: salesGrowth.value,
-      riskLevel: riskLevel.value.text,
+    carModelId: forecastConfig.value.carModelId,
+  regionId: forecastConfig.value.regionId,
+  scenario: forecastScenario.value,
+  modelType: forecastConfig.value.modelType,
+  period: forecastConfig.value.period,
+  // 根据模型类型保存对应参数
+  modelParams: JSON.stringify(
+    forecastConfig.value.modelType === 'ARIMA'
+      ? forecastConfig.value.arimaParams
+      : forecastConfig.value.prophetParams,
+  ),
+  scenarioParams: JSON.stringify(getScenarioParams()),
+  externalFactors: JSON.stringify(externalFactors),
+  predResult: JSON.stringify(predictionResults.value),
+  fitScore: fitScore.value,
+  predictedTotalSales: predictedTotalSales.value,
+  salesGrowth: salesGrowth.value,
+  riskLevel: riskLevel.value.text,
     }
 
     const response = await axios.post('/api/predictions/save', params)
@@ -1552,46 +1392,13 @@ const applyAdvancedConfig = () => {
   ElMessage.success('高级配置已应用，重新预测以查看效果')
 }
 
-// 业务洞察相关
-const handleInsightAction = (insight: BusinessInsight) => {
-  switch (insight.id) {
-    case 'strong_growth':
-      router.push({ name: 'ProductionPlanning' })
-      break
-    case 'market_adjustment':
-      router.push({ name: 'RiskManagement' })
-      break
-    case 'channel_optimization':
-      router.push({ name: 'ChannelManagement' })
-      break
-    default:
-      ElMessage.info(`执行操作: ${insight.actionText}`)
-  }
-}
-
-const handleRiskAction = (alert: RiskAlert) => {
-  switch (alert.id) {
-    case 'low_accuracy':
-      showAdvancedConfig.value = true
-      activeAdvancedTab.value = 'model'
-      break
-    case 'negative_growth':
-      router.push({ name: 'MarketStrategy' })
-      break
-    case 'slow_turnover':
-      router.push({ name: 'InventoryManagement' })
-      break
-    default:
-      ElMessage.info(`执行操作: ${alert.actionText}`)
-  }
-}
 
 // 图表和界面控制
 const resetConfig = () => {
   forecastConfig.value = {
     carModelId: null,
     regionId: null,
-    modelType: 'AUTO',
+    modelType: 'ARIMA',
     period: '6M',
     arimaParams: {
       p: 1,
@@ -2264,164 +2071,9 @@ onUnmounted(() => {
   color: #f56c6c;
 }
 
-/* 渠道分配卡片 */
-.channel-card,
-.risk-card {
-  border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  margin-bottom: 20px;
-}
-
-.channel-recommendations {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.channel-item {
-  background: #f8f9fa;
-  border-radius: 8px;
-  padding: 16px;
-  border-left: 4px solid #409eff;
-  transition: all 0.3s ease;
-}
-
-.channel-item:hover {
-  background: #f0f9ff;
-  transform: translateX(4px);
-}
-
-.channel-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
-}
-
-.channel-name {
-  font-weight: 600;
-  color: #303133;
-  font-size: 16px;
-}
-
-.channel-metrics {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 12px;
-  margin-bottom: 12px;
-}
-
-.channel-metric {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 13px;
-  color: #606266;
-}
-
-.channel-metric span:first-child {
-  color: #909399;
-}
-
-.channel-metric strong {
-  color: #303133;
-  font-weight: 600;
-}
-
-.channel-suggestions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.channel-suggestions .el-tag {
-  font-size: 11px;
-  border-radius: 4px;
-}
-
-/* 风险预警卡片 */
-.risk-alerts {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.risk-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 16px;
-  border-radius: 8px;
-  border-left: 4px solid #e6a23c;
-  background: #fdf6ec;
-  transition: all 0.3s ease;
-}
-
-.risk-item.high {
-  border-left-color: #f56c6c;
-  background: #fef0f0;
-}
-
-.risk-item.high .risk-icon {
-  color: #f56c6c;
-}
-
-.risk-item.medium {
-  border-left-color: #e6a23c;
-  background: #fdf6ec;
-}
-
-.risk-item.medium .risk-icon {
-  color: #e6a23c;
-}
-
-.risk-item.low {
-  border-left-color: #409eff;
-  background: #ecf5ff;
-}
-
-.risk-item.low .risk-icon {
-  color: #409eff;
-}
-
-.risk-item:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.risk-icon {
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.8);
-  margin-top: 2px;
-}
-
-.risk-content {
-  flex: 1;
-}
-
-.risk-title {
-  font-weight: 600;
-  color: #303133;
-  margin-bottom: 4px;
-  font-size: 14px;
-}
-
-.risk-description {
-  color: #606266;
-  font-size: 13px;
-  line-height: 1.5;
-  margin-bottom: 8px;
-}
-
-.risk-actions .el-button {
-  padding: 4px 12px;
-  font-size: 12px;
-  border-radius: 4px;
+/* 添加新的库存建议样式 */
+.metric-icon.inventory-suggestion {
+  background: linear-gradient(135deg, #52c41a 0%, #73d13d 100%);
 }
 
 /* 高级配置弹窗 */
@@ -2555,11 +2207,6 @@ onUnmounted(() => {
   font-size: 14px;
 }
 
-.insight-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-}
 
 /* 历史记录卡片 */
 .history-card {
@@ -2826,8 +2473,7 @@ onUnmounted(() => {
   .header-actions,
   .action-buttons,
   .result-actions,
-  .risk-actions,
-  .insight-actions {
+  .risk-actions, {
     display: none !important;
   }
 

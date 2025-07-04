@@ -27,6 +27,16 @@ public class SaleRecordController {
     private SaleRecordService service;
 
     /**
+     * 查询所有销售记录
+     * GET /api/sale-records
+     */
+    @GetMapping
+    public ResponseEntity<ApiResponse<List<SaleRecord>>> getAllSaleRecords() {
+        List<SaleRecord> records = service.findAll();
+        return ResponseUtil.success(records);
+    }
+
+    /**
      * 根据车型ID查询销售记录
      * GET /api/sale-records/car-model/{carModelId}
      */
@@ -45,7 +55,30 @@ public class SaleRecordController {
         List<SaleRecord> records = service.findByRegionId(regionId);
         return ResponseUtil.success(records);
     }
-      /**
+
+    /**
+     * 根据地区名称查询销售记录
+     * GET /api/sale-records/region/name/{regionName}
+     */
+    @GetMapping("/region/name/{regionName}")
+    public ResponseEntity<ApiResponse<List<SaleRecord>>> getByRegionName(@PathVariable String regionName) {
+        List<SaleRecord> records = service.findByRegionName(regionName);
+        return ResponseUtil.success(records);
+    }
+
+    /**
+     * 根据车型ID和地区名称查询销售记录
+     * GET /api/sale-records/search?carModelId={carModelId}&regionName={regionName}
+     */
+    @GetMapping("/search")
+    public ResponseEntity<ApiResponse<List<SaleRecord>>> getByCarModelIdAndRegionName(
+            @RequestParam Long carModelId,
+            @RequestParam String regionName) {
+        List<SaleRecord> records = service.findByCarModelIdAndRegionName(carModelId, regionName);
+        return ResponseUtil.success(records);
+    }
+
+    /**
      * 获取热门车型排行榜
      * GET /api/sale-records/rankings/car-models?limit=10&timeSpan=year
      */

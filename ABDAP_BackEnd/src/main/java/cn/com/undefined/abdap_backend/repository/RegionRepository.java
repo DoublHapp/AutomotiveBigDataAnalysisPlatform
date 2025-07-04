@@ -10,4 +10,9 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface RegionRepository extends JpaRepository<Region, Long> {
     
+    /**
+     * 根据地区名称查询地区信息
+     */
+    Region findByRegionName(String regionName);
+    
 }

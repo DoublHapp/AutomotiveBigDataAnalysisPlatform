@@ -15,7 +15,7 @@ import java.util.List;
  * 提供车型相关的API接口
  */
 @RestController
-@RequestMapping("/api/carModels")
+@RequestMapping("/api/car-models")
 @CrossOrigin(origins = "*")
 public class CarModelController {
     
