@@ -24,7 +24,9 @@ import java.util.List;
 public class SaleRecordController {
 
     @Autowired
-    private SaleRecordService service;    /**
+    private SaleRecordService service;
+
+    /**
      * 查询所有销售记录
      * GET /api/sale-records
      */
@@ -36,19 +38,33 @@ public class SaleRecordController {
 
     /**
      * 根据车型ID查询销售记录
-     * GET /api/sale-records/car-model/{carModelId}
+     * GET /api/sale-records?carModelId={carModelId}
      */
-    @GetMapping("/car-model/{carModelId}")
-    public ResponseEntity<ApiResponse<List<SaleRecordDTO>>> getByCarModelId(@PathVariable Long carModelId) {
+    @GetMapping(params = "carModelId")
+    public ResponseEntity<ApiResponse<List<SaleRecordDTO>>> getByCarModelId(@RequestParam Long carModelId) {
         List<SaleRecordDTO> records = service.findByCarModelId(carModelId);
         return ResponseUtil.success(records);
-    }    /**
+    }
+
+    /**
      * 根据地区ID查询销售记录
-     * GET /api/sale-records/region/{regionId}
+     * GET /api/sale-records?regionId={regionId}
      */
-    @GetMapping("/region/{regionId}")
-    public ResponseEntity<ApiResponse<List<SaleRecordDTO>>> getByRegionId(@PathVariable Long regionId) {
+    @GetMapping(params = "regionId")
+    public ResponseEntity<ApiResponse<List<SaleRecordDTO>>> getByRegionId(@RequestParam Long regionId) {
         List<SaleRecordDTO> records = service.findByRegionId(regionId);
+        return ResponseUtil.success(records);
+    }
+
+    /**
+     * 根据车型ID和地区ID查询销售记录
+     * GET /api/sale-records?carModelId={carModelId}&regionId={regionId}
+     */
+    @GetMapping(params = { "carModelId", "regionId" })
+    public ResponseEntity<ApiResponse<List<SaleRecordDTO>>> getByCarModelIdAndRegionId(
+            @RequestParam Long carModelId,
+            @RequestParam Long regionId) {
+        List<SaleRecordDTO> records = service.getSaleRecordsByCarModelIdAndRegionId(carModelId, regionId);
         return ResponseUtil.success(records);
     }
 
@@ -64,9 +80,10 @@ public class SaleRecordController {
 
     /**
      * 根据车型ID和地区名称查询销售记录
-     * GET /api/sale-records/search?carModelId={carModelId}&regionName={regionName}
+     * GET
+     * /api/sale-records/search-by-name?carModelId={carModelId}&regionName={regionName}
      */
-    @GetMapping("/search")
+    @GetMapping("/search-by-name")
     public ResponseEntity<ApiResponse<List<SaleRecordDTO>>> getByCarModelIdAndRegionName(
             @RequestParam Long carModelId,
             @RequestParam String regionName) {
@@ -82,13 +99,13 @@ public class SaleRecordController {
     public ResponseEntity<ApiResponse<List<CarModelRankingDTO>>> getCarModelRanking(
             @RequestParam(defaultValue = "10") int limit,
             @RequestParam(defaultValue = "year") String timeSpan) {
-        
+
         // 根据时间跨度计算开始日期
         LocalDate startDate = service.calculateStartDate(timeSpan);
         List<CarModelRankingDTO> rankings = service.getCarModelRanking(limit, startDate);
         return ResponseUtil.success(rankings);
     }
-    
+
     /**
      * 获取地区销量分布
      * GET /api/sale-records/distribution/regions?timeSpan=year
@@ -96,13 +113,13 @@ public class SaleRecordController {
     @GetMapping("/distribution/regions")
     public ResponseEntity<ApiResponse<List<RegionSalesDTO>>> getRegionSalesDistribution(
             @RequestParam(defaultValue = "year") String timeSpan) {
-        
+
         // 根据时间跨度计算开始日期
         LocalDate startDate = service.calculateStartDate(timeSpan);
         List<RegionSalesDTO> distributions = service.getRegionSalesDistribution(startDate);
         return ResponseUtil.success(distributions);
     }
-    
+
     /**
      * 获取指定车型的月度销量趋势
      * GET /api/sale-records/trends/sales/{carModelId}?timeSpan=year
@@ -111,13 +128,13 @@ public class SaleRecordController {
     public ResponseEntity<ApiResponse<List<MonthlySalesTrendDTO>>> getMonthlySalesTrend(
             @PathVariable Long carModelId,
             @RequestParam(defaultValue = "year") String timeSpan) {
-        
+
         // 根据时间跨度计算开始日期
         LocalDate startDate = service.calculateStartDate(timeSpan);
         List<MonthlySalesTrendDTO> trends = service.getMonthlySalesTrend(carModelId, startDate);
         return ResponseUtil.success(trends);
     }
-    
+
     /**
      * 获取指定车型的月度销售额趋势
      * GET /api/sale-records/trends/revenue/{carModelId}?timeSpan=year
@@ -126,7 +143,7 @@ public class SaleRecordController {
     public ResponseEntity<ApiResponse<List<MonthlyRevenueTrendDTO>>> getMonthlyRevenueTrend(
             @PathVariable Long carModelId,
             @RequestParam(defaultValue = "year") String timeSpan) {
-        
+
         // 根据时间跨度计算开始日期
         LocalDate startDate = service.calculateStartDate(timeSpan);
         List<MonthlyRevenueTrendDTO> trends = service.getMonthlyRevenueTrend(carModelId, startDate);

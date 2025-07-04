@@ -87,6 +87,16 @@ public class SaleRecordService {
     }
 
     /**
+     * 根据车型ID和地区ID查询销售记录
+     */
+    public List<SaleRecordDTO> getSaleRecordsByCarModelIdAndRegionId(Long carModelId, Long regionId) {
+        List<SaleRecord> saleRecords = repository.findByCarModelIdAndRegionId(carModelId, regionId);
+        return saleRecords.stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
+    /**
      * 根据车型ID和地区名称查询销售记录
      */
     public List<SaleRecordDTO> findByCarModelIdAndRegionName(Long carModelId, String regionName) {
