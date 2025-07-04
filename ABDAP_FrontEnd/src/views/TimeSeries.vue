@@ -2,21 +2,78 @@
 import { ref, watch, nextTick, onMounted, computed } from 'vue'
 import * as echarts from 'echarts'
 import { ElMessage } from 'element-plus'
+import axios from 'axios'
+
 
 // 主筛选类型
 const compareMode = ref<'region' | 'carModel' | 'none'>('carModel')
 
+// // 地区
+// interface regionOption {
+//   label: string
+//   value: number | null
+// }
+
+// const regionOptionsAll: regionOption[] = [
+//   { label: '全国', value: null },
+//   { label: '北京省', value: 1 },
+//   { label: '上海省', value: 2 },
+//   { label: '广东省', value: 3 },
+//   { label: '浙江省', value: 4 },
+//   { label: '山东省', value: 5 }
+// ]
+// const regionOptionsNoAll = regionOptionsAll.slice(1) // 不含全国
+
+// // 车型
+// interface carModelOption {
+//   label: string
+//   value: number
+// }
+
+// const carModelOptions: carModelOption[] = [
+//   { label: '宝马X3', value: 1 },
+//   { label: '奔驰C200L', value: 2 },
+//   { label: '奥迪A4L', value: 3 },
+//   { label: '特斯拉Model 3', value: 4 },
+//   { label: '比亚迪汉EV', value: 5 }
+// ]
 // 选项
-const carModelOptions = ['宝马X3', '奥迪A6', '特斯拉Model Y', '比亚迪汉']
-const regionOptionsAll = ['全国', '北京省', '上海省', '广东省', '浙江省', '山东省']
+// 地区
+interface regionOption {
+  label: string
+  value: string
+}
+
+const regionOptionsAll: regionOption[] = [
+  { label: '全国', value: 'null' },
+  { label: '北京省', value: '1' },
+  { label: '上海省', value: '2' },
+  { label: '广东省', value: '3' },
+  { label: '浙江省', value: '4' },
+  { label: '山东省', value: '5' }
+]
 const regionOptionsNoAll = regionOptionsAll.slice(1) // 不含全国
+
+// 车型
+interface carModelOption {
+  label: string
+  value: string
+}
+
+const carModelOptions: carModelOption[] = [
+  { label: '宝马X3', value: '1' },
+  { label: '奔驰C200L', value: '2' },
+  { label: '奥迪A4L', value: '3' },
+  { label: '特斯拉Model 3', value: '4' },
+  { label: '比亚迪汉EV', value: '5' }
+]
 
 // 筛选条件
 const dateRangeType = ref<'month' | 'quarter' | 'year'>('month')
 const dateRange = ref<[string, string]>(['2023-01', '2023-12'])
-const carModelTargets = ref<string[]>(['宝马X3'])
-const regionTargets = ref<string[]>(['全国'])
-const powerType = ref<string>('')
+const carModelTargets = ref<string[]>(['1'])
+const regionTargets = ref<string[]>(['null'])
+const powerType = ref<string>('全部')
 
 // 计算当前可选项和选择方式
 const carModelMultiple = computed(() => compareMode.value == 'carModel' || compareMode.value == 'none')
@@ -44,25 +101,25 @@ function showStatsDetail(stats: { name: string, min: number, max: number, avg: n
   statsDetailVisible.value = true
 }
 
-// 监听筛选条件变化，刷新图表
+// 测试
 const handleFilterChange = () => {
-  fetchDataAndRender()
+  console.log(carModelTargets.value)
 }
 
 // 选择时自动修正选项
 watch(compareMode, (mode) => {
   if (mode === 'region') {
     // 地区多选，车型单选，地区包含全国
-    carModelTargets.value = [carModelOptions[0]]
-    regionTargets.value = [regionOptionsNoAll[0]]
+    carModelTargets.value = []
+    regionTargets.value = []
   } else if (mode === 'carModel') {
     // 车型多选，地区单选，不含全国
-    regionTargets.value = [regionOptionsAll[0]]
-    carModelTargets.value = ['宝马X3']
+    regionTargets.value = [regionOptionsAll[0].value]
+    carModelTargets.value = ['1']
   } else {
     // 不限，地区多选不含全国，车型多选
-    regionTargets.value = [regionOptionsNoAll[0]]
-    carModelTargets.value = [carModelOptions[0]]
+    regionTargets.value = [regionOptionsNoAll[0].value]
+    carModelTargets.value = [carModelOptions[0].value]
   }
 })
 
@@ -165,12 +222,82 @@ function generateMockData() {
   })
 }
 
+interface repsonseData {
+  saleId: number;
+  carModelId: number;
+  carModelName: string;
+  regionId: number;
+  regionName: string;
+  saleMonth: string;
+  saleCount: number;
+  saleAmount: number;
+}
+
+interface chartData {
+  name: string;
+  data: number[];
+  dateList: string[];
+}
+
+function processResponseData(salesData: repsonseData[]): chartData[] {
+  // 创建一个Map来按名称分组数据
+  const groupedData = new Map<string, { counts: number[]; dates: string[] }>();
+
+  console.log(salesData[0].regionName,typeof salesData[0].regionName,salesData[0].regionName === "null")
+  // 遍历所有销售记录
+  salesData.forEach(record => {
+    const key = record.regionName ===  "全国"?`${record.carModelName}`:`${record.carModelName}${record.regionName}`;
+    
+    // 如果Map中还没有这个key，就初始化
+    if (!groupedData.has(key)) {
+      groupedData.set(key, { counts: [], dates: [] });
+    }
+    
+    // 获取当前分组
+    const group = groupedData.get(key)!;
+    
+    // 添加销售数量和日期
+    group.counts.push(record.saleCount);
+    group.dates.push(record.saleMonth);
+  });
+
+  // 将Map转换为目标数组
+  const result: chartData[] = [];
+  groupedData.forEach((value, key) => {
+    // 按日期排序（如果需要）
+    const sortedIndices = value.dates
+      .map((date, index) => ({ date, index }))
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+      .map(item => item.index);
+    
+    // 按日期顺序重新排列数据
+    const sortedData = sortedIndices.map(i => value.counts[i]);
+    const sortedDates = sortedIndices.map(i => value.dates[i]);
+
+    result.push({
+      name: key,
+      data: sortedData,
+      dateList: sortedDates
+    });
+  });
+
+  return result;
+}
+
 // 预留接口函数
 async function fetchTrendData() {
   // 这里实际应调用后端接口
-  // const res = await axios.get('/api/xxx', { params: { ... } })
-  // return res.data
-  return generateMockData()
+  const params = new URLSearchParams();
+  carModelTargets.value.forEach(item => {
+    params.append('itemId', item.toString());
+  });
+  regionTargets.value.forEach(item => {
+    params.append('regionId', item?.toString() || '');
+  });
+  const res = await axios.get(`/api/sale-records?${params.toString()}`)
+  console.log('请求参数:', res.data)
+  return processResponseData(res.data.data)
+  // return generateMockData()
 }
 
 // 渲染图表
@@ -253,8 +380,6 @@ async function fetchDataAndRender() {
 onMounted(() => {
   fetchDataAndRender()
 })
-
-watch([dateRangeType, dateRange, carModelTargets, regionTargets, powerType], fetchDataAndRender)
 </script>
 
 <template>
@@ -263,7 +388,7 @@ watch([dateRangeType, dateRange, carModelTargets, regionTargets, powerType], fet
       <div class="filter-content">
         <div class="filter-time">
           <!-- 时间粒度选择 -->
-          <el-radio-group v-model="dateRangeType" @change="handleFilterChange">
+          <el-radio-group v-model="dateRangeType">
             <el-radio-button label="month">月</el-radio-button>
             <el-radio-button label="quarter">季度</el-radio-button>
             <el-radio-button label="year">年</el-radio-button>
@@ -278,13 +403,12 @@ watch([dateRangeType, dateRange, carModelTargets, regionTargets, powerType], fet
             format="YYYY-MM"
             value-format="YYYY-MM"
             style="margin-left: 16px; max-width: 260px"
-            @change="handleFilterChange"
           />
         </div>
         <br>
         <div class="filter-options">
           <!-- 主筛选类型选择 -->
-          <el-radio-group v-model="compareMode" @change="handleFilterChange">
+          <el-radio-group v-model="compareMode">
             <el-radio-button label="carModel">以车型为主</el-radio-button>
             <el-radio-button label="region">以地区为主</el-radio-button>
             <el-radio-button label="none">不限</el-radio-button>
@@ -302,9 +426,9 @@ watch([dateRangeType, dateRange, carModelTargets, regionTargets, powerType], fet
           >
             <el-option
               v-for="item in carModelOptions"
-              :key="item"
-              :label="item"
-              :value="item"
+              :key="item.label"
+              :label="item.label"
+              :value="item.value"
             />
           </el-select>
           <!-- 地区选择 -->
@@ -316,21 +440,21 @@ watch([dateRangeType, dateRange, carModelTargets, regionTargets, powerType], fet
             collapse-tags-tooltip
             placeholder="选择地区"
             style="margin-left: 16px; width: 220px; vertical-align: middle;"
-            @change="handleFilterChange"
           >
             <el-option
               v-for="item in regionOptions"
-              :key="item"
-              :label="item"
-              :value="item"
+              :key="item.label"
+              :label="item.label"
+              :value="item.value"
             />
           </el-select>
           <!-- 动力类型选择 -->
-          <el-select v-model="powerType" placeholder="动力类型" style="margin-left: 16px; width: 120px" @change="handleFilterChange">
-            <el-option label="全部" value="" />
+          <el-select v-model="powerType" placeholder="动力类型" style="margin-left: 16px; width: 120px">
+            <el-option label="全部" :value="null" />
             <el-option label="燃油" value="fuel" />
             <el-option label="新能源" value="electric" />
           </el-select>
+          <el-button @click="fetchDataAndRender" style="margin-left: 30px;">更新数据</el-button>
         </div>
       </div>
     </el-card>
@@ -395,24 +519,13 @@ watch([dateRangeType, dateRange, carModelTargets, regionTargets, powerType], fet
 .filter-options {
   display: flex;
   justify-content: flex-start;
-  gap: 32px;
+  gap: 20px;
   margin-top: 10px;
 }
 
 .stats-item.clickable {
   cursor: pointer;
   transition: box-shadow 0.2s, background 0.2s;
-}
-
-.stats-item.clickable:hover {
-  background: #e6f7ff;
-  box-shadow: 0 2px 8px rgba(64,158,255,0.12);
-}
-
-.stats-label {
-  font-weight: bold;
-  color: #409EFF;
-  margin-right: 8px;
 }
 
 .stats-value {
@@ -451,7 +564,7 @@ watch([dateRangeType, dateRange, carModelTargets, regionTargets, powerType], fet
 }
 
 .stats-item {
-  background: #f5f7fa;
+  background: #d6f2ff;
   border-radius: 6px;
   padding: 8px 14px;
   font-size: 14px;
@@ -467,7 +580,7 @@ watch([dateRangeType, dateRange, carModelTargets, regionTargets, powerType], fet
 }
 
 .stats-item.clickable:hover {
-  background: #e6f7ff;
+  background: #98deff;
   box-shadow: 0 2px 8px rgba(64,158,255,0.12);
 }
 
