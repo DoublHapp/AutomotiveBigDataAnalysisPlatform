@@ -44,41 +44,4 @@ public class FuelEconomy {
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "car_model_id", insertable = false, updatable = false)
     private CarModel carModel;
-    
-    /**
-     * 获取油耗显示文本
-     */
-    public String getFuelDisplayText() {
-        if (avgFuel == null) {
-            return "油耗数据未知";
-        }
-        return String.format("%.2fL/100km", avgFuel);
-    }
-    
-    /**
-     * 获取燃料类型显示文本
-     */
-    public String getFuelTypeDisplayText() {
-        if (fuelType == null || fuelType.trim().isEmpty()) {
-            return "燃料类型未知";
-        }
-        return fuelType;
-    }
-    
-    /**
-     * 检查样本数量是否充足
-     */
-    public boolean hasSufficientSamples() {
-        return sampleCount != null && sampleCount >= 10;
-    }
-    
-    /**
-     * 获取样本数量显示文本
-     */
-    public String getSampleCountText() {
-        if (sampleCount == null) {
-            return "样本数量未知";
-        }
-        return "基于" + sampleCount + "个样本";
-    }
 }

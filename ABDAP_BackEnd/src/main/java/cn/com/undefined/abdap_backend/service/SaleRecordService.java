@@ -127,6 +127,13 @@ public class SaleRecordService {
     }
 
     /**
+     * 根据车型ID和地区ID查询销售记录（返回原始数据）
+     */
+    public List<SaleRecord> getSaleRecordsByCarModelIdAndRegionIdRaw(Long carModelId, Long regionId) {
+        return repository.findByCarModelIdAndRegionId(carModelId, regionId);
+    }
+
+    /**
      * 根据车型ID和地区名称查询销售记录
      */
     public List<SaleRecordDTO> findByCarModelIdAndRegionName(Long carModelId, String regionName) {

@@ -113,34 +113,4 @@ public class CarModel {
      */
     @OneToMany(mappedBy = "competitorModel", fetch = FetchType.LAZY)
     private List<CompetitorAnalysis> asCompetitorAnalyses;
-    
-    /**
-     * 获取完整车型名称（品牌 + 车型）
-     */
-    public String getFullModelName() {
-        if (brand != null) {
-            return brand.getBrandName() + " " + modelName;
-        }
-        return modelName;
-    }
-    
-    /**
-     * 获取价格显示文本
-     */
-    public String getPriceDisplayText() {
-        if (officialPrice == null) {
-            return "价格待定";
-        }
-        return String.format("%.2f万元", officialPrice.divide(new BigDecimal("10000")));
-    }
-    
-    /**
-     * 获取续航里程显示文本
-     */
-    public String getRangeDisplayText() {
-        if (rangeKm == null) {
-            return "续航里程未知";
-        }
-        return rangeKm + "公里";
-    }
 }

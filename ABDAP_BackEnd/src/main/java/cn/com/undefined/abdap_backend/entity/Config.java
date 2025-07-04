@@ -43,21 +43,4 @@ public class Config {
      */
     @OneToMany(mappedBy = "config", fetch = FetchType.LAZY)
     private List<ConfigHeat> configHeats;
-    
-    /**
-     * 检查配置名称是否有效
-     */
-    public boolean hasValidName() {
-        return configName != null && !configName.trim().isEmpty();
-    }
-    
-    /**
-     * 获取配置显示信息
-     */
-    public String getConfigDisplayInfo() {
-        if (configType != null && !configType.trim().isEmpty()) {
-            return configName + " (" + configType + ")";
-        }
-        return configName;
-    }
 }
