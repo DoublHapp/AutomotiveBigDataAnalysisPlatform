@@ -584,7 +584,7 @@ import axios from 'axios'
 const router = useRouter()
 
 // =============================================
-// 🏗️ 接口定义
+// 接口定义
 // =============================================
 
 // 基础数据接口 - 与API响应完全对应
@@ -620,7 +620,7 @@ interface Region {
   parentRegionName: string | null
 }
 
-// 📊 基础数据层
+//  基础数据层
 interface BaseData {
   carModels: CarModel[]
   saleRecords: SaleRecord[]
@@ -629,7 +629,7 @@ interface BaseData {
   nonTopLevelRegions: Region[]
 }
 
-// 🧮 计算数据层
+// 计算数据层
 interface CalculatedData {
   salesTrend: SalesTrendItem[]
   salesAmount: SalesAmountItem[]
@@ -638,7 +638,7 @@ interface CalculatedData {
   businessMetrics: BusinessMetrics
 }
 
-// 📈 业务指标层
+// 业务指标层
 interface BusinessMetrics {
   actualSales: number
   lastYearSales: number
@@ -690,7 +690,7 @@ interface RegionOption {
 }
 
 // =============================================
-// 🎛️ 响应式数据
+// 响应式数据
 // =============================================
 
 const loading = ref(false)
@@ -707,7 +707,7 @@ const topN = ref(10)
 const showTargetDialog = ref(false)
 const targetFormRef = ref()
 
-// 📊 基础数据存储
+//  基础数据存储
 const baseData = ref<BaseData>({
   carModels: [],
   saleRecords: [],
@@ -716,7 +716,7 @@ const baseData = ref<BaseData>({
   nonTopLevelRegions: []
 })
 
-// 🧮 计算后的业务数据
+//  计算后的业务数据
 const salesTrendData = ref<SalesTrendItem[]>([])
 const salesAmountData = ref<SalesAmountItem[]>([])
 const topModelsData = ref<TopModelItem[]>([])
@@ -727,7 +727,7 @@ const detailTableData = ref<any[]>([])
 const currentRecommendations = ref<any[]>([])
 const forecastSummary = ref('')
 
-// 📈 业务指标
+// 业务指标
 const businessMetrics = ref<BusinessMetrics>({
   actualSales: 0,
   lastYearSales: 0,
@@ -797,22 +797,22 @@ let forecastChartInstance: echarts.ECharts | null = null
 let kpiTrendChartInstance: echarts.ECharts | null = null
 
 // =============================================
-// 🌐 API 调用函数
+// API 调用函数
 // =============================================
 
 const fetchCarModels = async (): Promise<CarModel[]> => {
   try {
-    console.log('🚀 正在获取车型列表...')
+    console.log(' 正在获取车型列表...')
     const response = await axios.get('/api/car-models')
     
     if (response.data.status === 200 && response.data.data) {
-      console.log('✅ 获取车型数据成功:', response.data.data.length, '个车型')
+      console.log('获取车型数据成功:', response.data.data.length, '个车型')
       return response.data.data
     } else {
       throw new Error(`API返回错误状态: ${response.data.status}`)
     }
   } catch (error) {
-    console.error('❌ 获取车型列表失败:', error)
+    console.error('获取车型列表失败:', error)
     ElMessage.error('车型数据加载失败')
     throw error
   }
@@ -820,17 +820,17 @@ const fetchCarModels = async (): Promise<CarModel[]> => {
 
 const fetchSaleRecords = async (): Promise<SaleRecord[]> => {
   try {
-    console.log('🚀 正在获取销售记录...')
+    console.log('正在获取销售记录...')
     const response = await axios.get('/api/sale-records')
     
     if (response.data.status === 200 && response.data.data) {
-      console.log('✅ 获取销售记录成功:', response.data.data.length, '条记录')
+      console.log(' 获取销售记录成功:', response.data.data.length, '条记录')
       return response.data.data
     } else {
       throw new Error(`API返回错误状态: ${response.data.status}`)
     }
   } catch (error) {
-    console.error('❌ 获取销售记录失败:', error)
+    console.error('获取销售记录失败:', error)
     ElMessage.error('销售数据加载失败')
     throw error
   }
@@ -838,17 +838,17 @@ const fetchSaleRecords = async (): Promise<SaleRecord[]> => {
 
 const fetchRegions = async (): Promise<Region[]> => {
   try {
-    console.log('🚀 正在获取地区信息...')
+    console.log(' 正在获取地区信息...')
     const response = await axios.get('/api/regions')
     
     if (response.data.status === 200 && response.data.data) {
-      console.log('✅ 获取地区信息成功:', response.data.data.length, '个地区')
+      console.log('获取地区信息成功:', response.data.data.length, '个地区')
       return response.data.data
     } else {
       throw new Error(`API返回错误状态: ${response.data.status}`)
     }
   } catch (error) {
-    console.error('❌ 获取地区信息失败:', error)
+    console.error('获取地区信息失败:', error)
     ElMessage.error('地区数据加载失败')
     throw error
   }
@@ -856,17 +856,17 @@ const fetchRegions = async (): Promise<Region[]> => {
 
 const fetchTopLevelRegions = async (): Promise<Region[]> => {
   try {
-    console.log('🚀 正在获取省份信息...')
+    console.log(' 正在获取省份信息...')
     const response = await axios.get('/api/regions/top-level')
     
     if (response.data.status === 200 && response.data.data) {
-      console.log('✅ 获取省份信息成功:', response.data.data.length, '个省份')
+      console.log(' 获取省份信息成功:', response.data.data.length, '个省份')
       return response.data.data
     } else {
       throw new Error(`API返回错误状态: ${response.data.status}`)
     }
   } catch (error) {
-    console.error('❌ 获取省份信息失败:', error)
+    console.error(' 获取省份信息失败:', error)
     ElMessage.error('省份数据加载失败')
     throw error
   }
@@ -874,29 +874,29 @@ const fetchTopLevelRegions = async (): Promise<Region[]> => {
 
 const fetchNonTopLevelRegions = async (): Promise<Region[]> => {
   try {
-    console.log('🚀 正在获取城市信息...')
+    console.log(' 正在获取城市信息...')
     const response = await axios.get('/api/regions/non-top-level')
     
     if (response.data.status === 200 && response.data.data) {
-      console.log('✅ 获取城市信息成功:', response.data.data.length, '个城市')
+      console.log(' 获取城市信息成功:', response.data.data.length, '个城市')
       return response.data.data
     } else {
       throw new Error(`API返回错误状态: ${response.data.status}`)
     }
   } catch (error) {
-    console.error('❌ 获取城市信息失败:', error)
+    console.error(' 获取城市信息失败:', error)
     ElMessage.error('城市数据加载失败')
     throw error
   }
 }
 
 // =============================================
-// 🔄 数据处理函数
+// 数据处理函数
 // =============================================
 
 const loadAllBaseData = async () => {
   try {
-    console.log('📊 开始加载基础数据...')
+    console.log('开始加载基础数据...')
     
     const [carModels, saleRecords, regions, topLevelRegions, nonTopLevelRegions] = await Promise.all([
       fetchCarModels(),
@@ -914,7 +914,7 @@ const loadAllBaseData = async () => {
       nonTopLevelRegions
     }
     
-    console.log('📊 基础数据加载完成:', {
+    console.log(' 基础数据加载完成:', {
       车型数量: carModels.length,
       销售记录数量: saleRecords.length,
       地区数量: regions.length,
@@ -925,7 +925,7 @@ const loadAllBaseData = async () => {
     ElMessage.success('基础数据加载完成')
     
   } catch (error) {
-    console.error('❌ 基础数据加载失败:', error)
+    console.error(' 基础数据加载失败:', error)
     ElMessage.error('数据加载失败，请检查网络连接')
     throw error
   }
@@ -933,14 +933,14 @@ const loadAllBaseData = async () => {
 
 // 处理销量趋势数据
 const processSalesTrendData = () => {
-  console.log('📈 处理销量趋势数据...')
+  console.log('处理销量趋势数据...')
   
   const trendMap = new Map<string, number>()
   const lastYearTrendMap = new Map<string, number>()
   
   const currentYear = new Date().getFullYear()
   
-  // 🔧 添加调试日志，查看实际的销售记录
+  //  添加调试日志，查看实际的销售记录
   console.log('当前年份:', currentYear)
   console.log('全局筛选条件:', globalFilters)
   console.log('销售记录样本:', baseData.value.saleRecords.slice(0, 3))
@@ -952,7 +952,7 @@ const processSalesTrendData = () => {
     
     console.log(`处理记录: ${record.saleMonth}, 解析年份: ${year}, 月份键: ${monthKey}`)
     
-    // 🔧 修改时间范围，包含更多年份的数据
+    //  修改时间范围，包含更多年份的数据
     if (year >= currentYear - 2) { // 包含近2年的数据
       const currentCount = trendMap.get(monthKey) || 0
       trendMap.set(monthKey, currentCount + record.saleCount)
@@ -966,9 +966,9 @@ const processSalesTrendData = () => {
     }
   })
   
-  // 🔧 如果当年数据为空，使用所有可用数据
+  //  如果当年数据为空，使用所有可用数据
   if (trendMap.size === 0) {
-    console.log('⚠️ 当年数据为空，使用所有可用数据...')
+    console.log(' 当年数据为空，使用所有可用数据...')
     baseData.value.saleRecords.forEach(record => {
       const monthKey = record.saleMonth.slice(0, 7)
       const currentCount = trendMap.get(monthKey) || 0
@@ -978,7 +978,7 @@ const processSalesTrendData = () => {
   
   console.log('处理后的月度数据:', Object.fromEntries(trendMap))
   
-  // 🔧 根据全局筛选器生成时间范围
+  //  根据全局筛选器生成时间范围
   let dateList: string[] = []
   
   if (globalFilters.timeRange === 'custom' && globalFilters.customDateRange) {
@@ -1052,12 +1052,12 @@ const processSalesTrendData = () => {
   businessMetrics.value.actualSales = trendData.reduce((sum, item) => sum + item.salesVolume, 0)
   businessMetrics.value.lastYearSales = trendData.reduce((sum, item) => sum + (item.lastYearSalesVolume || 0), 0)
   
-  console.log('📈 销量趋势处理完成，实际销量:', businessMetrics.value.actualSales, '去年销量:', businessMetrics.value.lastYearSales)
+  console.log(' 销量趋势处理完成，实际销量:', businessMetrics.value.actualSales, '去年销量:', businessMetrics.value.lastYearSales)
 }
 
 // 处理销售额数据
 const processSalesAmountData = () => {
-  console.log('💰 处理销售额数据...')
+  console.log(' 处理销售额数据...')
   
   const amountMap = new Map<string, number>()
   
@@ -1069,7 +1069,7 @@ const processSalesAmountData = () => {
     amountMap.set(monthKey, currentAmount + monthlyAmount)
   })
   
-  // 🔧 使用与销量趋势相同的时间范围
+  // 使用与销量趋势相同的时间范围
   let dateList: string[] = []
   
   if (globalFilters.timeRange === 'custom' && globalFilters.customDateRange) {
@@ -1131,11 +1131,11 @@ const processSalesAmountData = () => {
   })
   
   salesAmountData.value = amountData
-  console.log('💰 销售额数据处理完成')
+  console.log(' 销售额数据处理完成')
 }
 // 处理车型排行数据
 const processTopModelsData = () => {
-  console.log('🏆 处理车型排行数据...')
+  console.log(' 处理车型排行数据...')
   
   const modelSalesMap = new Map<number, {
     carModel: string
@@ -1147,7 +1147,7 @@ const processTopModelsData = () => {
   
   const currentYear = new Date().getFullYear()
   
-  // 🔧 根据全局筛选器过滤销售记录
+  //  根据全局筛选器过滤销售记录
   let filteredRecords = baseData.value.saleRecords
   
   // 时间筛选
@@ -1213,7 +1213,7 @@ const processTopModelsData = () => {
     
     const existing = modelSalesMap.get(record.carModelId)!
     
-    // 🔧 修改逻辑：如果是自定义时间范围，则不区分当年/去年
+    // 修改逻辑：如果是自定义时间范围，则不区分当年/去年
     if (globalFilters.timeRange === 'custom' || globalFilters.timeRange === 'all') {
       // 自定义时间范围或全部时间，统一计算到当期
       existing.salesVolume += record.saleCount
@@ -1251,12 +1251,12 @@ const processTopModelsData = () => {
   }
   
   topModelsData.value = modelsArray.slice(0, topN.value)
-  console.log('🏆 车型排行处理完成，前', topN.value, '名车型, 筛选后数据量:', modelsArray.length)
+  console.log('车型排行处理完成，前', topN.value, '名车型, 筛选后数据量:', modelsArray.length)
 }
 
 // 处理地区销量数据
 const processRegionSalesData = () => {
-  console.log('📍 处理地区销量数据...')
+  console.log(' 处理地区销量数据...')
   
   const regionSalesMap = new Map<number, {
     regionName: string
@@ -1264,7 +1264,7 @@ const processRegionSalesData = () => {
     salesAmount: number
   }>()
   
-  // 🔧 根据全局筛选器过滤销售记录
+  //  根据全局筛选器过滤销售记录
   let filteredRecords = baseData.value.saleRecords
   
   // 时间筛选
@@ -1303,7 +1303,7 @@ const processRegionSalesData = () => {
     filteredRecords = filteredRecords.filter(record => record.carModelId === selectedModelId)
   }
   
-  // 🔧 注意：地区销量分布通常不需要根据地区筛选器再次过滤
+  // 注意：地区销量分布通常不需要根据地区筛选器再次过滤
   // 因为我们就是要看各个地区的分布情况
   // 除非用户选择了特定地区，那我们只显示该地区的数据
   if (globalFilters.region !== 'all') {
@@ -1346,13 +1346,13 @@ const processRegionSalesData = () => {
     name: region.regionName
   }))
   
-  console.log('📍 地区销量处理完成，覆盖', regionsArray.length, '个地区, 筛选后数据')}
+  console.log(' 地区销量处理完成，覆盖', regionsArray.length, '个地区, 筛选后数据')}
 
 // 计算业务指标
 const calculateBusinessMetrics = () => {
- console.log('📊 计算业务指标...')
+ console.log('计算业务指标...')
   
-  // 🔧 使用与趋势数据相同的筛选逻辑
+  // 使用与趋势数据相同的筛选逻辑
   let filteredRecords = baseData.value.saleRecords
   
   // 应用时间筛选
@@ -1433,13 +1433,13 @@ const calculateBusinessMetrics = () => {
   // 更新可用车型列表（基于原始数据，不筛选）
   availableCarModels.value = baseData.value.carModels
   
-  console.log('📊 业务指标计算完成:', businessMetrics.value)
+  console.log(' 业务指标计算完成:', businessMetrics.value)
 }
 
 // 处理所有数据
 const processAllData = () => {
   try {
-    console.log('🔄 开始处理所有数据...')
+    console.log('开始处理所有数据...')
     
     if (baseData.value.saleRecords.length === 0) {
       ElMessage.warning('销售记录为空，无法生成报表')
@@ -1452,16 +1452,16 @@ const processAllData = () => {
     processRegionSalesData()
     calculateBusinessMetrics()
     
-    console.log('🔄 所有数据处理完成')
+    console.log(' 所有数据处理完成')
     
   } catch (error) {
-    console.error('❌ 数据处理失败:', error)
+    console.error(' 数据处理失败:', error)
     ElMessage.error('数据处理失败，请重试')
   }
 }
 
 // =============================================
-// 📊 计算属性 - 从业务指标中获取
+// 计算属性 - 从业务指标中获取
 // =============================================
 
 const targetSales = computed(() => targetForm.salesTarget)
@@ -1590,7 +1590,7 @@ const businessAlerts = computed(() => {
 })
 
 // =============================================
-// 🛠️ 工具函数
+// 工具函数
 // =============================================
 
 const getTimePlaceholder = () => {
@@ -1610,14 +1610,14 @@ const handlePeriodChange = () => {
 }
 
 const handleGlobalFilterChange = () => {
-  console.log('🔄 全局筛选条件变更:', globalFilters)
+  console.log('全局筛选条件变更:', globalFilters)
   // 可以在这里添加筛选逻辑重新处理数据
   processAllData()
   initAllCharts()
 }
 
 // =============================================
-// 📈 图表初始化函数
+// 图表初始化函数
 // =============================================
 
 const initSalesTrendChart = async () => {
