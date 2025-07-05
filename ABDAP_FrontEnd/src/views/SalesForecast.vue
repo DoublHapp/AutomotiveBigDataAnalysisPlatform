@@ -712,7 +712,7 @@ import axios from 'axios'
 const router = useRouter()
 
 // =============================================
-// 📊 基础数据层 - 直接从API获取
+// 基础数据层 - 直接从API获取
 // =============================================
 
 // 接口定义
@@ -816,7 +816,7 @@ interface ProphetDetailResult {
 }
 
 // =============================================
-// 🧮 计算数据层 - 基于基础数据计算
+// 计算数据层 - 基于基础数据计算
 // =============================================
 
 interface ForecastConfig {
@@ -888,7 +888,7 @@ interface BusinessInsight {
 }
 
 // =============================================
-// 📈 业务指标层 - 最终展示的KPI
+// 业务指标层 - 最终展示的KPI
 // =============================================
 
 interface BusinessMetrics {
@@ -910,7 +910,7 @@ interface BusinessMetrics {
 }
 
 // =============================================
-// 🎛️ 响应式数据
+// 响应式数据
 // =============================================
 
 const loading = ref(false)
@@ -1010,22 +1010,22 @@ let forecastChartInstance: echarts.ECharts | null = null
 let confidenceChartInstance: echarts.ECharts | null = null
 
 // =============================================
-// 🌐 API调用函数 - 基础数据获取
+// API调用函数 - 基础数据获取
 // =============================================
 
 const fetchCarModels = async (): Promise<CarModel[]> => {
   try {
-    console.log('🚀 正在获取车型列表...')
+    console.log('正在获取车型列表...')
     const response = await axios.get('/api/car-models')
 
     if (response.data.status === 200 && response.data.data) {
-      console.log('✅ 获取车型数据成功:', response.data.data.length, '个车型')
+      console.log('获取车型数据成功:', response.data.data.length, '个车型')
       return response.data.data
     } else {
       throw new Error(`API返回错误状态: ${response.data.status}`)
     }
   } catch (error) {
-    console.error('❌ 获取车型列表失败:', error)
+    console.error('获取车型列表失败:', error)
     ElMessage.error('车型数据加载失败')
     throw error
   }
@@ -1033,17 +1033,17 @@ const fetchCarModels = async (): Promise<CarModel[]> => {
 
 const fetchRegions = async (): Promise<Region[]> => {
   try {
-    console.log('🚀 正在获取地区信息...')
+    console.log('正在获取地区信息...')
     const response = await axios.get('/api/regions')
 
     if (response.data.status === 200 && response.data.data) {
-      console.log('✅ 获取地区数据成功:', response.data.data.length, '个地区')
+      console.log('获取地区数据成功:', response.data.data.length, '个地区')
       return response.data.data
     } else {
       throw new Error(`API返回错误状态: ${response.data.status}`)
     }
   } catch (error) {
-    console.error('❌ 获取地区信息失败:', error)
+    console.error('获取地区信息失败:', error)
     ElMessage.error('地区数据加载失败')
     throw error
   }
@@ -1051,17 +1051,17 @@ const fetchRegions = async (): Promise<Region[]> => {
 
 const fetchTopLevelRegions = async (): Promise<Region[]> => {
   try {
-    console.log('🚀 正在获取省份信息...')
+    console.log('正在获取省份信息...')
     const response = await axios.get('/api/regions/top-level')
 
     if (response.data.status === 200 && response.data.data) {
-      console.log('✅ 获取省份数据成功:', response.data.data.length, '个省份')
+      console.log('获取省份数据成功:', response.data.data.length, '个省份')
       return response.data.data
     } else {
       throw new Error(`API返回错误状态: ${response.data.status}`)
     }
   } catch (error) {
-    console.error('❌ 获取省份信息失败:', error)
+    console.error('获取省份信息失败:', error)
     ElMessage.error('省份数据加载失败')
     throw error
   }
@@ -1069,17 +1069,17 @@ const fetchTopLevelRegions = async (): Promise<Region[]> => {
 
 const fetchNonTopLevelRegions = async (): Promise<Region[]> => {
   try {
-    console.log('🚀 正在获取城市信息...')
+    console.log('正在获取城市信息...')
     const response = await axios.get('/api/regions/non-top-level')
 
     if (response.data.status === 200 && response.data.data) {
-      console.log('✅ 获取城市信息成功:', response.data.data.length, '个城市')
+      console.log('获取城市信息成功:', response.data.data.length, '个城市')
       return response.data.data
     } else {
       throw new Error(`API返回错误状态: ${response.data.status}`)
     }
   } catch (error) {
-    console.error('❌ 获取城市信息失败:', error)
+    console.error('获取城市信息失败:', error)
     ElMessage.error('城市数据加载失败')
     throw error
   }
@@ -1090,7 +1090,7 @@ const fetchSaleRecords = async (params?: {
   regionId?: number
 }): Promise<SaleRecord[]> => {
   try {
-    console.log('🚀 正在获取销售记录...')
+    console.log('正在获取销售记录...')
     let url = '/api/sale-records'
 
     if (params?.carModelId && params?.regionId) {
@@ -1104,13 +1104,13 @@ const fetchSaleRecords = async (params?: {
     const response = await axios.get(url)
 
     if (response.data.status === 200 && response.data.data) {
-      console.log('✅ 获取销售记录成功:', response.data.data.length, '条记录')
+      console.log('获取销售记录成功:', response.data.data.length, '条记录')
       return response.data.data
     } else {
       throw new Error(`API返回错误状态: ${response.data.status}`)
     }
   } catch (error) {
-    console.error('❌ 获取销售记录失败:', error)
+    console.error('获取销售记录失败:', error)
     ElMessage.error('销售数据加载失败')
     throw error
   }
@@ -1118,17 +1118,17 @@ const fetchSaleRecords = async (params?: {
 
 const fetchOpinions = async (): Promise<Opinion[]> => {
   try {
-    console.log('🚀 正在获取口碑数据...')
+    console.log('正在获取口碑数据...')
     const response = await axios.get('/api/opinions')
 
     if (response.data.status === 200 && response.data.data) {
-      console.log('✅ 获取口碑数据成功:', response.data.data.length, '条评价')
+      console.log('获取口碑数据成功:', response.data.data.length, '条评价')
       return response.data.data
     } else {
       throw new Error(`API返回错误状态: ${response.data.status}`)
     }
   } catch (error) {
-    console.error('❌ 获取口碑数据失败:', error)
+    console.error('获取口碑数据失败:', error)
     ElMessage.error('口碑数据加载失败')
     throw error
   }
@@ -1136,40 +1136,40 @@ const fetchOpinions = async (): Promise<Opinion[]> => {
 
 const fetchConfigs = async (carModelId: number): Promise<Config[]> => {
   try {
-    console.log('🚀 正在获取车型配置...')
+    console.log('正在获取车型配置...')
     const response = await axios.get(`/api/configs?carModelId=${carModelId}`)
 
     if (response.data.status === 200 && response.data.data) {
-      console.log('✅ 获取配置数据成功:', response.data.data.length, '个配置')
+      console.log('获取配置数据成功:', response.data.data.length, '个配置')
       return response.data.data
     } else {
       throw new Error(`API返回错误状态: ${response.data.status}`)
     }
   } catch (error) {
-    console.error('❌ 获取配置数据失败:', error)
+    console.error('获取配置数据失败:', error)
     return []
   }
 }
 
 const fetchFuelEconomy = async (carModelId: number): Promise<FuelEconomy | null> => {
   try {
-    console.log('🚀 正在获取油耗信息...')
+    console.log('正在获取油耗信息...')
     const response = await axios.get(`/api/fuel-economy/car-model/${carModelId}`)
 
     if (response.data.status === 200 && response.data.data) {
-      console.log('✅ 获取油耗数据成功')
+      console.log('获取油耗数据成功')
       return response.data.data
     } else {
       throw new Error(`API返回错误状态: ${response.data.status}`)
     }
   } catch (error) {
-    console.error('❌ 获取油耗数据失败:', error)
+    console.error('获取油耗数据失败:', error)
     return null
   }
 }
 
 // =============================================
-// 🔮 预测API调用函数 - 使用新的详细API
+// 预测API调用函数 - 使用新的详细API
 // =============================================
 
 const fetchARIMADetailPrediction = async (config: {
@@ -1181,7 +1181,7 @@ const fetchARIMADetailPrediction = async (config: {
   q?: number
 }): Promise<ARIMADetailResult> => {
   try {
-    console.log('🔮 开始ARIMA详细预测...')
+    console.log('开始ARIMA详细预测...')
     const { p, d, q } = config
     let url = `/api/prediction/ARIMA/detail?carModelId=${config.carModelId}&regionId=${config.regionId}&months=${config.months}`
 
@@ -1192,7 +1192,7 @@ const fetchARIMADetailPrediction = async (config: {
     const response = await axios.get(url)
 
     if (response.data.status === 200 && response.data.data) {
-      console.log('✅ ARIMA预测完成，数据详情:', {
+      console.log('ARIMA预测完成，数据详情:', {
         历史数据点数: response.data.data.historicalDataCount,
         预测数据点数: response.data.data.forecastDataCount,
         MAPE: response.data.data.mape,
@@ -1203,7 +1203,7 @@ const fetchARIMADetailPrediction = async (config: {
       throw new Error(`ARIMA预测API返回错误状态: ${response.data.status}`)
     }
   } catch (error) {
-    console.error('❌ ARIMA预测失败:', error)
+    console.error('ARIMA预测失败:', error)
     throw error
   }
 }
@@ -1214,13 +1214,13 @@ const fetchProphetDetailPrediction = async (config: {
   months: number
 }): Promise<ProphetDetailResult> => {
   try {
-    console.log('🔮 开始Prophet详细预测...')
+    console.log('开始Prophet详细预测...')
     const url = `/api/prediction/Prophet/detail?carModelId=${config.carModelId}&regionId=${config.regionId}&months=${config.months}`
 
     const response = await axios.get(url)
 
     if (response.data.status === 200 && response.data.data) {
-      console.log('✅ Prophet预测完成，数据详情:', {
+      console.log('Prophet预测完成，数据详情:', {
         历史数据点数: response.data.data.historicalDataCount,
         预测数据点数: response.data.data.forecastDataCount,
         MAPE: response.data.data.mape,
@@ -1230,18 +1230,18 @@ const fetchProphetDetailPrediction = async (config: {
       throw new Error(`Prophet预测API返回错误状态: ${response.data.status}`)
     }
   } catch (error) {
-    console.error('❌ Prophet预测失败:', error)
+    console.error('Prophet预测失败:', error)
     throw error
   }
 }
 
 // =============================================
-// 📊 数据加载函数
+// 数据加载函数
 // =============================================
 
 const loadAllBaseData = async () => {
   try {
-    console.log('📊 开始加载基础数据...')
+    console.log('开始加载基础数据...')
 
     const [carModels, regions, topLevelRegions, nonTopLevelRegions, saleRecords, opinions] =
       await Promise.all([
@@ -1264,7 +1264,7 @@ const loadAllBaseData = async () => {
       fuelEconomies: [],
     }
 
-    console.log('📊 基础数据加载完成:', {
+    console.log('基础数据加载完成:', {
       车型数量: carModels.length,
       地区数量: regions.length,
       省份数量: topLevelRegions.length,
@@ -1279,21 +1279,21 @@ const loadAllBaseData = async () => {
 
     ElMessage.success('基础数据加载完成')
   } catch (error) {
-    console.error('❌ 基础数据加载失败:', error)
+    console.error('基础数据加载失败:', error)
     ElMessage.error('数据加载失败，请检查网络连接')
     throw error
   }
 }
 
 // =============================================
-// 🧮 数据处理函数
+// 数据处理函数
 // =============================================
 
 const processDetailPredictionResult = (
   rawResult: ARIMADetailResult | ProphetDetailResult,
   modelType: 'ARIMA' | 'Prophet',
 ): ProcessedPredictionResult => {
-  console.log('🧮 处理详细预测结果...')
+  console.log('处理详细预测结果...')
 
   // 生成时间序列日期
   const startDate = new Date()
@@ -1363,7 +1363,7 @@ const processDetailPredictionResult = (
     components,
   }
 
-  console.log('🧮 预测结果处理完成:', {
+  console.log('预测结果处理完成:', {
     历史数据点: historicalData.length,
     预测数据点: forecastData.length,
     模型精度: modelMetrics.mape,
@@ -1374,7 +1374,7 @@ const processDetailPredictionResult = (
 }
 
 const calculateBusinessMetrics = (): BusinessMetrics => {
-  console.log('📈 计算业务指标...')
+  console.log('计算业务指标...')
 
   if (!predictionResult.value) {
     return {
@@ -1459,7 +1459,7 @@ const calculateBusinessMetrics = (): BusinessMetrics => {
     seasonalityIndex,
   }
 
-  console.log('📈 业务指标计算完成:', result)
+  console.log('业务指标计算完成:', result)
   return result
 }
 
@@ -1531,7 +1531,7 @@ const calculateVolatility = (): number => {
 }
 
 // =============================================
-// 🧮 计算属性 - 业务指标
+// 计算属性 - 业务指标
 // =============================================
 
 const businessMetrics = computed<BusinessMetrics>(() => calculateBusinessMetrics())
@@ -1633,7 +1633,7 @@ const businessInsights = computed((): BusinessInsight[] => {
 })
 
 // =============================================
-// 🎯 事件处理函数
+// 事件处理函数
 // =============================================
 
 const handleScenarioChange = () => {
@@ -1719,7 +1719,7 @@ const startPrediction = async () => {
     await nextTick()
     await initForecastChart()
   } catch (error) {
-    console.error('❌ 预测失败:', error)
+    console.error('预测失败:', error)
     ElMessage.error('预测失败，请重试')
   } finally {
     predicting.value = false
@@ -1771,7 +1771,7 @@ const applyScenarioAdjustments = () => {
 }
 
 // =============================================
-// 📊 图表初始化函数
+// 图表初始化函数
 // =============================================
 
 const initForecastChart = async () => {
@@ -1965,7 +1965,7 @@ const initForecastChart = async () => {
 }
 
 // =============================================
-// 🛠️ 工具函数
+// 工具函数
 // =============================================
 
 const resetConfig = () => {
@@ -2131,7 +2131,7 @@ const handleResize = () => {
 }
 
 // =============================================
-// 🔄 生命周期
+// 生命周期
 // =============================================
 
 onMounted(async () => {
@@ -2141,7 +2141,7 @@ onMounted(async () => {
     await loadAllBaseData()
     window.addEventListener('resize', handleResize)
   } catch (error) {
-    console.error('❌ 页面初始化失败:', error)
+    console.error('页面初始化失败:', error)
     ElMessage.error('初始化失败，部分功能可能不可用')
   }
 })
