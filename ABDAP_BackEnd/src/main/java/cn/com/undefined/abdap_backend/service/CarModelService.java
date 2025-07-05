@@ -63,23 +63,11 @@ public class CarModelService {
 
         // 设置车型级别
         dto.setLevel(carModel.getLevel());
-
-        // 设置上市日期
         dto.setLaunchDate(carModel.getLaunchDate());
-
-        // 设置官方指导价
         dto.setOfficialPrice(carModel.getOfficialPrice());
-
-        // 设置发动机类型
         dto.setEngineType(carModel.getEngineType());
-
-        // 设置座位数
         dto.setSeatNum(carModel.getSeatNum());
-
-        // 设置驱动类型
         dto.setDriveType(carModel.getDriveType());
-
-        // 设置续航里程
         dto.setRangeKm(carModel.getRangeKm());
 
         return dto;

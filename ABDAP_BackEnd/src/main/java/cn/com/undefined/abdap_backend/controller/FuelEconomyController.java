@@ -23,14 +23,18 @@ public class FuelEconomyController {
 
     /**
      * 获取所有燃油经济性数据
+     * 
      * @return 燃油经济性数据列表
      */
     @GetMapping
     public ResponseEntity<ApiResponse<List<FuelEconomyDTO>>> getAllFuelEconomy() {
         List<FuelEconomyDTO> fuelEconomyList = fuelEconomyService.getAllFuelEconomy();
         return ResponseUtil.success(fuelEconomyList);
-    }    /**
+    }
+
+    /**
      * 根据车型ID获取燃油经济性数据（一对一关系）
+     * 
      * @param carModelId 车型ID
      * @return 燃油经济性数据
      */
@@ -43,6 +47,7 @@ public class FuelEconomyController {
 
     /**
      * 根据燃料类型获取燃油经济性数据
+     * 
      * @param fuelType 燃料类型
      * @return 燃油经济性数据列表
      */
@@ -50,17 +55,5 @@ public class FuelEconomyController {
     public ResponseEntity<ApiResponse<List<FuelEconomyDTO>>> getFuelEconomyByFuelType(@PathVariable String fuelType) {
         List<FuelEconomyDTO> fuelEconomyList = fuelEconomyService.getFuelEconomyByFuelType(fuelType);
         return ResponseUtil.success(fuelEconomyList);
-    }    /**
-     * 根据车型ID和燃料类型获取燃油经济性数据（一对一关系）
-     * @param carModelId 车型ID
-     * @param fuelType 燃料类型
-     * @return 燃油经济性数据
-     */
-    @GetMapping("/car-model/{carModelId}/fuel-type/{fuelType}")
-    public ResponseEntity<ApiResponse<FuelEconomyDTO>> getFuelEconomyByCarModelIdAndFuelType(
-            @PathVariable Long carModelId,
-            @PathVariable String fuelType) {
-        FuelEconomyDTO fuelEconomy = fuelEconomyService.getFuelEconomyByCarModelIdAndFuelType(carModelId, fuelType);
-        return ResponseUtil.success(fuelEconomy);
     }
 }
