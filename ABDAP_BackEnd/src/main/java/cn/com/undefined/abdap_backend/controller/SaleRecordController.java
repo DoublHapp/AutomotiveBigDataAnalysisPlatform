@@ -3,19 +3,25 @@ package cn.com.undefined.abdap_backend.controller;
 import cn.com.undefined.abdap_backend.dto.ApiResponse;
 import cn.com.undefined.abdap_backend.dto.CarModelRankingDTO;
 import cn.com.undefined.abdap_backend.dto.MonthlySalesTrendDTO;
+import cn.com.undefined.abdap_backend.dto.RegionDTO;
 import cn.com.undefined.abdap_backend.dto.MonthlyRevenueTrendDTO;
 import cn.com.undefined.abdap_backend.dto.RegionSalesDTO;
 import cn.com.undefined.abdap_backend.dto.SaleRecordDTO;
+import cn.com.undefined.abdap_backend.service.CarModelService;
+import cn.com.undefined.abdap_backend.service.RegionService;
 import cn.com.undefined.abdap_backend.service.SaleRecordService;
 import cn.com.undefined.abdap_backend.util.ResponseUtil;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import java.util.stream.Collectors;
 
 /**
  * 销售记录控制器
@@ -27,6 +33,12 @@ public class SaleRecordController {
 
     @Autowired
     private SaleRecordService service;
+
+    @Autowired
+    private RegionService regionService;
+
+    @Autowired
+    private CarModelService carModelService;
 
     /**
      * 查询所有销售记录
@@ -72,7 +84,8 @@ public class SaleRecordController {
 
     /**
      * 获取指定多个车型id、多个地区id下的销售数据
-     * GET /api/sale-records/multiple?carModelIds={carModelIds}&regionIds={regionIds}
+     * GET
+     * /api/sale-records/multiple?carModelIds={carModelIds}&regionIds={regionIds}
      */
     @GetMapping("/multiple")
     public ResponseEntity<ApiResponse<List<SaleRecordDTO>>> getMultipleSaleRecords(
@@ -95,15 +108,11 @@ public class SaleRecordController {
      * "date": "2025-04",
      * "salesVolume": 1200,
      * "salesAmount": 1800000,
-     * "predictedVolume": 1250,
-     * "predictedAmount": 1900000
      * },
      * {
      * "date": "2025-05",
      * "salesVolume": 1100,
      * "salesAmount": 1700000,
-     * "predictedVolume": 1150,
-     * "predictedAmount": 1750000
      * }
      * ],
      * "brandSales": [
@@ -132,8 +141,6 @@ public class SaleRecordController {
      * @param regionId 省份ID
      * @return
      */
-    // TODO: 实现复杂数据结构的查询和返回
-    // ---以下为未验证接口---
     @GetMapping("/complex-structure")
     public ResponseEntity<ApiResponse<Object>> getComplexStructureDataByRegionId(@RequestParam Long regionId) {
         // 创建三种数据结构的局部内部类
@@ -141,17 +148,19 @@ public class SaleRecordController {
          * 月度销售数据
          * 合计每个月的销售量、销售额、预测量和预测额
          */
+        @AllArgsConstructor
+        @Data
         class MonthlySales {
             private String date;
             private int salesVolume;
-            private int salesAmount;
-            private int predictedVolume;
-            private int predictedAmount;
+            private BigDecimal salesAmount;
         }
         /**
          * 车型销售数据
          * 合计每个车型的总销售量，展示品牌
          */
+        @AllArgsConstructor
+        @Data
         class BrandSales {
             private String brand;
             private String model;
@@ -161,19 +170,65 @@ public class SaleRecordController {
          * 市区销售数据
          * 统计指定省份下每个市区的总销售量
          */
+        @AllArgsConstructor
+        @Data
         class RegionSales {
             private String region;
             private int salesVolume;
         }
+        @AllArgsConstructor
+        @Data
         class ComplexData {
             private List<MonthlySales> monthlySales;
             private List<BrandSales> brandSales;
             private List<RegionSales> regionSales;
         }
-        // TODO: 综合查询逻辑，获取数据并填充到 ComplexData 对象中
-        return ResponseUtil.success(new ComplexData());
+        // 传入的地区是省级，先查询其下的所有市级地区id
+        List<Long> regionIds = regionService.getRegionsByParentId(regionId).stream()
+                .map(RegionDTO::getRegionId)
+                .collect(Collectors.toList());
+
+        // 查询这些子地区的所有销售记录
+        List<SaleRecordDTO> records = service.getMultipleSaleRecords(null, regionIds);
+
+        // 按日期合并records，得到MonthlySales数据
+        List<MonthlySales> monthlySales = records.stream()
+                .collect(Collectors.groupingBy(SaleRecordDTO::getSaleMonth))
+                .entrySet().stream()
+                .map(entry -> {
+                    return new MonthlySales(
+                            entry.getKey().toString(),
+                            entry.getValue().stream().mapToInt(SaleRecordDTO::getSaleCount).sum(),
+                            entry.getValue().stream().map(SaleRecordDTO::getSaleAmount).reduce(BigDecimal.ZERO,
+                                    BigDecimal::add));
+                })
+                .collect(Collectors.toList());
+        // 按车型合并records，得到BrandSales数据
+        List<BrandSales> brandSales = records.stream()
+                .collect(Collectors.groupingBy(SaleRecordDTO::getCarModelId))
+                .entrySet().stream()
+                .map(entry -> {
+                    return new BrandSales(
+                            carModelService.getCarModelById(entry.getValue().get(0).getCarModelId()).getBrandName(), // 需要根据车型ID查询品牌
+                            entry.getValue().get(0).getCarModelName(), // 假设所有记录的车型名相同
+                            entry.getValue().stream().mapToInt(SaleRecordDTO::getSaleCount).sum());
+                })
+                .collect(Collectors.toList());
+        // 按地区合并records，得到RegionSales数据
+        List<RegionSales> regionSales = records.stream()
+                .collect(Collectors.groupingBy(SaleRecordDTO::getRegionId))
+                .entrySet().stream()
+                .map(entry -> {
+                    return new RegionSales(
+                            entry.getValue().get(0).getRegionName(), // 假设所有记录的地区名相同
+                            entry.getValue().stream().mapToInt(SaleRecordDTO::getSaleCount).sum());
+                })
+                .collect(Collectors.toList());
+
+        return ResponseUtil.success(new ComplexData(monthlySales, brandSales, regionSales));
     }
 
+    // ---以下为未验证接口---
     /**
      * 根据地区名称查询销售记录
      * GET /api/sale-records/region/name/{regionName}

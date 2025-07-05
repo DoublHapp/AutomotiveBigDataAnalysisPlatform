@@ -217,6 +217,8 @@ public class PredictionService {
     }
 
     private List<Double> extractAndValidateSalesData(List<SaleRecord> saleRecords) {
+        // 将销售数据按日期排序
+        saleRecords.sort((r1, r2) -> r1.getSaleMonth().compareTo(r2.getSaleMonth()));
         // 提取销售数量数据并转换为Double列表
         List<Double> salesData = saleRecords.stream()
                 .filter(record -> record.getSaleCount() != null) // 过滤空值

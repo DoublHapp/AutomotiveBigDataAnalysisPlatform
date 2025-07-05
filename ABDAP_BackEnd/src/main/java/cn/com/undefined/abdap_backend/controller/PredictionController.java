@@ -108,7 +108,7 @@ public class PredictionController {
      * GET
      * /api/prediction/Prophet/detail?carModelId={carModelId}&regionId={regionId}&months={months}
      */
-    @GetMapping("/Prophet/detail") 
+    @GetMapping("/Prophet/detail")
     public ResponseEntity<ApiResponse<ProphetResultDTO>> predictSalesWithProphetWithDetail(
             @RequestParam Long carModelId,
             @RequestParam Long regionId,
