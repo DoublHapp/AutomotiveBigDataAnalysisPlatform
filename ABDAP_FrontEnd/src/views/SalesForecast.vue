@@ -712,7 +712,7 @@ import axios from 'axios'
 const router = useRouter()
 
 // =============================================
-// 基础数据层 - 直接从API获取
+// 📊 基础数据层 - 直接从API获取
 // =============================================
 
 // 接口定义
@@ -783,8 +783,40 @@ interface BaseData {
   fuelEconomies: FuelEconomy[]
 }
 
+// 预测API返回的详细数据
+interface ARIMADetailResult {
+  historicalData: number[]
+  fittedValues: number[]
+  forecastValues: number[]
+  forecastUpperBounds: number[]
+  forecastLowerBounds: number[]
+  residuals: number[]
+  mape: number
+  confidenceLevel: number
+  forecastStartIndex: number
+  completeTimeSeries: number[]
+  completeFittedSeries: number[]
+  historicalDataCount: number
+  forecastDataCount: number
+}
+
+interface ProphetDetailResult {
+  historicalData: number[]
+  fittedValues: number[]
+  forecastValues: number[]
+  trendComponent: number[]
+  seasonalComponent: number[]
+  residuals: number[]
+  mape: number
+  forecastStartIndex: number
+  completeTimeSeries: number[]
+  completeFittedSeries: number[]
+  historicalDataCount: number
+  forecastDataCount: number
+}
+
 // =============================================
-// 计算数据层 - 基于基础数据计算
+// 🧮 计算数据层 - 基于基础数据计算
 // =============================================
 
 interface ForecastConfig {
@@ -808,8 +840,29 @@ interface PredictionData {
   date: string
   value: number
   isHistorical: boolean
+  fitted?: number
   upper?: number
   lower?: number
+  trend?: number
+  seasonal?: number
+  residual?: number
+}
+
+interface ProcessedPredictionResult {
+  historicalData: PredictionData[]
+  forecastData: PredictionData[]
+  allData: PredictionData[]
+  modelMetrics: {
+    mape: number
+    confidenceLevel: number
+    fitScore: number
+    modelType: string
+  }
+  components?: {
+    trend: number[]
+    seasonal: number[]
+    residuals: number[]
+  }
 }
 
 interface PredictionRecord {
@@ -835,7 +888,7 @@ interface BusinessInsight {
 }
 
 // =============================================
-// 业务指标层 - 最终展示的KPI
+// 📈 业务指标层 - 最终展示的KPI
 // =============================================
 
 interface BusinessMetrics {
@@ -851,10 +904,13 @@ interface BusinessMetrics {
   }
   marketVolatility: number
   confidenceLevel: number
+  modelAccuracy: number
+  trendStrength: number
+  seasonalityIndex: number
 }
 
 // =============================================
-// 响应式数据
+// 🎛️ 响应式数据
 // =============================================
 
 const loading = ref(false)
@@ -882,10 +938,8 @@ const baseData = ref<BaseData>({
 // 计算后的业务数据
 const availableCarModels = ref<CarModel[]>([])
 const availableRegions = ref<Region[]>([])
-const historicalData = ref<PredictionData[]>([])
-const predictionResults = ref<PredictionData[] | null>(null)
+const predictionResult = ref<ProcessedPredictionResult | null>(null)
 const predictionHistory = ref<PredictionRecord[]>([])
-const fitScore = ref(0)
 const monthlyBreakdownData = ref<any[]>([])
 
 // 预测场景配置
@@ -956,22 +1010,22 @@ let forecastChartInstance: echarts.ECharts | null = null
 let confidenceChartInstance: echarts.ECharts | null = null
 
 // =============================================
-// API调用函数 - 基础数据获取
+// 🌐 API调用函数 - 基础数据获取
 // =============================================
 
 const fetchCarModels = async (): Promise<CarModel[]> => {
   try {
-    console.log('正在获取车型列表...')
+    console.log('🚀 正在获取车型列表...')
     const response = await axios.get('/api/car-models')
 
     if (response.data.status === 200 && response.data.data) {
-      console.log('获取车型数据成功:', response.data.data.length, '个车型')
+      console.log('✅ 获取车型数据成功:', response.data.data.length, '个车型')
       return response.data.data
     } else {
       throw new Error(`API返回错误状态: ${response.data.status}`)
     }
   } catch (error) {
-    console.error('获取车型列表失败:', error)
+    console.error('❌ 获取车型列表失败:', error)
     ElMessage.error('车型数据加载失败')
     throw error
   }
@@ -979,17 +1033,17 @@ const fetchCarModels = async (): Promise<CarModel[]> => {
 
 const fetchRegions = async (): Promise<Region[]> => {
   try {
-    console.log('正在获取地区信息...')
+    console.log('🚀 正在获取地区信息...')
     const response = await axios.get('/api/regions')
 
     if (response.data.status === 200 && response.data.data) {
-      console.log('获取地区数据成功:', response.data.data.length, '个地区')
+      console.log('✅ 获取地区数据成功:', response.data.data.length, '个地区')
       return response.data.data
     } else {
       throw new Error(`API返回错误状态: ${response.data.status}`)
     }
   } catch (error) {
-    console.error('获取地区信息失败:', error)
+    console.error('❌ 获取地区信息失败:', error)
     ElMessage.error('地区数据加载失败')
     throw error
   }
@@ -997,17 +1051,17 @@ const fetchRegions = async (): Promise<Region[]> => {
 
 const fetchTopLevelRegions = async (): Promise<Region[]> => {
   try {
-    console.log('正在获取省份信息...')
+    console.log('🚀 正在获取省份信息...')
     const response = await axios.get('/api/regions/top-level')
 
     if (response.data.status === 200 && response.data.data) {
-      console.log('获取省份数据成功:', response.data.data.length, '个省份')
+      console.log('✅ 获取省份数据成功:', response.data.data.length, '个省份')
       return response.data.data
     } else {
       throw new Error(`API返回错误状态: ${response.data.status}`)
     }
   } catch (error) {
-    console.error('获取省份信息失败:', error)
+    console.error('❌ 获取省份信息失败:', error)
     ElMessage.error('省份数据加载失败')
     throw error
   }
@@ -1015,17 +1069,17 @@ const fetchTopLevelRegions = async (): Promise<Region[]> => {
 
 const fetchNonTopLevelRegions = async (): Promise<Region[]> => {
   try {
-    console.log('正在获取城市信息...')
+    console.log('🚀 正在获取城市信息...')
     const response = await axios.get('/api/regions/non-top-level')
 
     if (response.data.status === 200 && response.data.data) {
-      console.log('获取城市信息成功:', response.data.data.length, '个城市')
+      console.log('✅ 获取城市信息成功:', response.data.data.length, '个城市')
       return response.data.data
     } else {
       throw new Error(`API返回错误状态: ${response.data.status}`)
     }
   } catch (error) {
-    console.error('获取城市信息失败:', error)
+    console.error('❌ 获取城市信息失败:', error)
     ElMessage.error('城市数据加载失败')
     throw error
   }
@@ -1036,7 +1090,7 @@ const fetchSaleRecords = async (params?: {
   regionId?: number
 }): Promise<SaleRecord[]> => {
   try {
-    console.log('正在获取销售记录...')
+    console.log('🚀 正在获取销售记录...')
     let url = '/api/sale-records'
 
     if (params?.carModelId && params?.regionId) {
@@ -1050,13 +1104,13 @@ const fetchSaleRecords = async (params?: {
     const response = await axios.get(url)
 
     if (response.data.status === 200 && response.data.data) {
-      console.log('获取销售记录成功:', response.data.data.length, '条记录')
+      console.log('✅ 获取销售记录成功:', response.data.data.length, '条记录')
       return response.data.data
     } else {
       throw new Error(`API返回错误状态: ${response.data.status}`)
     }
   } catch (error) {
-    console.error('获取销售记录失败:', error)
+    console.error('❌ 获取销售记录失败:', error)
     ElMessage.error('销售数据加载失败')
     throw error
   }
@@ -1064,17 +1118,17 @@ const fetchSaleRecords = async (params?: {
 
 const fetchOpinions = async (): Promise<Opinion[]> => {
   try {
-    console.log('正在获取口碑数据...')
+    console.log('🚀 正在获取口碑数据...')
     const response = await axios.get('/api/opinions')
 
     if (response.data.status === 200 && response.data.data) {
-      console.log('获取口碑数据成功:', response.data.data.length, '条评价')
+      console.log('✅ 获取口碑数据成功:', response.data.data.length, '条评价')
       return response.data.data
     } else {
       throw new Error(`API返回错误状态: ${response.data.status}`)
     }
   } catch (error) {
-    console.error('获取口碑数据失败:', error)
+    console.error('❌ 获取口碑数据失败:', error)
     ElMessage.error('口碑数据加载失败')
     throw error
   }
@@ -1082,81 +1136,112 @@ const fetchOpinions = async (): Promise<Opinion[]> => {
 
 const fetchConfigs = async (carModelId: number): Promise<Config[]> => {
   try {
-    console.log('正在获取车型配置...')
+    console.log('🚀 正在获取车型配置...')
     const response = await axios.get(`/api/configs?carModelId=${carModelId}`)
 
     if (response.data.status === 200 && response.data.data) {
-      console.log('获取配置数据成功:', response.data.data.length, '个配置')
+      console.log('✅ 获取配置数据成功:', response.data.data.length, '个配置')
       return response.data.data
     } else {
       throw new Error(`API返回错误状态: ${response.data.status}`)
     }
   } catch (error) {
-    console.error('获取配置数据失败:', error)
+    console.error('❌ 获取配置数据失败:', error)
     return []
   }
 }
 
 const fetchFuelEconomy = async (carModelId: number): Promise<FuelEconomy | null> => {
   try {
-    console.log('正在获取油耗信息...')
+    console.log('🚀 正在获取油耗信息...')
     const response = await axios.get(`/api/fuel-economy/car-model/${carModelId}`)
 
     if (response.data.status === 200 && response.data.data) {
-      console.log('获取油耗数据成功')
+      console.log('✅ 获取油耗数据成功')
       return response.data.data
     } else {
       throw new Error(`API返回错误状态: ${response.data.status}`)
     }
   } catch (error) {
-    console.error('获取油耗数据失败:', error)
+    console.error('❌ 获取油耗数据失败:', error)
     return null
   }
 }
 
 // =============================================
-// 预测API调用函数
+// 🔮 预测API调用函数 - 使用新的详细API
 // =============================================
 
-const fetchPrediction = async (config: {
+const fetchARIMADetailPrediction = async (config: {
   carModelId: number
   regionId: number
   months: number
-  modelType: 'ARIMA' | 'Prophet'
-  arimaParams?: { p: number; d: number; q: number }
-}): Promise<any> => {
+  p?: number
+  d?: number
+  q?: number
+}): Promise<ARIMADetailResult> => {
   try {
-    console.log('开始预测...')
-    let url = ''
+    console.log('🔮 开始ARIMA详细预测...')
+    const { p, d, q } = config
+    let url = `/api/prediction/ARIMA/detail?carModelId=${config.carModelId}&regionId=${config.regionId}&months=${config.months}`
 
-    if (config.modelType === 'ARIMA') {
-      const { p, d, q } = config.arimaParams || { p: 1, d: 1, q: 1 }
-      url = `/api/prediction/ARIMA?carModelId=${config.carModelId}&regionId=${config.regionId}&months=${config.months}&p=${p}&d=${d}&q=${q}`
-    } else {
-      url = `/api/prediction/Prophet?carModelId=${config.carModelId}&regionId=${config.regionId}&months=${config.months}`
-    }
+    if (p !== undefined) url += `&p=${p}`
+    if (d !== undefined) url += `&d=${d}`
+    if (q !== undefined) url += `&q=${q}`
 
     const response = await axios.get(url)
 
     if (response.data.status === 200 && response.data.data) {
-      console.log('预测完成')
+      console.log('✅ ARIMA预测完成，数据详情:', {
+        历史数据点数: response.data.data.historicalDataCount,
+        预测数据点数: response.data.data.forecastDataCount,
+        MAPE: response.data.data.mape,
+        置信水平: response.data.data.confidenceLevel,
+      })
       return response.data.data
     } else {
-      throw new Error(`预测API返回错误状态: ${response.data.status}`)
+      throw new Error(`ARIMA预测API返回错误状态: ${response.data.status}`)
     }
   } catch (error) {
-    console.error('预测失败:', error)
+    console.error('❌ ARIMA预测失败:', error)
+    throw error
+  }
+}
+
+const fetchProphetDetailPrediction = async (config: {
+  carModelId: number
+  regionId: number
+  months: number
+}): Promise<ProphetDetailResult> => {
+  try {
+    console.log('🔮 开始Prophet详细预测...')
+    const url = `/api/prediction/Prophet/detail?carModelId=${config.carModelId}&regionId=${config.regionId}&months=${config.months}`
+
+    const response = await axios.get(url)
+
+    if (response.data.status === 200 && response.data.data) {
+      console.log('✅ Prophet预测完成，数据详情:', {
+        历史数据点数: response.data.data.historicalDataCount,
+        预测数据点数: response.data.data.forecastDataCount,
+        MAPE: response.data.data.mape,
+      })
+      return response.data.data
+    } else {
+      throw new Error(`Prophet预测API返回错误状态: ${response.data.status}`)
+    }
+  } catch (error) {
+    console.error('❌ Prophet预测失败:', error)
     throw error
   }
 }
 
 // =============================================
-// 数据加载函数
+// 📊 数据加载函数
 // =============================================
 
 const loadAllBaseData = async () => {
   try {
-    console.log('开始加载基础数据...')
+    console.log('📊 开始加载基础数据...')
 
     const [carModels, regions, topLevelRegions, nonTopLevelRegions, saleRecords, opinions] =
       await Promise.all([
@@ -1179,7 +1264,7 @@ const loadAllBaseData = async () => {
       fuelEconomies: [],
     }
 
-    console.log('基础数据加载完成:', {
+    console.log('📊 基础数据加载完成:', {
       车型数量: carModels.length,
       地区数量: regions.length,
       省份数量: topLevelRegions.length,
@@ -1194,58 +1279,104 @@ const loadAllBaseData = async () => {
 
     ElMessage.success('基础数据加载完成')
   } catch (error) {
-    console.error('基础数据加载失败:', error)
+    console.error('❌ 基础数据加载失败:', error)
     ElMessage.error('数据加载失败，请检查网络连接')
     throw error
   }
 }
 
 // =============================================
-// 数据处理函数
+// 🧮 数据处理函数
 // =============================================
 
-const processHistoricalData = (carModelId: number, regionId: number): PredictionData[] => {
-  console.log('处理历史数据...')
+const processDetailPredictionResult = (
+  rawResult: ARIMADetailResult | ProphetDetailResult,
+  modelType: 'ARIMA' | 'Prophet',
+): ProcessedPredictionResult => {
+  console.log('🧮 处理详细预测结果...')
 
-  // 筛选指定车型和地区的销售记录
-  const filteredRecords = baseData.value.saleRecords.filter(
-    (record) => record.carModelId === carModelId && record.regionId === regionId,
-  )
+  // 生成时间序列日期
+  const startDate = new Date()
+  startDate.setMonth(startDate.getMonth() - rawResult.historicalDataCount + 1)
 
-  if (filteredRecords.length === 0) {
-    console.warn('没有找到匹配的历史数据')
-    return []
+  const dates: string[] = []
+  for (let i = 0; i < rawResult.completeTimeSeries.length; i++) {
+    const date = new Date(startDate)
+    date.setMonth(date.getMonth() + i)
+    dates.push(date.toISOString().slice(0, 7)) // YYYY-MM格式
   }
 
-  // 按月份聚合数据
-  const monthlyData = new Map<string, number>()
-
-  filteredRecords.forEach((record) => {
-    const monthKey = record.saleMonth.slice(0, 7) // YYYY-MM格式
-    const currentValue = monthlyData.get(monthKey) || 0
-    monthlyData.set(monthKey, currentValue + record.saleCount)
-  })
-
-  // 转换为预测数据格式
+  // 处理历史数据
   const historicalData: PredictionData[] = []
-  const sortedMonths = Array.from(monthlyData.keys()).sort()
-
-  sortedMonths.forEach((month) => {
+  for (let i = 0; i < rawResult.historicalDataCount; i++) {
     historicalData.push({
-      date: month,
-      value: monthlyData.get(month) || 0,
+      date: dates[i],
+      value: rawResult.historicalData[i],
+      fitted: rawResult.fittedValues[i],
       isHistorical: true,
+      residual: rawResult.residuals[i],
+      trend: 'trendComponent' in rawResult ? rawResult.trendComponent[i] : undefined,
+      seasonal: 'seasonalComponent' in rawResult ? rawResult.seasonalComponent[i] : undefined,
     })
+  }
+
+  // 处理预测数据
+  const forecastData: PredictionData[] = []
+  for (let i = 0; i < rawResult.forecastDataCount; i++) {
+    const dataIndex = rawResult.historicalDataCount + i
+    forecastData.push({
+      date: dates[dataIndex],
+      value: rawResult.forecastValues[i],
+      fitted: rawResult.forecastValues[i],
+      isHistorical: false,
+      upper: 'forecastUpperBounds' in rawResult ? rawResult.forecastUpperBounds[i] : undefined,
+      lower: 'forecastLowerBounds' in rawResult ? rawResult.forecastLowerBounds[i] : undefined,
+    })
+  }
+
+  // 合并所有数据
+  const allData = [...historicalData, ...forecastData]
+
+  // 计算模型指标
+  const modelMetrics = {
+    mape: rawResult.mape,
+    confidenceLevel: 'confidenceLevel' in rawResult ? rawResult.confidenceLevel : 0.95,
+    fitScore: Math.max(0, (100 - rawResult.mape) / 100), // 基于MAPE计算拟合分数
+    modelType,
+  }
+
+  // 组件分析（仅Prophet模型有）
+  const components =
+    'trendComponent' in rawResult
+      ? {
+          trend: rawResult.trendComponent,
+          seasonal: rawResult.seasonalComponent,
+          residuals: rawResult.residuals,
+        }
+      : undefined
+
+  const result: ProcessedPredictionResult = {
+    historicalData,
+    forecastData,
+    allData,
+    modelMetrics,
+    components,
+  }
+
+  console.log('🧮 预测结果处理完成:', {
+    历史数据点: historicalData.length,
+    预测数据点: forecastData.length,
+    模型精度: modelMetrics.mape,
+    拟合分数: modelMetrics.fitScore,
   })
 
-  console.log('历史数据处理完成:', historicalData.length, '个月份')
-  return historicalData
+  return result
 }
 
 const calculateBusinessMetrics = (): BusinessMetrics => {
-  console.log('计算业务指标...')
+  console.log('📈 计算业务指标...')
 
-  if (!predictionResults.value || !historicalData.value.length) {
+  if (!predictionResult.value) {
     return {
       predictedTotalSales: 0,
       salesGrowth: 0,
@@ -1256,16 +1387,21 @@ const calculateBusinessMetrics = (): BusinessMetrics => {
       riskLevel: { type: 'warning', text: '暂无数据' },
       marketVolatility: 0,
       confidenceLevel: 0,
+      modelAccuracy: 0,
+      trendStrength: 0,
+      seasonalityIndex: 0,
     }
   }
 
+  const { historicalData, forecastData, modelMetrics, components } = predictionResult.value
+
   // 计算预测总销量
-  const predictedTotalSales = predictionResults.value.reduce((sum, item) => sum + item.value, 0)
+  const predictedTotalSales = forecastData.reduce((sum, item) => sum + item.value, 0)
 
   // 计算销量增长率
   const avgHistorical =
-    historicalData.value.reduce((sum, item) => sum + item.value, 0) / historicalData.value.length
-  const avgForecast = predictedTotalSales / predictionResults.value.length
+    historicalData.reduce((sum, item) => sum + item.value, 0) / historicalData.length
+  const avgForecast = predictedTotalSales / forecastData.length
   const salesGrowth = avgHistorical > 0 ? ((avgForecast - avgHistorical) / avgHistorical) * 100 : 0
 
   // 计算平均价格（基于选中车型）
@@ -1275,7 +1411,7 @@ const calculateBusinessMetrics = (): BusinessMetrics => {
   const avgPrice = selectedCarModel ? selectedCarModel.officialPrice : 220000
 
   // 计算库存建议
-  const avgMonthlySales = predictedTotalSales / predictionResults.value.length
+  const avgMonthlySales = predictedTotalSales / forecastData.length
   const safetyFactor = salesGrowth > 10 ? 1.8 : salesGrowth < -10 ? 2.2 : 2.0
   const recommendedInventory = Math.floor(avgMonthlySales * safetyFactor)
   const safetyStock = Math.floor(avgMonthlySales * 1.5)
@@ -1284,16 +1420,25 @@ const calculateBusinessMetrics = (): BusinessMetrics => {
   const predictedRevenue = predictedTotalSales * avgPrice
 
   // 计算市场波动性
-  const values = predictionResults.value.map((item) => item.value)
+  const values = forecastData.map((item) => item.value)
   const mean = values.reduce((sum, val) => sum + val, 0) / values.length
   const variance = values.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / values.length
   const marketVolatility = Math.sqrt(variance)
 
+  // 计算趋势强度
+  const trendStrength = components?.trend
+    ? calculateTrendStrength(components.trend)
+    : calculateTrendStrength(values)
+
+  // 计算季节性指数
+  const seasonalityIndex = components?.seasonal ? calculateSeasonalityIndex(components.seasonal) : 0
+
   // 计算风险等级
+  const fitScore = modelMetrics.fitScore
   let riskLevel: BusinessMetrics['riskLevel']
-  if (fitScore.value >= 0.9 && marketVolatility < 100) {
+  if (fitScore >= 0.9 && marketVolatility < 100) {
     riskLevel = { type: 'success', text: '低风险' }
-  } else if (fitScore.value >= 0.8 && marketVolatility < 200) {
+  } else if (fitScore >= 0.8 && marketVolatility < 200) {
     riskLevel = { type: 'warning', text: '中风险' }
   } else {
     riskLevel = { type: 'danger', text: '高风险' }
@@ -1308,23 +1453,48 @@ const calculateBusinessMetrics = (): BusinessMetrics => {
     avgPrice,
     riskLevel,
     marketVolatility,
-    confidenceLevel: fitScore.value * 100,
+    confidenceLevel: modelMetrics.confidenceLevel * 100,
+    modelAccuracy: 100 - modelMetrics.mape,
+    trendStrength,
+    seasonalityIndex,
   }
 
-  console.log('业务指标计算完成:', result)
+  console.log('📈 业务指标计算完成:', result)
   return result
 }
 
-const generateMonthlyBreakdown = () => {
-  if (!predictionResults.value) return []
+const calculateTrendStrength = (data: number[]): number => {
+  if (data.length < 2) return 0
 
-  const breakdown = predictionResults.value.map((item, index) => {
-    const previousValue = index > 0 ? predictionResults.value![index - 1].value : item.value
+  const firstHalf = data.slice(0, Math.floor(data.length / 2))
+  const secondHalf = data.slice(Math.floor(data.length / 2))
+
+  const firstAvg = firstHalf.reduce((sum, val) => sum + val, 0) / firstHalf.length
+  const secondAvg = secondHalf.reduce((sum, val) => sum + val, 0) / secondHalf.length
+
+  return firstAvg > 0 ? ((secondAvg - firstAvg) / firstAvg) * 100 : 0
+}
+
+const calculateSeasonalityIndex = (seasonalData: number[]): number => {
+  if (seasonalData.length === 0) return 0
+
+  const variance =
+    seasonalData.reduce((sum, val) => sum + Math.pow(val, 2), 0) / seasonalData.length
+  return Math.sqrt(variance)
+}
+
+const generateMonthlyBreakdown = () => {
+  if (!predictionResult.value) return []
+
+  const { forecastData, modelMetrics } = predictionResult.value
+
+  const breakdown = forecastData.map((item, index) => {
+    const previousValue = index > 0 ? forecastData[index - 1].value : item.value
     const growthRate = previousValue > 0 ? ((item.value - previousValue) / previousValue) * 100 : 0
 
-    // 基于拟合优度和波动性计算置信度
-    const baseConfidence = Math.floor(fitScore.value * 100)
-    const volatilityPenalty = Math.min(10, calculateVolatility() / 20)
+    // 基于模型精度计算置信度
+    const baseConfidence = Math.floor(100 - modelMetrics.mape)
+    const volatilityPenalty = Math.min(10, Math.abs(growthRate) / 5)
     const confidence = Math.max(60, baseConfidence - volatilityPenalty)
 
     // 风险评估
@@ -1341,6 +1511,8 @@ const generateMonthlyBreakdown = () => {
       growthRate,
       confidence,
       riskLevel,
+      upperBound: item.upper,
+      lowerBound: item.lower,
     }
   })
 
@@ -1349,9 +1521,9 @@ const generateMonthlyBreakdown = () => {
 }
 
 const calculateVolatility = (): number => {
-  if (!predictionResults.value || predictionResults.value.length < 3) return 0
+  if (!predictionResult.value || predictionResult.value.forecastData.length < 3) return 0
 
-  const values = predictionResults.value.map((item) => item.value)
+  const values = predictionResult.value.forecastData.map((item) => item.value)
   const mean = values.reduce((sum, val) => sum + val, 0) / values.length
   const variance = values.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / values.length
 
@@ -1359,7 +1531,7 @@ const calculateVolatility = (): number => {
 }
 
 // =============================================
-// 计算属性 - 业务指标
+// 🧮 计算属性 - 业务指标
 // =============================================
 
 const businessMetrics = computed<BusinessMetrics>(() => calculateBusinessMetrics())
@@ -1371,9 +1543,9 @@ const canPredict = computed(() => {
 })
 
 const trendDirection = computed(() => {
-  if (!predictionResults.value || predictionResults.value.length < 2) return 'stable'
+  if (!predictionResult.value || predictionResult.value.forecastData.length < 2) return 'stable'
 
-  const recent = predictionResults.value.slice(-3)
+  const recent = predictionResult.value.forecastData.slice(-3)
   const first = recent[0]?.value || 0
   const last = recent[recent.length - 1]?.value || 0
 
@@ -1382,6 +1554,7 @@ const trendDirection = computed(() => {
   return 'stable'
 })
 
+const fitScore = computed(() => predictionResult.value?.modelMetrics.fitScore || 0)
 const predictedTotalSales = computed(() => businessMetrics.value.predictedTotalSales)
 const salesGrowth = computed(() => businessMetrics.value.salesGrowth)
 const recommendedInventory = computed(() => businessMetrics.value.recommendedInventory)
@@ -1389,6 +1562,7 @@ const safetyStock = computed(() => businessMetrics.value.safetyStock)
 const predictedRevenue = computed(() => businessMetrics.value.predictedRevenue)
 const avgPrice = computed(() => businessMetrics.value.avgPrice / 10000) // 转换为万元
 const riskLevel = computed(() => businessMetrics.value.riskLevel)
+const predictionResults = computed(() => predictionResult.value?.allData || null)
 
 const salesChangeType = computed(() => {
   if (salesGrowth.value > 5) return 'success'
@@ -1398,6 +1572,21 @@ const salesChangeType = computed(() => {
 
 const businessInsights = computed((): BusinessInsight[] => {
   const insights: BusinessInsight[] = []
+
+  if (!predictionResult.value) return insights
+
+  const { modelMetrics } = predictionResult.value
+
+  // 高精度模型洞察
+  if (modelMetrics.mape < 5) {
+    insights.push({
+      id: 'high_accuracy',
+      type: 'opportunity',
+      icon: 'TrendCharts',
+      title: '高精度预测机会',
+      content: `模型精度达到${(100 - modelMetrics.mape).toFixed(1)}%，可作为重要决策依据进行资源配置和战略规划`,
+    })
+  }
 
   if (salesGrowth.value > 10) {
     insights.push({
@@ -1419,6 +1608,16 @@ const businessInsights = computed((): BusinessInsight[] => {
     })
   }
 
+  if (businessMetrics.value.seasonalityIndex > 50) {
+    insights.push({
+      id: 'seasonal_pattern',
+      type: 'recommendation',
+      icon: 'Calendar',
+      title: '季节性模式建议',
+      content: `检测到明显的季节性波动（指数：${businessMetrics.value.seasonalityIndex.toFixed(1)}），建议制定差异化的季节性营销策略`,
+    })
+  }
+
   if (recommendedInventory.value > 0) {
     const inventoryStatus = recommendedInventory.value > safetyStock.value * 1.3 ? '充足' : '紧张'
     insights.push({
@@ -1426,7 +1625,7 @@ const businessInsights = computed((): BusinessInsight[] => {
       type: 'recommendation',
       icon: 'Box',
       title: '库存优化建议',
-      content: `建议库存${recommendedInventory.value.toLocaleString()}台，当前库存状态${inventoryStatus}。建议根据季节性需求和市场变化及时调整库存策略。`,
+      content: `建议库存${recommendedInventory.value.toLocaleString()}台，当前库存状态${inventoryStatus}。建议根据预测波动性及时调整库存策略。`,
     })
   }
 
@@ -1434,11 +1633,11 @@ const businessInsights = computed((): BusinessInsight[] => {
 })
 
 // =============================================
-// 事件处理函数
+// 🎯 事件处理函数
 // =============================================
 
 const handleScenarioChange = () => {
-  predictionResults.value = null
+  predictionResult.value = null
   if (forecastChartInstance) {
     forecastChartInstance.clear()
   }
@@ -1457,14 +1656,14 @@ const getScenarioText = () => {
 }
 
 const handleCarModelChange = () => {
-  predictionResults.value = null
+  predictionResult.value = null
   if (forecastChartInstance) {
     forecastChartInstance.clear()
   }
 }
 
 const handleRegionChange = () => {
-  predictionResults.value = null
+  predictionResult.value = null
   if (forecastChartInstance) {
     forecastChartInstance.clear()
   }
@@ -1483,55 +1682,44 @@ const startPrediction = async () => {
   predicting.value = true
 
   try {
-    // 处理历史数据
-    historicalData.value = processHistoricalData(
-      forecastConfig.value.carModelId!,
-      forecastConfig.value.regionId!,
-    )
-
-    if (historicalData.value.length === 0) {
-      ElMessage.warning('未找到历史数据，无法进行预测')
-      return
-    }
-
-    // 调用预测API
     const periodMonths = parseInt(forecastConfig.value.period.replace('M', ''))
-    const predictionData = await fetchPrediction({
-      carModelId: forecastConfig.value.carModelId!,
-      regionId: forecastConfig.value.regionId!,
-      months: periodMonths,
-      modelType: forecastConfig.value.modelType,
-      arimaParams:
-        forecastConfig.value.modelType === 'ARIMA' ? forecastConfig.value.arimaParams : undefined,
-    })
+    let rawResult: ARIMADetailResult | ProphetDetailResult
+
+    // 根据模型类型调用不同的API
+    if (forecastConfig.value.modelType === 'ARIMA') {
+      rawResult = await fetchARIMADetailPrediction({
+        carModelId: forecastConfig.value.carModelId!,
+        regionId: forecastConfig.value.regionId!,
+        months: periodMonths,
+        p: forecastConfig.value.arimaParams.p,
+        d: forecastConfig.value.arimaParams.d,
+        q: forecastConfig.value.arimaParams.q,
+      })
+    } else {
+      rawResult = await fetchProphetDetailPrediction({
+        carModelId: forecastConfig.value.carModelId!,
+        regionId: forecastConfig.value.regionId!,
+        months: periodMonths,
+      })
+    }
 
     // 处理预测结果
-    if (predictionData && Array.isArray(predictionData)) {
-      predictionResults.value = predictionData.map((item: any) => ({
-        date: item.date || item.month,
-        value: item.value || item.prediction,
-        isHistorical: false,
-        upper: item.upper,
-        lower: item.lower,
-      }))
+    predictionResult.value = processDetailPredictionResult(
+      rawResult,
+      forecastConfig.value.modelType,
+    )
 
-      // 计算拟合优度
-      fitScore.value = predictionData.length > 0 ? predictionData[0].fitScore || 0.85 : 0.85
+    // 应用场景调整
+    applyScenarioAdjustments()
 
-      // 应用场景调整
-      applyScenarioAdjustments()
+    // 生成月度分解数据
+    generateMonthlyBreakdown()
 
-      // 生成月度分解数据
-      generateMonthlyBreakdown()
-
-      ElMessage.success('预测完成！')
-      await nextTick()
-      await initForecastChart()
-    } else {
-      throw new Error('预测数据格式错误')
-    }
+    ElMessage.success(`预测完成！模型精度: ${(100 - rawResult.mape).toFixed(1)}%`)
+    await nextTick()
+    await initForecastChart()
   } catch (error) {
-    console.error('预测失败:', error)
+    console.error('❌ 预测失败:', error)
     ElMessage.error('预测失败，请重试')
   } finally {
     predicting.value = false
@@ -1539,62 +1727,55 @@ const startPrediction = async () => {
 }
 
 const applyScenarioAdjustments = () => {
-  if (!predictionResults.value || forecastScenario.value === 'normal') return
+  if (!predictionResult.value || forecastScenario.value === 'normal') return
 
-  predictionResults.value = predictionResults.value.map((prediction, index) => {
-    let adjustment = 0
+  predictionResult.value.forecastData = predictionResult.value.forecastData.map(
+    (prediction, index) => {
+      let adjustment = 0
 
-    switch (forecastScenario.value) {
-      case 'newProduct':
-        adjustment = index > 3 ? (index - 3) * 15 : 0
-        break
-      case 'promotion':
-        adjustment =
-          index <= scenarioConfig.promotion.duration
-            ? (scenarioConfig.promotion.expectedLift * prediction.value) / 100
-            : 0
-        break
-      case 'competitor':
-        adjustment =
-          index > 2 ? (-scenarioConfig.competitor.marketLoss * prediction.value) / 100 : 0
-        break
-      case 'seasonal':
-        const intensity = scenarioConfig.seasonal.intensity
-        const multiplier = intensity === 'strong' ? 1.5 : intensity === 'weak' ? 0.5 : 1.0
-        adjustment = Math.sin((index + new Date().getMonth()) * 0.5) * 45 * multiplier
-        break
-    }
+      switch (forecastScenario.value) {
+        case 'newProduct':
+          adjustment = index > 3 ? (index - 3) * 15 : 0
+          break
+        case 'promotion':
+          adjustment =
+            index <= scenarioConfig.promotion.duration
+              ? (scenarioConfig.promotion.expectedLift * prediction.value) / 100
+              : 0
+          break
+        case 'competitor':
+          adjustment =
+            index > 2 ? (-scenarioConfig.competitor.marketLoss * prediction.value) / 100 : 0
+          break
+        case 'seasonal':
+          const intensity = scenarioConfig.seasonal.intensity
+          const multiplier = intensity === 'strong' ? 1.5 : intensity === 'weak' ? 0.5 : 1.0
+          adjustment = Math.sin((index + new Date().getMonth()) * 0.5) * 45 * multiplier
+          break
+      }
 
-    return {
-      ...prediction,
-      value: Math.max(80, prediction.value + adjustment),
-      upper: prediction.upper ? Math.max(80, prediction.upper + adjustment) : undefined,
-      lower: prediction.lower ? Math.max(80, prediction.lower + adjustment) : undefined,
-    }
-  })
-}
+      return {
+        ...prediction,
+        value: Math.max(80, prediction.value + adjustment),
+        upper: prediction.upper ? Math.max(80, prediction.upper + adjustment) : undefined,
+        lower: prediction.lower ? Math.max(80, prediction.lower + adjustment) : undefined,
+      }
+    },
+  )
 
-const getScenarioParams = () => {
-  switch (forecastScenario.value) {
-    case 'newProduct':
-      return scenarioConfig.newProduct
-    case 'promotion':
-      return scenarioConfig.promotion
-    case 'competitor':
-      return scenarioConfig.competitor
-    case 'seasonal':
-      return scenarioConfig.seasonal
-    default:
-      return {}
-  }
+  // 重新计算合并数据
+  predictionResult.value.allData = [
+    ...predictionResult.value.historicalData,
+    ...predictionResult.value.forecastData,
+  ]
 }
 
 // =============================================
-// 图表初始化函数
+// 📊 图表初始化函数
 // =============================================
 
 const initForecastChart = async () => {
-  if (!forecastChart.value || !predictionResults.value) return
+  if (!forecastChart.value || !predictionResult.value) return
 
   await nextTick()
 
@@ -1604,28 +1785,107 @@ const initForecastChart = async () => {
 
   forecastChartInstance = echarts.init(forecastChart.value)
 
-  const allData = [...historicalData.value, ...predictionResults.value]
+  const { historicalData, forecastData, allData } = predictionResult.value
   const dates = allData.map((item) => item.date)
-  const historicalValues = historicalData.value.map((item) => item.value)
-  const forecastValues = predictionResults.value.map((item) => item.value)
+  const historicalValues = historicalData.map((item) => item.value)
+  const fittedValues = historicalData.map((item) => item.fitted || item.value)
+  const forecastValues = forecastData.map((item) => item.value)
 
-  const forecastAligned = new Array(historicalData.value.length).fill(null).concat(forecastValues)
+  // 对齐数据以便在图表中正确显示
+  const historicalAligned = historicalValues.concat(new Array(forecastData.length).fill(null))
+  const fittedAligned = fittedValues.concat(new Array(forecastData.length).fill(null))
+  const forecastAligned = new Array(historicalData.length).fill(null).concat(forecastValues)
+
+  const series: any[] = [
+    {
+      name: '历史销量',
+      type: 'line',
+      data: historicalAligned,
+      itemStyle: { color: '#409EFF' },
+      lineStyle: { width: 3 },
+      symbol: 'circle',
+      symbolSize: 6,
+      label: {
+        show: showDataLabels.value,
+        position: 'top',
+        fontSize: 10,
+      },
+    },
+    {
+      name: '拟合值',
+      type: 'line',
+      data: fittedAligned,
+      itemStyle: { color: '#67C23A' },
+      lineStyle: { width: 2, type: 'solid' },
+      symbol: 'diamond',
+      symbolSize: 4,
+      label: {
+        show: showDataLabels.value,
+        position: 'bottom',
+        fontSize: 9,
+      },
+    },
+    {
+      name: '预测销量',
+      type: 'line',
+      data: forecastAligned,
+      itemStyle: { color: '#E6A23C' },
+      lineStyle: { width: 3, type: 'dashed' },
+      symbol: 'diamond',
+      symbolSize: 6,
+      label: {
+        show: showDataLabels.value,
+        position: 'top',
+        fontSize: 10,
+      },
+    },
+  ]
+
+  // 添加置信区间（仅ARIMA模型）
+  if (
+    forecastConfig.value.modelType === 'ARIMA' &&
+    forecastData.some((item) => item.upper && item.lower)
+  ) {
+    const upperBound = new Array(historicalData.length)
+      .fill(null)
+      .concat(forecastData.map((item) => item.upper || item.value))
+    const lowerBound = new Array(historicalData.length)
+      .fill(null)
+      .concat(forecastData.map((item) => item.lower || item.value))
+
+    series.push({
+      name: '置信区间上限',
+      type: 'line',
+      data: upperBound,
+      lineStyle: { opacity: 0 },
+      symbol: 'none',
+      stack: 'confidence-band',
+      areaStyle: { color: 'rgba(230, 162, 60, 0.2)' },
+    })
+
+    series.push({
+      name: '置信区间下限',
+      type: 'line',
+      data: lowerBound,
+      lineStyle: { opacity: 0 },
+      symbol: 'none',
+      stack: 'confidence-band',
+      areaStyle: { color: 'rgba(255, 255, 255, 0.8)' },
+      showInLegend: false,
+    })
+  }
 
   const option = {
     title: {
-      text: `${getScenarioText()}销售预测`,
+      text: `${getScenarioText()}销售预测 (${forecastConfig.value.modelType})`,
+      subtext: `模型精度: ${(100 - predictionResult.value.modelMetrics.mape).toFixed(1)}%`,
       left: 'center',
-      textStyle: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        color: '#333',
-      },
+      textStyle: { fontSize: 16, fontWeight: 'bold', color: '#333' },
+      subtextStyle: { fontSize: 12, color: '#666' },
     },
     tooltip: {
       trigger: 'axis',
-      axisPointer: {
-        type: 'cross',
-      },
+      axisPointer: { type: 'cross' },
       formatter: (params: any) => {
         let result = `<div style="font-weight: bold; margin-bottom: 6px;">${params[0].axisValue}</div>`
 
@@ -1633,7 +1893,8 @@ const initForecastChart = async () => {
           if (param.value !== null && param.value !== undefined) {
             const color = param.color
             const seriesName = param.seriesName
-            const value = param.value.toLocaleString()
+            const value =
+              typeof param.value === 'number' ? param.value.toLocaleString() : param.value
             result += `<div style="margin-bottom: 3px;">
               <span style="display: inline-block; width: 10px; height: 10px; background: ${color}; border-radius: 50%; margin-right: 6px;"></span>
               ${seriesName}: <strong>${value}</strong> 台
@@ -1641,10 +1902,12 @@ const initForecastChart = async () => {
           }
         })
 
-        if (params[0].dataIndex >= historicalData.value.length) {
+        const dataIndex = params[0].dataIndex
+        if (dataIndex >= historicalData.length) {
           result += `<div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #eee;">
             <div style="font-size: 12px; color: #666;">预测场景: ${getScenarioText()}</div>
-            <div style="font-size: 12px; color: #666;">置信度: ${(fitScore.value * 100).toFixed(1)}%</div>
+            <div style="font-size: 12px; color: #666;">模型: ${forecastConfig.value.modelType}</div>
+            <div style="font-size: 12px; color: #666;">置信度: ${(predictionResult.value!.modelMetrics.confidenceLevel * 100).toFixed(1)}%</div>
           </div>`
         }
 
@@ -1652,11 +1915,9 @@ const initForecastChart = async () => {
       },
     },
     legend: {
-      data: ['历史销量', '预测销量', '置信区间'],
+      data: series.filter((s) => s.showInLegend !== false).map((s) => s.name),
       top: 30,
-      textStyle: {
-        fontSize: 12,
-      },
+      textStyle: { fontSize: 12 },
     },
     grid: {
       left: '3%',
@@ -1668,13 +1929,8 @@ const initForecastChart = async () => {
     xAxis: {
       type: 'category',
       data: dates,
-      axisLabel: {
-        fontSize: 10,
-        rotate: 45,
-      },
-      axisTick: {
-        alignWithLabel: true,
-      },
+      axisLabel: { fontSize: 10, rotate: 45 },
+      axisTick: { alignWithLabel: true },
     },
     yAxis: {
       type: 'value',
@@ -1690,97 +1946,26 @@ const initForecastChart = async () => {
         },
       },
       splitLine: {
-        lineStyle: {
-          type: 'dashed',
-          color: '#e0e6ed',
-        },
+        lineStyle: { type: 'dashed', color: '#e0e6ed' },
       },
     },
-    series: [
+    series,
+    dataZoom: [
       {
-        name: '历史销量',
-        type: 'line',
-        data: historicalValues.concat(new Array(predictionResults.value.length).fill(null)),
-        itemStyle: {
-          color: '#409EFF',
-        },
-        lineStyle: {
-          width: 3,
-        },
-        symbol: 'circle',
-        symbolSize: 6,
-        label: {
-          show: showDataLabels.value,
-          position: 'top',
-          fontSize: 10,
-        },
-      },
-      {
-        name: '预测销量',
-        type: 'line',
-        data: forecastAligned,
-        itemStyle: {
-          color: '#E6A23C',
-        },
-        lineStyle: {
-          width: 3,
-          type: 'dashed',
-        },
-        symbol: 'diamond',
-        symbolSize: 6,
-        label: {
-          show: showDataLabels.value,
-          position: 'top',
-          fontSize: 10,
-        },
+        type: 'slider',
+        show: true,
+        start: 0,
+        end: 100,
+        height: 20,
       },
     ],
-  }
-
-  // 添加置信区间
-  if (predictionResults.value.some((item) => item.upper && item.lower)) {
-    const upperBound = new Array(historicalData.value.length)
-      .fill(null)
-      .concat(predictionResults.value.map((item) => item.upper || item.value))
-    const lowerBound = new Array(historicalData.value.length)
-      .fill(null)
-      .concat(predictionResults.value.map((item) => item.lower || item.value))
-
-    option.series.push({
-      name: '置信区间',
-      type: 'line',
-      data: upperBound,
-      lineStyle: {
-        opacity: 0,
-      },
-      symbol: 'none',
-      stack: 'confidence-band',
-      areaStyle: {
-        color: 'rgba(230, 162, 60, 0.2)',
-      },
-    } as any)
-
-    option.series.push({
-      name: '置信区间下限',
-      type: 'line',
-      data: lowerBound,
-      lineStyle: {
-        opacity: 0,
-      },
-      symbol: 'none',
-      stack: 'confidence-band',
-      areaStyle: {
-        color: 'rgba(255, 255, 255, 0.8)',
-      },
-      showInLegend: false,
-    } as any)
   }
 
   forecastChartInstance.setOption(option)
 }
 
 // =============================================
-// 工具函数
+// 🛠️ 工具函数
 // =============================================
 
 const resetConfig = () => {
@@ -1789,20 +1974,12 @@ const resetConfig = () => {
     regionId: null,
     modelType: 'ARIMA',
     period: '6M',
-    arimaParams: {
-      p: 1,
-      d: 1,
-      q: 1,
-    },
-    prophetParams: {
-      seasonality: true,
-      changepoints: 5,
-      confidence: 95,
-    },
+    arimaParams: { p: 1, d: 1, q: 1 },
+    prophetParams: { seasonality: true, changepoints: 5, confidence: 95 },
   }
 
   forecastScenario.value = 'normal'
-  predictionResults.value = null
+  predictionResult.value = null
 
   if (forecastChartInstance) {
     forecastChartInstance.clear()
@@ -1824,17 +2001,34 @@ const refreshData = async () => {
 }
 
 const exportResults = () => {
-  if (!predictionResults.value) return
+  if (!predictionResult.value) return
+
+  const { allData, modelMetrics } = predictionResult.value
 
   const csvContent = [
-    ['日期', '预测值', '置信区间上限', '置信区间下限', '预测场景', '拟合优度'],
-    ...predictionResults.value.map((item) => [
+    [
+      '日期',
+      '类型',
+      '实际值/预测值',
+      '拟合值',
+      '置信区间上限',
+      '置信区间下限',
+      '预测场景',
+      '模型类型',
+      'MAPE',
+      '置信水平',
+    ],
+    ...allData.map((item) => [
       item.date,
+      item.isHistorical ? '历史' : '预测',
       item.value,
+      item.fitted || '',
       item.upper || '',
       item.lower || '',
       getScenarioText(),
-      fitScore.value.toFixed(4),
+      forecastConfig.value.modelType,
+      modelMetrics.mape.toFixed(4),
+      (modelMetrics.confidenceLevel * 100).toFixed(1) + '%',
     ]),
   ]
     .map((row) => row.join(','))
@@ -1843,7 +2037,7 @@ const exportResults = () => {
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
   const link = document.createElement('a')
   link.href = URL.createObjectURL(blob)
-  link.download = `sales_forecast_${forecastScenario.value}_${new Date().toISOString().slice(0, 10)}.csv`
+  link.download = `sales_forecast_${forecastConfig.value.modelType}_${forecastScenario.value}_${new Date().toISOString().slice(0, 10)}.csv`
   link.click()
 
   ElMessage.success('预测结果已导出')
@@ -1861,16 +2055,9 @@ const updateChartLabels = () => {
 
   forecastChartInstance.setOption({
     series: [
-      {
-        label: {
-          show: showDataLabels.value,
-        },
-      },
-      {
-        label: {
-          show: showDataLabels.value,
-        },
-      },
+      { label: { show: showDataLabels.value } },
+      { label: { show: showDataLabels.value } },
+      { label: { show: showDataLabels.value } },
     ],
   })
 }
@@ -1923,9 +2110,10 @@ const getRiskTagType = (riskLevel: string) => {
 }
 
 const getConfidenceDescription = () => {
-  if (fitScore.value >= 0.9) {
+  const accuracy = businessMetrics.value.modelAccuracy
+  if (accuracy >= 95) {
     return '预测结果具有很高的可信度，可以作为重要的决策依据。'
-  } else if (fitScore.value >= 0.8) {
+  } else if (accuracy >= 90) {
     return '预测结果具有较高的可信度，建议结合其他因素综合判断。'
   } else {
     return '预测结果可信度一般，建议谨慎使用，需要更多数据验证。'
@@ -1943,7 +2131,7 @@ const handleResize = () => {
 }
 
 // =============================================
-// 生命周期
+// 🔄 生命周期
 // =============================================
 
 onMounted(async () => {
@@ -1953,7 +2141,7 @@ onMounted(async () => {
     await loadAllBaseData()
     window.addEventListener('resize', handleResize)
   } catch (error) {
-    console.error('页面初始化失败:', error)
+    console.error('❌ 页面初始化失败:', error)
     ElMessage.error('初始化失败，部分功能可能不可用')
   }
 })
