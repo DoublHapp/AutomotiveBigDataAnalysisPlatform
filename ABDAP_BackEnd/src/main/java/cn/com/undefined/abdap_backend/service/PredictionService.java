@@ -10,8 +10,10 @@ import cn.com.undefined.abdap_backend.util.ProphetUtil;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -217,12 +219,17 @@ public class PredictionService {
     }
 
     private List<Double> extractAndValidateSalesData(List<SaleRecord> saleRecords) {
-        // 将销售数据按日期排序
-        saleRecords.sort((r1, r2) -> r1.getSaleMonth().compareTo(r2.getSaleMonth()));
-        // 提取销售数量数据并转换为Double列表
-        List<Double> salesData = saleRecords.stream()
-                .filter(record -> record.getSaleCount() != null) // 过滤空值
-                .map(record -> record.getSaleCount().doubleValue()) // 转换为Double
+        // 将销售数据按日期分组并合并相同日期的销售量
+        Map<LocalDate, Integer> salesByDate = saleRecords.stream()
+                .filter(record -> record.getSaleCount() != null && record.getSaleMonth() != null) // 过滤空值
+                .collect(Collectors.groupingBy(
+                        SaleRecord::getSaleMonth,
+                        Collectors.summingInt(SaleRecord::getSaleCount)));
+
+        // 按日期排序并提取销售数量
+        List<Double> salesData = salesByDate.entrySet().stream()
+                .sorted(Map.Entry.comparingByKey()) // 按日期排序
+                .map(entry -> entry.getValue().doubleValue()) // 转换为Double
                 .collect(Collectors.toList());
 
         // 数据量验证

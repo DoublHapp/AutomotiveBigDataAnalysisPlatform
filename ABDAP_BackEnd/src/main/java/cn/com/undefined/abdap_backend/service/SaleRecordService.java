@@ -143,6 +143,26 @@ public class SaleRecordService {
     }
 
     /**
+     * 根据车型ID查询销售记录（返回原始数据）
+     */
+    public List<SaleRecord> getSaleRecordsByCarModelIdRaw(Long carModelId) {
+        return repository.findByCarModelId(carModelId);
+    }
+
+    /**
+     * 根据车型ID和地区名称（省）查询销售记录（返回原始数据）
+     */
+    public List<SaleRecord> getSaleRecordsByCarModelIdAndRegionNameRaw(Long carModelId, String regionName) {
+        // 先根据地区名称查找所有子地区id
+        List<Long> regionIds = regionRepository.findByParentRegion(regionName).stream()
+                .map(Region::getRegionId)
+                .collect(Collectors.toList());
+
+        // 根据车型ID和地区ID查询销售记录（返回原始数据）
+        return repository.findByCarModelIdsAndRegionIds(List.of(carModelId), regionIds);
+    }
+
+    /**
      * 根据车型ID和地区名称查询销售记录
      */
     public List<SaleRecordDTO> findByCarModelIdAndRegionName(Long carModelId, String regionName) {

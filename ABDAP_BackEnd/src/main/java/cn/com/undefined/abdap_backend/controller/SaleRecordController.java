@@ -20,7 +20,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -78,8 +77,8 @@ public class SaleRecordController {
     @GetMapping(params = "regionName")
     public ResponseEntity<ApiResponse<List<SaleRecordDTO>>> getByRegionName(@RequestParam String regionName) {
         List<Long> regionIds = regionService.getRegionsByParent(regionName).stream()
-                    .map(RegionDTO::getRegionId)
-                    .collect(Collectors.toList());
+                .map(RegionDTO::getRegionId)
+                .collect(Collectors.toList());
         List<SaleRecordDTO> records = service.findByRegionIds(regionIds);
         return ResponseUtil.success(records);
     }
@@ -104,12 +103,11 @@ public class SaleRecordController {
     public ResponseEntity<ApiResponse<List<SaleRecordDTO>>> getByCarModelIdAndRegionName(
             @RequestParam Long carModelId,
             @RequestParam String regionName) {
-        
-        return getMultipleSaleRecords(List.of(carModelId), 
-                null, 
+
+        return getMultipleSaleRecords(List.of(carModelId),
+                null,
                 List.of(regionName));
     }
-
 
     /**
      * 获取指定多个车型id、多个地区id或多个省级下的销售数据
@@ -138,50 +136,44 @@ public class SaleRecordController {
     }
 
     /**
+     * 根据省份名称获取复杂结构化销售数据
+     * 返回指定省份下的月度销售、品牌销售和地区销售的聚合数据
      * 
-     * 按照如下数据结构的查询和返回：
-     * 请求参数：
-     * {
-     * "regionId": "1",
-     * }
-     * 返回的data结构：
-     * "monthlySales": [
-     * {
-     * "date": "2025-04",
-     * "salesVolume": 1200,
-     * "salesAmount": 1800000,
-     * },
-     * {
-     * "date": "2025-05",
-     * "salesVolume": 1100,
-     * "salesAmount": 1700000,
-     * }
-     * ],
-     * "brandSales": [
-     * {
-     * "brand": "丰田",
-     * "model": "卡罗拉",
-     * "totalVolume": 300
-     * },
-     * {
-     * "brand": "比亚迪",
-     * "model": "汉",
-     * "totalVolume": 260
-     * }
-     * ],
-     * "regionSales": [
-     * {
-     * "region": "广州市",
-     * "salesVolume": 600
-     * },
-     * {
-     * "region": "深圳市",
-     * "salesVolume": 500
-     * }
-     * ]
+     * GET /api/sale-records/complex-structure?regionName={regionName}
      * 
-     * @param regionName 省份名
-     * @return
+     * @param regionName 省份名称
+     * @return ResponseEntity<ApiResponse<Object>> 包含三种维度聚合数据的复杂结构
+     * 
+     * @example
+     * 
+     * <pre>
+     * {
+     *   "status": 200,
+     *   "message": "操作成功",
+     *   "data": {
+     *     "monthlySales": [
+     *       {
+     *         "date": "2025-04",
+     *         "salesVolume": 1200,
+     *         "salesAmount": 1800000
+     *       }
+     *     ],
+     *     "brandSales": [
+     *       {
+     *         "brand": "丰田",
+     *         "model": "卡罗拉",
+     *         "totalVolume": 300
+     *       }
+     *     ],
+     *     "regionSales": [
+     *       {
+     *         "region": "广州市",
+     *         "salesVolume": 600
+     *       }
+     *     ]
+     *   }
+     * }
+     * </pre>
      */
     @GetMapping("/complex-structure")
     public ResponseEntity<ApiResponse<Object>> getComplexStructureDataByRegionId(@RequestParam String regionName) {
