@@ -28,9 +28,7 @@
       <template #header>
         <div class="filter-header">
           <span>筛选条件</span>
-          <el-button size="small" @click="resetFilters" :icon="RefreshRight">
-            重置筛选
-          </el-button>
+          <el-button size="small" @click="resetFilters" :icon="RefreshRight"> 重置筛选 </el-button>
         </div>
       </template>
       <div class="filter-content">
@@ -62,8 +60,8 @@
             <el-form-item label="车型筛选:">
               <el-select v-model="selectedCarModel" @change="handleFilterChange" clearable>
                 <el-option label="全部车型" value="" />
-                <el-option 
-                  v-for="carModel in availableCarModels" 
+                <el-option
+                  v-for="carModel in availableCarModels"
                   :key="carModel.carModelId"
                   :label="`${carModel.brandName} ${carModel.modelName}`"
                   :value="carModel.carModelId.toString()"
@@ -75,8 +73,8 @@
             <el-form-item label="地区筛选:">
               <el-select v-model="selectedRegion" @change="handleFilterChange" clearable>
                 <el-option label="全部地区" value="" />
-                <el-option 
-                  v-for="region in availableRegions" 
+                <el-option
+                  v-for="region in availableRegions"
                   :key="region.regionId"
                   :label="region.regionName"
                   :value="region.regionId.toString()"
@@ -95,9 +93,9 @@
           <span>快速对比 ({{ selectedModels.length }}/3)</span>
           <div class="compare-actions">
             <el-button size="small" @click="clearComparison">清空</el-button>
-            <el-button 
-              size="small" 
-              type="primary" 
+            <el-button
+              size="small"
+              type="primary"
               @click="startComparison"
               :disabled="selectedModels.length < 2"
             >
@@ -107,11 +105,7 @@
         </div>
       </template>
       <div class="comparison-list">
-        <div 
-          v-for="model in selectedModels" 
-          :key="model.id" 
-          class="comparison-item"
-        >
+        <div v-for="model in selectedModels" :key="model.id" class="comparison-item">
           <img :src="model.image" :alt="model.name" class="model-thumb" />
           <div class="model-info">
             <span class="model-name">{{ model.brand }} {{ model.name }}</span>
@@ -353,7 +347,6 @@
   </div>
 </template>
 
-
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
@@ -377,10 +370,10 @@ import axios from 'axios'
 const router = useRouter()
 
 // =============================================
-// 🏗️ 接口定义
+// 接口定义
 // =============================================
 
-// 📊 基础数据层 - 直接从API获取
+// 基础数据层 - 直接从API获取
 interface CarModel {
   carModelId: number
   modelName: string
@@ -421,7 +414,7 @@ interface Opinion {
   score: number
 }
 
-// 📊 基础数据存储
+// 基础数据存储
 interface BaseData {
   carModels: CarModel[]
   saleRecords: SaleRecord[]
@@ -431,7 +424,7 @@ interface BaseData {
   opinions: Opinion[]
 }
 
-// 🧮 计算数据层 - 基于基础数据计算
+// 计算数据层 - 基于基础数据计算
 interface ProcessedCarModel {
   id: number
   name: string
@@ -464,23 +457,23 @@ interface SelectedModel {
 }
 
 // =============================================
-// 🎛️ 响应式数据
+// 响应式数据
 // =============================================
 
 const loading = ref(false)
 const analyzing = ref(false)
 
-// 📊 基础数据存储
+// 基础数据存储
 const baseData = ref<BaseData>({
   carModels: [],
   saleRecords: [],
   regions: [],
   topLevelRegions: [],
   nonTopLevelRegions: [],
-  opinions: []
+  opinions: [],
 })
 
-// 🧮 计算后的业务数据
+// 计算后的业务数据
 const hotCarList = ref<ProcessedCarModel[]>([])
 const availableCarModels = ref<CarModel[]>([])
 const availableRegions = ref<Region[]>([])
@@ -509,7 +502,7 @@ const trendChart = ref<HTMLDivElement>()
 let trendChartInstance: echarts.ECharts | null = null
 
 // =============================================
-// 🧮 计算属性
+// 计算属性
 // =============================================
 
 const paginatedCarList = computed(() => {
@@ -519,22 +512,22 @@ const paginatedCarList = computed(() => {
 })
 
 // =============================================
-// 🌐 API 调用函数
+// API 调用函数
 // =============================================
 
 const fetchCarModels = async (): Promise<CarModel[]> => {
   try {
-    console.log('🚀 正在获取车型列表...')
+    console.log('正在获取车型列表...')
     const response = await axios.get('/api/car-models')
-    
+
     if (response.data.status === 200 && response.data.data) {
-      console.log('✅ 获取车型数据成功:', response.data.data.length, '个车型')
+      console.log('获取车型数据成功:', response.data.data.length, '个车型')
       return response.data.data
     } else {
       throw new Error(`API返回错误状态: ${response.data.status}`)
     }
   } catch (error) {
-    console.error('❌ 获取车型列表失败:', error)
+    console.error('获取车型列表失败:', error)
     ElMessage.error('车型数据加载失败')
     throw error
   }
@@ -545,9 +538,9 @@ const fetchSaleRecords = async (params?: {
   regionId?: number
 }): Promise<SaleRecord[]> => {
   try {
-    console.log('🚀 正在获取销售记录...')
+    console.log('正在获取销售记录...')
     let url = '/api/sale-records'
-    
+
     if (params?.carModelId && params?.regionId) {
       url = `/api/sale-records?carModelId=${params.carModelId}&regionId=${params.regionId}`
     } else if (params?.carModelId) {
@@ -555,17 +548,17 @@ const fetchSaleRecords = async (params?: {
     } else if (params?.regionId) {
       url = `/api/sale-records?regionId=${params.regionId}`
     }
-    
+
     const response = await axios.get(url)
-    
+
     if (response.data.status === 200 && response.data.data) {
-      console.log('✅ 获取销售记录成功:', response.data.data.length, '条记录')
+      console.log('获取销售记录成功:', response.data.data.length, '条记录')
       return response.data.data
     } else {
       throw new Error(`API返回错误状态: ${response.data.status}`)
     }
   } catch (error) {
-    console.error('❌ 获取销售记录失败:', error)
+    console.error('获取销售记录失败:', error)
     ElMessage.error('销售数据加载失败')
     throw error
   }
@@ -573,17 +566,17 @@ const fetchSaleRecords = async (params?: {
 
 const fetchRegions = async (): Promise<Region[]> => {
   try {
-    console.log('🚀 正在获取地区信息...')
+    console.log('正在获取地区信息...')
     const response = await axios.get('/api/regions')
-    
+
     if (response.data.status === 200 && response.data.data) {
-      console.log('✅ 获取地区信息成功:', response.data.data.length, '个地区')
+      console.log('获取地区信息成功:', response.data.data.length, '个地区')
       return response.data.data
     } else {
       throw new Error(`API返回错误状态: ${response.data.status}`)
     }
   } catch (error) {
-    console.error('❌ 获取地区信息失败:', error)
+    console.error('获取地区信息失败:', error)
     ElMessage.error('地区数据加载失败')
     throw error
   }
@@ -591,17 +584,17 @@ const fetchRegions = async (): Promise<Region[]> => {
 
 const fetchTopLevelRegions = async (): Promise<Region[]> => {
   try {
-    console.log('🚀 正在获取省份信息...')
+    console.log('正在获取省份信息...')
     const response = await axios.get('/api/regions/top-level')
-    
+
     if (response.data.status === 200 && response.data.data) {
-      console.log('✅ 获取省份信息成功:', response.data.data.length, '个省份')
+      console.log('获取省份信息成功:', response.data.data.length, '个省份')
       return response.data.data
     } else {
       throw new Error(`API返回错误状态: ${response.data.status}`)
     }
   } catch (error) {
-    console.error('❌ 获取省份信息失败:', error)
+    console.error('获取省份信息失败:', error)
     ElMessage.error('省份数据加载失败')
     throw error
   }
@@ -609,17 +602,17 @@ const fetchTopLevelRegions = async (): Promise<Region[]> => {
 
 const fetchNonTopLevelRegions = async (): Promise<Region[]> => {
   try {
-    console.log('🚀 正在获取城市信息...')
+    console.log('正在获取城市信息...')
     const response = await axios.get('/api/regions/non-top-level')
-    
+
     if (response.data.status === 200 && response.data.data) {
-      console.log('✅ 获取城市信息成功:', response.data.data.length, '个城市')
+      console.log('获取城市信息成功:', response.data.data.length, '个城市')
       return response.data.data
     } else {
       throw new Error(`API返回错误状态: ${response.data.status}`)
     }
   } catch (error) {
-    console.error('❌ 获取城市信息失败:', error)
+    console.error('获取城市信息失败:', error)
     ElMessage.error('城市数据加载失败')
     throw error
   }
@@ -627,104 +620,106 @@ const fetchNonTopLevelRegions = async (): Promise<Region[]> => {
 
 const fetchOpinions = async (): Promise<Opinion[]> => {
   try {
-    console.log('🚀 正在获取口碑数据...')
+    console.log('正在获取口碑数据...')
     const response = await axios.get('/api/opinions')
-    
+
     if (response.data.status === 200 && response.data.data) {
-      console.log('✅ 获取口碑数据成功:', response.data.data.length, '条评价')
+      console.log('获取口碑数据成功:', response.data.data.length, '条评价')
       return response.data.data
     } else {
       throw new Error(`API返回错误状态: ${response.data.status}`)
     }
   } catch (error) {
-    console.error('❌ 获取口碑数据失败:', error)
+    console.error('获取口碑数据失败:', error)
     ElMessage.error('口碑数据加载失败')
     throw error
   }
 }
 
 // =============================================
-// 📊 基础数据加载函数
+// 基础数据加载函数
 // =============================================
 
 const loadAllBaseData = async () => {
   try {
-    console.log('📊 开始加载基础数据...')
-    
-    const [carModels, saleRecords, regions, topLevelRegions, nonTopLevelRegions, opinions] = 
+    console.log('开始加载基础数据...')
+
+    const [carModels, saleRecords, regions, topLevelRegions, nonTopLevelRegions, opinions] =
       await Promise.all([
         fetchCarModels(),
         fetchSaleRecords(),
         fetchRegions(),
         fetchTopLevelRegions(),
         fetchNonTopLevelRegions(),
-        fetchOpinions()
+        fetchOpinions(),
       ])
-    
+
     baseData.value = {
       carModels,
       saleRecords,
       regions,
       topLevelRegions,
       nonTopLevelRegions,
-      opinions
+      opinions,
     }
-    
-    console.log('📊 基础数据加载完成:', {
+
+    console.log('基础数据加载完成:', {
       车型数量: carModels.length,
       销售记录数量: saleRecords.length,
       地区数量: regions.length,
       省份数量: topLevelRegions.length,
       城市数量: nonTopLevelRegions.length,
-      口碑数量: opinions.length
+      口碑数量: opinions.length,
     })
-    
+
     // 更新可用选项
     availableCarModels.value = carModels
     availableRegions.value = [...topLevelRegions, ...nonTopLevelRegions]
-    
+
     ElMessage.success('基础数据加载完成')
-    
   } catch (error) {
-    console.error('❌ 基础数据加载失败:', error)
+    console.error('基础数据加载失败:', error)
     ElMessage.error('数据加载失败，请检查网络连接')
     throw error
   }
 }
 
 // =============================================
-// 🧮 数据处理函数
+// 数据处理函数
 // =============================================
 
 const processHotCarData = () => {
-  console.log('📊 开始处理热门车型数据...')
-  
+  console.log('开始处理热门车型数据...')
+
   if (baseData.value.saleRecords.length === 0) {
     console.warn('销售记录为空')
     hotCarList.value = []
     return
   }
-  
+
   // 1. 按车型聚合销售数据
-  const carModelSalesMap = new Map<number, {
-    totalSales: number
-    totalAmount: number
-    monthlyData: { month: string, sales: number, amount: number }[]
-  }>()
-  
+  const carModelSalesMap = new Map<
+    number,
+    {
+      totalSales: number
+      totalAmount: number
+      monthlyData: { month: string; sales: number; amount: number }[]
+    }
+  >()
+
   // 时间筛选
   let filteredRecords = baseData.value.saleRecords
-  
+
   if (timeRange.value === 'custom' && customDateRange.value) {
     const [startDate, endDate] = customDateRange.value
-    filteredRecords = filteredRecords.filter(record => {
+    filteredRecords = filteredRecords.filter((record) => {
       const recordDate = new Date(record.saleMonth)
       return recordDate >= startDate && recordDate <= endDate
     })
   } else if (timeRange.value !== 'custom') {
     const currentDate = new Date()
     let monthsBack = 12
-    
+
     switch (timeRange.value) {
       case 'month':
         monthsBack = 1
@@ -736,62 +731,62 @@ const processHotCarData = () => {
         monthsBack = 12
         break
     }
-    
+
     const startDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - monthsBack, 1)
-    filteredRecords = filteredRecords.filter(record => {
+    filteredRecords = filteredRecords.filter((record) => {
       const recordDate = new Date(record.saleMonth)
       return recordDate >= startDate
     })
   }
-  
+
   // 车型筛选
   if (selectedCarModel.value) {
     const selectedModelId = parseInt(selectedCarModel.value)
-    filteredRecords = filteredRecords.filter(record => record.carModelId === selectedModelId)
+    filteredRecords = filteredRecords.filter((record) => record.carModelId === selectedModelId)
   }
-  
+
   // 地区筛选
   if (selectedRegion.value) {
     const selectedRegionId = parseInt(selectedRegion.value)
-    filteredRecords = filteredRecords.filter(record => record.regionId === selectedRegionId)
+    filteredRecords = filteredRecords.filter((record) => record.regionId === selectedRegionId)
   }
-  
+
   console.log('筛选后销售记录数:', filteredRecords.length)
-  
+
   // 2. 聚合数据
-  filteredRecords.forEach(record => {
+  filteredRecords.forEach((record) => {
     const carModelId = record.carModelId
     if (!carModelSalesMap.has(carModelId)) {
       carModelSalesMap.set(carModelId, {
         totalSales: 0,
         totalAmount: 0,
-        monthlyData: []
+        monthlyData: [],
       })
     }
-    
+
     const existing = carModelSalesMap.get(carModelId)!
     existing.totalSales += record.saleCount
     existing.totalAmount += record.saleAmount
     existing.monthlyData.push({
       month: record.saleMonth,
       sales: record.saleCount,
-      amount: record.saleAmount
+      amount: record.saleAmount,
     })
   })
-  
+
   // 3. 计算同比增长率
   const calculateGrowthRate = (monthlyData: any[]): number => {
     const currentYear = new Date().getFullYear()
     const lastYear = currentYear - 1
-    
+
     const currentYearSales = monthlyData
-      .filter(item => new Date(item.month).getFullYear() === currentYear)
+      .filter((item) => new Date(item.month).getFullYear() === currentYear)
       .reduce((sum, item) => sum + item.sales, 0)
-      
+
     const lastYearSales = monthlyData
-      .filter(item => new Date(item.month).getFullYear() === lastYear)
+      .filter((item) => new Date(item.month).getFullYear() === lastYear)
       .reduce((sum, item) => sum + item.sales, 0)
-    
+
     if (lastYearSales > 0) {
       return ((currentYearSales - lastYearSales) / lastYearSales) * 100
     } else if (currentYearSales > 0) {
@@ -799,56 +794,56 @@ const processHotCarData = () => {
     }
     return 0
   }
-  
+
   // 4. 获取用户评分
   const getCarModelRating = (carModelId: number): number => {
-    const opinion = baseData.value.opinions.find(o => o.carModelId === carModelId)
+    const opinion = baseData.value.opinions.find((o) => o.carModelId === carModelId)
     return opinion ? opinion.score : 3.5
   }
-  
+
   // 5. 生成最终排行数据
   const processedData: ProcessedCarModel[] = baseData.value.carModels
-    .filter(carModel => carModelSalesMap.has(carModel.carModelId))
-    .map(carModel => {
+    .filter((carModel) => carModelSalesMap.has(carModel.carModelId))
+    .map((carModel) => {
       const salesData = carModelSalesMap.get(carModel.carModelId)!
       const salesGrowth = calculateGrowthRate(salesData.monthlyData)
       const rating = getCarModelRating(carModel.carModelId)
-      
+
       // 计算热度指数
       const hotIndex = calculateHotIndex({
         sales: salesData.totalSales,
         salesGrowth,
-        rating
+        rating,
       })
-      
+
       // 计算性价比评分
       const avgPrice = carModel.officialPrice / 10000 // 转换为万元
       const valueScore = calculateValueScore(avgPrice, carModel.engineType)
-      
+
       // 车型类型映射
       const typeMapping: Record<string, string> = {
-        'SUV': 'SUV',
-        '轿车': '轿车',
-        'MPV': 'MPV'
+        SUV: 'SUV',
+        轿车: '轿车',
+        MPV: 'MPV',
       }
       const carType = typeMapping[carModel.driveType || 'SUV'] || '轿车'
-      
+
       // 变速箱映射
       const transmissionMapping: Record<string, string> = {
-        '纯电动': '单速变速器',
-        '混合动力': 'CVT',
-        '燃油': '8AT'
+        纯电动: '单速变速器',
+        混合动力: 'CVT',
+        燃油: '8AT',
       }
       const transmission = transmissionMapping[carModel.engineType] || '自动变速器'
-      
+
       // 价格区间
       const priceMin = Math.max(avgPrice - 5, avgPrice * 0.8)
       const priceMax = avgPrice + 8
       const priceRange = `${priceMin.toFixed(0)}-${priceMax.toFixed(0)}万`
-      
+
       // 特色功能
       const keyFeatures = generateKeyFeatures(carModel)
-      
+
       return {
         id: carModel.carModelId,
         name: carModel.modelName,
@@ -869,10 +864,10 @@ const processHotCarData = () => {
         image: generateCarImage(carModel),
         isHot: hotIndex > 800,
         isNew: isNewModel(carModel.launchDate),
-        keyFeatures
+        keyFeatures,
       }
     })
-  
+
   // 6. 根据排行榜类型排序
   switch (rankingType.value) {
     case 'sales':
@@ -885,13 +880,13 @@ const processHotCarData = () => {
       processedData.sort((a, b) => b.valueScore - a.valueScore)
       break
   }
-  
+
   hotCarList.value = processedData
-  console.log('📊 热门车型数据处理完成:', processedData.length, '个车型')
+  console.log('热门车型数据处理完成:', processedData.length, '个车型')
 }
 
 // =============================================
-// 🧮 计算工具函数
+// 计算工具函数
 // =============================================
 
 // 热度指数计算函数
@@ -901,12 +896,12 @@ const calculateHotIndex = (params: {
   rating: number
 }): number => {
   const { sales, salesGrowth, rating } = params
-  
+
   const baseHotIndex = 500
-  
+
   // 销量影响 (40%权重)
   const salesImpact = (sales / 1000) * 20
-  
+
   // 增长趋势影响 (25%权重)
   let trendImpact = 0
   if (salesGrowth > 20) {
@@ -920,10 +915,10 @@ const calculateHotIndex = (params: {
   } else {
     trendImpact = -100
   }
-  
+
   // 用户评分影响 (10%权重)
   const ratingImpact = (rating - 3.0) * 50
-  
+
   return Math.floor(baseHotIndex + salesImpact + trendImpact + ratingImpact)
 }
 
@@ -931,44 +926,44 @@ const calculateHotIndex = (params: {
 const calculateValueScore = (avgPrice: number, engineType: string): number => {
   // 1. 配置价值分 (满分100分)
   const configValueScore = calculateConfigValueScore(engineType)
-  
+
   // 2. 使用成本分 (满分100分)
   const usageCostScore = calculateUsageCostScore(engineType, avgPrice)
-  
+
   // 3. 价格调整系数
   const priceAdjustmentFactor = calculatePriceAdjustmentFactor(avgPrice)
-  
+
   // 4. 最终性价比评分
   const finalScore = (configValueScore + usageCostScore) / priceAdjustmentFactor
-  
+
   return Math.min(10, Math.max(0, finalScore))
 }
 
 const calculateConfigValueScore = (engineType: string): number => {
   const baseConfigScore = 75 // 基础配置分
-  
+
   const engineBonus: Record<string, number> = {
-    '纯电动': 15,
-    '混合动力': 10,
-    '燃油': 0
+    纯电动: 15,
+    混合动力: 10,
+    燃油: 0,
   }
-  
+
   return Math.min(100, baseConfigScore + (engineBonus[engineType] || 0))
 }
 
 const calculateUsageCostScore = (engineType: string, avgPrice: number): number => {
   const baseCostScore = 70
-  
+
   const engineCostScore: Record<string, number> = {
-    '纯电动': 30,
-    '混合动力': 20,
-    '燃油': 0
+    纯电动: 30,
+    混合动力: 20,
+    燃油: 0,
   }
-  
+
   const priceCostPenalty = avgPrice > 40 ? -10 : avgPrice > 25 ? -5 : 0
-  
+
   const finalCostScore = baseCostScore + (engineCostScore[engineType] || 0) + priceCostPenalty
-  
+
   return Math.min(100, Math.max(0, finalCostScore))
 }
 
@@ -987,7 +982,7 @@ const calculatePriceAdjustmentFactor = (avgPrice: number): number => {
 // 生成特色功能
 const generateKeyFeatures = (carModel: CarModel): string[] => {
   const features: string[] = []
-  
+
   if (carModel.engineType === '纯电动') {
     features.push('零排放', '静音驾驶')
     if (carModel.rangeKm && carModel.rangeKm > 500) {
@@ -996,19 +991,19 @@ const generateKeyFeatures = (carModel: CarModel): string[] => {
   } else if (carModel.engineType === '混合动力') {
     features.push('节能环保', '双重动力')
   }
-  
+
   if (carModel.officialPrice > 300000) {
     features.push('豪华配置', '高端品质')
   }
-  
+
   if (carModel.seatNum >= 7) {
     features.push('大空间')
   }
-  
+
   // 随机添加一些通用特性，但基于车型属性
   const commonFeatures = ['智能互联', '安全辅助', '舒适配置']
   features.push(...commonFeatures.slice(0, Math.max(0, 3 - features.length)))
-  
+
   return features.slice(0, 3)
 }
 
@@ -1022,12 +1017,13 @@ const generateCarImage = (carModel: CarModel): string => {
 const isNewModel = (launchDate: string): boolean => {
   const launch = new Date(launchDate)
   const now = new Date()
-  const monthsDiff = (now.getFullYear() - launch.getFullYear()) * 12 + (now.getMonth() - launch.getMonth())
+  const monthsDiff =
+    (now.getFullYear() - launch.getFullYear()) * 12 + (now.getMonth() - launch.getMonth())
   return monthsDiff <= 12 // 一年内的车型算新车
 }
 
 // =============================================
-// 🛠️ 工具函数
+// 工具函数
 // =============================================
 
 const getChangeType = (value: number) => {
@@ -1041,7 +1037,7 @@ const isSelected = (carId: number) => {
 }
 
 // =============================================
-// 🎛️ 事件处理函数
+// 事件处理函数
 // =============================================
 
 const handleFilterChange = async () => {
@@ -1061,13 +1057,13 @@ const handleRankingTypeChange = async () => {
   loading.value = true
   try {
     processHotCarData()
-    
+
     const rankingTypeText = {
-      'sales': '销量',
-      'hot': '热度',
-      'value': '性价比'
+      sales: '销量',
+      hot: '热度',
+      value: '性价比',
     }[rankingType.value]
-    
+
     ElMessage.info(`已切换到${rankingTypeText}排行`)
   } catch (error) {
     ElMessage.error('排行榜切换失败')
@@ -1092,7 +1088,7 @@ const resetFilters = async () => {
   selectedCarModel.value = ''
   selectedRegion.value = ''
   currentPage.value = 1
-  
+
   await handleFilterChange()
   ElMessage.success('筛选条件已重置')
 }
@@ -1100,7 +1096,7 @@ const resetFilters = async () => {
 // 对比功能
 const toggleComparison = (car: ProcessedCarModel) => {
   const isAlreadySelected = isSelected(car.id)
-  
+
   if (isAlreadySelected) {
     removeFromComparison(car.id)
   } else {
@@ -1108,7 +1104,7 @@ const toggleComparison = (car: ProcessedCarModel) => {
       ElMessage.warning('最多只能选择3款车型进行对比')
       return
     }
-    
+
     const selectedModel: SelectedModel = {
       id: car.id,
       name: car.name,
@@ -1116,7 +1112,7 @@ const toggleComparison = (car: ProcessedCarModel) => {
       priceRange: car.priceRange,
       image: car.image,
     }
-    
+
     selectedModels.value.push(selectedModel)
     ElMessage.success(`${car.brand} ${car.name} 已加入对比`)
   }
@@ -1140,7 +1136,7 @@ const startComparison = () => {
     ElMessage.warning('至少选择2款车型才能进行对比')
     return
   }
-  
+
   const modelIds = selectedModels.value.map((model) => model.id).join(',')
   router.push({
     name: 'VehicleModelCompAnalysis',
@@ -1172,7 +1168,7 @@ const viewTrend = (car: ProcessedCarModel) => {
 
 const shareCar = (car: ProcessedCarModel) => {
   const shareUrl = `${window.location.origin}/car/${car.id}`
-  
+
   if (navigator.share) {
     navigator.share({
       title: `${car.brand} ${car.name}`,
@@ -1180,11 +1176,14 @@ const shareCar = (car: ProcessedCarModel) => {
       url: shareUrl,
     })
   } else {
-    navigator.clipboard.writeText(shareUrl).then(() => {
-      ElMessage.success('分享链接已复制到剪贴板')
-    }).catch(() => {
-      ElMessage.error('分享失败')
-    })
+    navigator.clipboard
+      .writeText(shareUrl)
+      .then(() => {
+        ElMessage.success('分享链接已复制到剪贴板')
+      })
+      .catch(() => {
+        ElMessage.error('分享失败')
+      })
   }
 }
 
@@ -1216,7 +1215,7 @@ const exportRanking = () => {
     ElMessage.warning('暂无数据可导出')
     return
   }
-  
+
   const csvContent = [
     ['排名', '车型', '品牌', '销量', '热度指数', '性价比评分', '价格区间', '用户评分'],
     ...hotCarList.value
@@ -1234,38 +1233,38 @@ const exportRanking = () => {
   ]
     .map((row) => row.join(','))
     .join('\n')
-  
+
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
   const link = document.createElement('a')
   link.href = URL.createObjectURL(blob)
   link.download = `热门车型排行榜_${timeRange.value}_${new Date().toISOString().slice(0, 10)}.csv`
   link.click()
-  
+
   ElMessage.success('排行榜数据已导出')
 }
 
 // 图表初始化
 const initTrendChart = async (car: ProcessedCarModel) => {
   if (!trendChart.value) return
-  
+
   if (trendChartInstance) {
     trendChartInstance.dispose()
   }
-  
+
   trendChartInstance = echarts.init(trendChart.value)
-  
+
   // 基于真实数据生成趋势数据
   const carSalesData = baseData.value.saleRecords
-    .filter(record => record.carModelId === car.id)
+    .filter((record) => record.carModelId === car.id)
     .sort((a, b) => new Date(a.saleMonth).getTime() - new Date(b.saleMonth).getTime())
-  
-  const months = carSalesData.map(record => {
+
+  const months = carSalesData.map((record) => {
     const date = new Date(record.saleMonth)
     return `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`
   })
-  
-  const salesData = carSalesData.map(record => record.saleCount)
-  
+
+  const salesData = carSalesData.map((record) => record.saleCount)
+
   const option = {
     title: {
       text: `${car.brand} ${car.name} 销量趋势`,
@@ -1321,7 +1320,7 @@ const initTrendChart = async (car: ProcessedCarModel) => {
       },
     ],
   }
-  
+
   trendChartInstance.setOption(option)
 }
 
@@ -1340,12 +1339,12 @@ watch([timeRange, rankingType], () => {
 })
 
 // =============================================
-// 🔄 生命周期
+// 生命周期
 // =============================================
 
 onMounted(async () => {
   ElMessage.success('欢迎使用热门车型排行榜！')
-  
+
   try {
     await loadAllBaseData()
     processHotCarData()
@@ -1358,13 +1357,12 @@ onMounted(async () => {
 
 onUnmounted(() => {
   window.removeEventListener('resize', handleResize)
-  
+
   if (trendChartInstance) {
     trendChartInstance.dispose()
   }
 })
 </script>
-
 
 <style scoped>
 /* 整体布局 */
@@ -1867,7 +1865,6 @@ onUnmounted(() => {
   width: 100%;
 }
 
-
 /* 分页样式 */
 .pagination-wrapper {
   display: flex;
@@ -1880,7 +1877,6 @@ onUnmounted(() => {
   --el-pagination-button-bg-color: white;
   --el-pagination-button-border-radius: 8px;
 }
-
 
 /* 详情抽屉样式 */
 .detail-content {
@@ -2150,7 +2146,6 @@ onUnmounted(() => {
   .car-stats {
     min-width: 200px;
   }
-
 }
 
 @media (max-width: 768px) {
@@ -2219,7 +2214,6 @@ onUnmounted(() => {
     flex-direction: column;
   }
 
-
   .detail-header {
     flex-direction: column;
     text-align: center;
@@ -2282,9 +2276,7 @@ onUnmounted(() => {
   .filter-card,
   .quick-compare-card,
   .ranking-card,
-
   .car-item,
-
   .car-item.top-three {
     background: #3d3d2d;
   }

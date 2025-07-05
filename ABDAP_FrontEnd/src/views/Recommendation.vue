@@ -989,7 +989,7 @@ import axios from 'axios'
 const router = useRouter()
 
 // =============================================
-// 📊 基础数据层 - 直接从API获取
+//  基础数据层 - 直接从API获取
 // =============================================
 
 interface CarModel {
@@ -1041,7 +1041,7 @@ interface BaseData {
   opinions: Opinion[]
 }
 
-// 🧮 计算数据层 - 基于基础数据计算
+//  计算数据层 - 基于基础数据计算
 interface ProcessedCarModel {
   id: number
   brand: string
@@ -1098,7 +1098,7 @@ interface RecommendationResult {
   analysisTime: number
 }
 
-// 📈 业务指标层 - 最终展示的KPI
+//  业务指标层 - 最终展示的KPI
 interface BusinessMetrics {
   totalSalesRecords: number
   totalOpinions: number
@@ -1109,7 +1109,7 @@ interface BusinessMetrics {
 }
 
 // =============================================
-// 🎛️ 响应式数据
+//  响应式数据
 // =============================================
 
 const loading = ref(false)
@@ -1166,7 +1166,7 @@ const primaryRadarChart = ref<HTMLDivElement>()
 let primaryRadarChartInstance: echarts.ECharts | null = null
 
 // =============================================
-// 📊 筛选选项配置
+// 筛选选项配置
 // =============================================
 
 const budgetOptions = [
@@ -1215,21 +1215,21 @@ const mileageOptions = [
 ]
 
 // =============================================
-// 🌐 API调用函数
+//  API调用函数
 // =============================================
 
 const fetchCarModels = async (): Promise<CarModel[]> => {
   try {
-    console.log('🚀 正在获取车型列表...')
+    console.log('正在获取车型列表...')
     const response = await axios.get('/api/car-models')
     if (response.data.status === 200 && response.data.data) {
-      console.log('✅ 获取车型数据成功:', response.data.data.length, '个车型')
+      console.log('获取车型数据成功:', response.data.data.length, '个车型')
       return response.data.data
     } else {
       throw new Error(`API返回错误状态: ${response.data.status}`)
     }
   } catch (error) {
-    console.error('❌ 获取车型列表失败:', error)
+    console.error('获取车型列表失败:', error)
     ElMessage.error('车型数据加载失败')
     throw error
   }
@@ -1237,16 +1237,16 @@ const fetchCarModels = async (): Promise<CarModel[]> => {
 
 const fetchSaleRecords = async (): Promise<SaleRecord[]> => {
   try {
-    console.log('🚀 正在获取销售记录...')
+    console.log('正在获取销售记录...')
     const response = await axios.get('/api/sale-records')
     if (response.data.status === 200 && response.data.data) {
-      console.log('✅ 获取销售记录成功:', response.data.data.length, '条记录')
+      console.log('获取销售记录成功:', response.data.data.length, '条记录')
       return response.data.data
     } else {
       throw new Error(`API返回错误状态: ${response.data.status}`)
     }
   } catch (error) {
-    console.error('❌ 获取销售记录失败:', error)
+    console.error('获取销售记录失败:', error)
     ElMessage.error('销售数据加载失败')
     throw error
   }
@@ -1254,16 +1254,16 @@ const fetchSaleRecords = async (): Promise<SaleRecord[]> => {
 
 const fetchOpinions = async (): Promise<Opinion[]> => {
   try {
-    console.log('🚀 正在获取口碑数据...')
+    console.log('正在获取口碑数据...')
     const response = await axios.get('/api/opinions')
     if (response.data.status === 200 && response.data.data) {
-      console.log('✅ 获取口碑数据成功:', response.data.data.length, '条评价')
+      console.log('获取口碑数据成功:', response.data.data.length, '条评价')
       return response.data.data
     } else {
       throw new Error(`API返回错误状态: ${response.data.status}`)
     }
   } catch (error) {
-    console.error('❌ 获取口碑数据失败:', error)
+    console.error('获取口碑数据失败:', error)
     ElMessage.error('口碑数据加载失败')
     throw error
   }
@@ -1271,16 +1271,16 @@ const fetchOpinions = async (): Promise<Opinion[]> => {
 
 const fetchRegions = async (): Promise<Region[]> => {
   try {
-    console.log('🚀 正在获取地区信息...')
+    console.log('正在获取地区信息...')
     const response = await axios.get('/api/regions')
     if (response.data.status === 200 && response.data.data) {
-      console.log('✅ 获取地区数据成功:', response.data.data.length, '个地区')
+      console.log('获取地区数据成功:', response.data.data.length, '个地区')
       return response.data.data
     } else {
       throw new Error(`API返回错误状态: ${response.data.status}`)
     }
   } catch (error) {
-    console.error('❌ 获取地区信息失败:', error)
+    console.error('获取地区信息失败:', error)
     ElMessage.error('地区数据加载失败')
     throw error
   }
@@ -1295,7 +1295,7 @@ const fetchTopLevelRegions = async (): Promise<Region[]> => {
       throw new Error(`API返回错误状态: ${response.data.status}`)
     }
   } catch (error) {
-    console.error('❌ 获取省份信息失败:', error)
+    console.error('获取省份信息失败:', error)
     throw error
   }
 }
@@ -1309,18 +1309,18 @@ const fetchNonTopLevelRegions = async (): Promise<Region[]> => {
       throw new Error(`API返回错误状态: ${response.data.status}`)
     }
   } catch (error) {
-    console.error('❌ 获取城市信息失败:', error)
+    console.error('获取城市信息失败:', error)
     throw error
   }
 }
 
 // =============================================
-// 📊 数据加载与处理函数
+// 数据加载与处理函数
 // =============================================
 
 const loadAllBaseData = async () => {
   try {
-    console.log('📊 开始加载基础数据...')
+    console.log('开始加载基础数据...')
     loading.value = true
     loadingProgress.value = 0
 
@@ -1364,7 +1364,7 @@ const loadAllBaseData = async () => {
 
     ElMessage.success('基础数据加载完成')
   } catch (error) {
-    console.error('❌ 基础数据加载失败:', error)
+    console.error('基础数据加载失败:', error)
     ElMessage.error('数据加载失败，请检查网络连接')
     throw error
   } finally {
@@ -1373,7 +1373,7 @@ const loadAllBaseData = async () => {
 }
 
 const calculateBusinessMetrics = () => {
-  console.log('📊 计算业务指标...')
+  console.log('计算业务指标...')
 
   businessMetrics.value.totalSalesRecords = baseData.value.saleRecords.length
   businessMetrics.value.totalOpinions = baseData.value.opinions.length
@@ -1429,15 +1429,15 @@ const calculateBusinessMetrics = () => {
     }
   }
 
-  console.log('📊 业务指标计算完成:', businessMetrics.value)
+  console.log('业务指标计算完成:', businessMetrics.value)
 }
 
 // =============================================
-// 🧮 智能推荐算法核心函数
+// 智能推荐算法核心函数
 // =============================================
 
 const processCarModelsForRecommendation = (): ProcessedCarModel[] => {
-  console.log('🧮 处理车型数据用于推荐...')
+  console.log('处理车型数据用于推荐...')
 
   return baseData.value.carModels.map((carModel) => {
     // 计算销量数据
@@ -1764,7 +1764,7 @@ const generateRecommendation = async () => {
     await nextTick()
     initPrimaryRadarChart()
   } catch (error) {
-    console.error('❌ 推荐生成失败:', error)
+    console.error('推荐生成失败:', error)
     ElMessage.error('推荐生成失败，请重试')
   } finally {
     analyzing.value = false
@@ -1772,7 +1772,7 @@ const generateRecommendation = async () => {
 }
 
 // =============================================
-// 🧮 计算属性
+// 计算属性
 // =============================================
 
 const availableBrandOptions = computed(() => {
@@ -1844,7 +1844,7 @@ const getAveragePrice = computed(() => {
 })
 
 // =============================================
-// 🎯 筛选操作函数
+// 筛选操作函数
 // =============================================
 
 const selectBudget = (budget: string) => {
@@ -1886,7 +1886,7 @@ const selectDailyMileage = (mileage: string) => {
 }
 
 // =============================================
-// 🔍 匹配计数函数
+// 匹配计数函数
 // =============================================
 
 const getBudgetMatchCount = (budget: string): number => {
@@ -1950,7 +1950,7 @@ const getPassengerMatchCount = (passengers: string): number => {
 }
 
 // =============================================
-// 🎯 验证函数
+// 验证函数
 // =============================================
 
 const isStep1Valid = (): boolean => {
@@ -1963,7 +1963,7 @@ const isStep1Valid = (): boolean => {
 }
 
 // =============================================
-// 💡 智能提示函数
+// 智能提示函数
 // =============================================
 
 const getSmartHints = () => {
@@ -1991,7 +1991,7 @@ const getSmartHints = () => {
 }
 
 // =============================================
-// 📊 数据获取函数
+// 数据获取函数
 // =============================================
 
 const getModelSalesData = (carModelId: number) => {
@@ -2030,7 +2030,7 @@ const getPrimaryRecommendationSalesRank = (): number => {
 }
 
 // =============================================
-// 🎨 UI辅助函数
+//  UI辅助函数
 // =============================================
 
 const getScenarioTagType = () => {
@@ -2078,7 +2078,7 @@ const getSortedAlternatives = (alternatives: ProcessedCarModel[]) => {
 }
 
 // =============================================
-// 📈 购买建议函数
+// 购买建议函数
 // =============================================
 
 const getPurchaseTimingAdvice = (): string => {
@@ -2183,7 +2183,7 @@ const enhancedPurchaseChecklist = [
 ]
 
 // =============================================
-// 🎯 雷达图初始化
+// 雷达图初始化
 // =============================================
 
 const initPrimaryRadarChart = async () => {
@@ -2270,12 +2270,12 @@ const initPrimaryRadarChart = async () => {
       primaryRadarChartInstance?.resize()
     })
   } catch (error) {
-    console.error('❌ 雷达图初始化失败:', error)
+    console.error('雷达图初始化失败:', error)
   }
 }
 
 // =============================================
-// 🛠 操作函数
+//  操作函数
 // =============================================
 
 const addToComparison = (model: ProcessedCarModel | PrimaryRecommendation) => {
@@ -2482,7 +2482,7 @@ const contactDealer = () => {
 }
 
 // =============================================
-// 🔄 生命周期
+// 生命周期
 // =============================================
 
 onMounted(async () => {

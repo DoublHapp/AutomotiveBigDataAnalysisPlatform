@@ -480,7 +480,7 @@ import * as echarts from 'echarts'
 import axios from 'axios'
 
 // =============================================
-// 🏗️ 接口定义
+// 接口定义
 // =============================================
 
 // 基础数据接口 - 与API响应完全对应
@@ -516,7 +516,7 @@ interface Region {
   parentRegionName: string | null
 }
 
-// 📊 基础数据层
+//  基础数据层
 interface BaseData {
   carModels: CarModel[]
   saleRecords: SaleRecord[]
@@ -525,7 +525,7 @@ interface BaseData {
   nonTopLevelRegions: Region[]
 }
 
-// 🧮 计算数据层
+// 计算数据层
 interface RegionSalesData {
   regionId: number
   regionName: string
@@ -554,7 +554,7 @@ interface BusinessMetrics {
 }
 
 // =============================================
-// 🎛️ 响应式数据
+// 响应式数据
 // =============================================
 
 const loading = ref(false)
@@ -563,14 +563,12 @@ const showMapHelp = ref(false)
 const showScatterDetail = ref(false)
 const showGrowthDetail = ref(false)
 const selectedRegionDetail = ref<RegionSalesData | null>(null)
-
-// 🔧 修复：添加缺失的响应式变量
 const timeRange = ref<'month' | 'quarter' | 'year' | 'custom'>('year')
 const customDateRange = ref<[Date, Date] | null>(null)
 const selectedCarModel = ref('')
 const regionLevel = ref<'province' | 'city'>('province')
 
-// 📊 基础数据存储
+//  基础数据存储
 const baseData = ref<BaseData>({
   carModels: [],
   saleRecords: [],
@@ -579,7 +577,7 @@ const baseData = ref<BaseData>({
   nonTopLevelRegions: [],
 })
 
-// 🧮 计算后的业务数据
+//  计算后的业务数据
 const salesData = ref<RegionSalesData[]>([])
 const availableCarModels = ref<CarModel[]>([])
 const businessMetrics = ref<BusinessMetrics>({
@@ -596,7 +594,7 @@ const businessMetrics = ref<BusinessMetrics>({
   totalAmountGrowth: 0,
 })
 
-// 🔧 修复：使用 ref 变量代替 reactive 对象
+//  修复：使用 ref 变量代替 reactive 对象
 // const globalFilters = reactive({
 //   timeRange: 'year' as 'month' | 'quarter' | 'year' | 'custom',
 //   customDateRange: null as [Date, Date] | null,
@@ -624,17 +622,17 @@ let growthTrendChartInstance: echarts.ECharts | null = null
 // API 调用函数保持不变...
 const fetchCarModels = async (): Promise<CarModel[]> => {
   try {
-    console.log('🚀 正在获取车型列表...')
+    console.log('正在获取车型列表...')
     const response = await axios.get('/api/car-models')
 
     if (response.data.status === 200 && response.data.data) {
-      console.log('✅ 获取车型数据成功:', response.data.data.length, '个车型')
+      console.log('获取车型数据成功:', response.data.data.length, '个车型')
       return response.data.data
     } else {
       throw new Error(`API返回错误状态: ${response.data.status}`)
     }
   } catch (error) {
-    console.error('❌ 获取车型列表失败:', error)
+    console.error('获取车型列表失败:', error)
     ElMessage.error('车型数据加载失败')
     throw error
   }
@@ -642,17 +640,17 @@ const fetchCarModels = async (): Promise<CarModel[]> => {
 
 const fetchSaleRecords = async (): Promise<SaleRecord[]> => {
   try {
-    console.log('🚀 正在获取销售记录...')
+    console.log('正在获取销售记录...')
     const response = await axios.get('/api/sale-records')
 
     if (response.data.status === 200 && response.data.data) {
-      console.log('✅ 获取销售记录成功:', response.data.data.length, '条记录')
+      console.log('获取销售记录成功:', response.data.data.length, '条记录')
       return response.data.data
     } else {
       throw new Error(`API返回错误状态: ${response.data.status}`)
     }
   } catch (error) {
-    console.error('❌ 获取销售记录失败:', error)
+    console.error('获取销售记录失败:', error)
     ElMessage.error('销售数据加载失败')
     throw error
   }
@@ -660,17 +658,17 @@ const fetchSaleRecords = async (): Promise<SaleRecord[]> => {
 
 const fetchRegions = async (): Promise<Region[]> => {
   try {
-    console.log('🚀 正在获取地区信息...')
+    console.log('正在获取地区信息...')
     const response = await axios.get('/api/regions')
 
     if (response.data.status === 200 && response.data.data) {
-      console.log('✅ 获取地区信息成功:', response.data.data.length, '个地区')
+      console.log(' 获取地区信息成功:', response.data.data.length, '个地区')
       return response.data.data
     } else {
       throw new Error(`API返回错误状态: ${response.data.status}`)
     }
   } catch (error) {
-    console.error('❌ 获取地区信息失败:', error)
+    console.error('获取地区信息失败:', error)
     ElMessage.error('地区数据加载失败')
     throw error
   }
@@ -678,17 +676,17 @@ const fetchRegions = async (): Promise<Region[]> => {
 
 const fetchTopLevelRegions = async (): Promise<Region[]> => {
   try {
-    console.log('🚀 正在获取省份信息...')
+    console.log('正在获取省份信息...')
     const response = await axios.get('/api/regions/top-level')
 
     if (response.data.status === 200 && response.data.data) {
-      console.log('✅ 获取省份信息成功:', response.data.data.length, '个省份')
+      console.log(' 获取省份信息成功:', response.data.data.length, '个省份')
       return response.data.data
     } else {
       throw new Error(`API返回错误状态: ${response.data.status}`)
     }
   } catch (error) {
-    console.error('❌ 获取省份信息失败:', error)
+    console.error(' 获取省份信息失败:', error)
     ElMessage.error('省份数据加载失败')
     throw error
   }
@@ -696,17 +694,17 @@ const fetchTopLevelRegions = async (): Promise<Region[]> => {
 
 const fetchNonTopLevelRegions = async (): Promise<Region[]> => {
   try {
-    console.log('🚀 正在获取城市信息...')
+    console.log('正在获取城市信息...')
     const response = await axios.get('/api/regions/non-top-level')
 
     if (response.data.status === 200 && response.data.data) {
-      console.log('✅ 获取城市信息成功:', response.data.data.length, '个城市')
+      console.log(' 获取城市信息成功:', response.data.data.length, '个城市')
       return response.data.data
     } else {
       throw new Error(`API返回错误状态: ${response.data.status}`)
     }
   } catch (error) {
-    console.error('❌ 获取城市信息失败:', error)
+    console.error('获取城市信息失败:', error)
     ElMessage.error('城市数据加载失败')
     throw error
   }
@@ -714,7 +712,7 @@ const fetchNonTopLevelRegions = async (): Promise<Region[]> => {
 
 const loadAllBaseData = async () => {
   try {
-    console.log('📊 开始加载基础数据...')
+    console.log('开始加载基础数据...')
 
     const [carModels, saleRecords, regions, topLevelRegions, nonTopLevelRegions] =
       await Promise.all([
@@ -733,7 +731,7 @@ const loadAllBaseData = async () => {
       nonTopLevelRegions,
     }
 
-    console.log('📊 基础数据加载完成:', {
+    console.log(' 基础数据加载完成:', {
       车型数量: carModels.length,
       销售记录数量: saleRecords.length,
       地区数量: regions.length,
@@ -746,15 +744,15 @@ const loadAllBaseData = async () => {
 
     ElMessage.success('基础数据加载完成')
   } catch (error) {
-    console.error('❌ 基础数据加载失败:', error)
+    console.error(' 基础数据加载失败:', error)
     ElMessage.error('数据加载失败，请检查网络连接')
     throw error
   }
 }
 
-// 🔧 修复：数据处理函数
+//  修复：数据处理函数
 const processRegionSalesData = () => {
-  console.log('📍 处理地区销售数据...')
+  console.log(' 处理地区销售数据...')
 
   if (baseData.value.saleRecords.length === 0) {
     console.warn('销售记录为空')
@@ -762,7 +760,7 @@ const processRegionSalesData = () => {
     return
   }
 
-  // 🔧 使用新的 ref 变量
+  // 使用新的 ref 变量
   let filteredRecords = baseData.value.saleRecords
 
   // 时间筛选 - 修复逻辑
@@ -804,7 +802,7 @@ const processRegionSalesData = () => {
   console.log('地区销量筛选后记录数:', filteredRecords.length)
   console.log('筛选后的记录样本:', filteredRecords.slice(0, 3))
 
-  // 🔧 修复：如果筛选后数据为空，使用原始数据
+  //  修复：如果筛选后数据为空，使用原始数据
   if (filteredRecords.length === 0) {
     console.warn('筛选后数据为空，使用原始数据')
     filteredRecords = baseData.value.saleRecords
@@ -828,26 +826,29 @@ const processRegionSalesData = () => {
     targetRegions = baseData.value.regions
   }
 
-  // 🔧 修复：按地区聚合销售数据 - 简化逻辑
-  const regionSalesMap = new Map<number, {
-    regionName: string
-    salesVolume: number
-    salesAmount: number
-    lastYearSalesVolume: number
-    lastYearSalesAmount: number
-  }>()
+  // 修复：按地区聚合销售数据 - 简化逻辑
+  const regionSalesMap = new Map<
+    number,
+    {
+      regionName: string
+      salesVolume: number
+      salesAmount: number
+      lastYearSalesVolume: number
+      lastYearSalesAmount: number
+    }
+  >()
 
   const currentYear = new Date().getFullYear()
   console.log('当前年份:', currentYear)
 
-  // 🔧 修复：处理销售记录 - 改进逻辑
+  // 修复：处理销售记录 - 改进逻辑
   filteredRecords.forEach((record, index) => {
     console.log(`处理记录 ${index + 1}:`, {
       regionId: record.regionId,
       regionName: record.regionName,
       saleCount: record.saleCount,
       saleAmount: record.saleAmount,
-      saleMonth: record.saleMonth
+      saleMonth: record.saleMonth,
     })
 
     const recordDate = new Date(record.saleMonth)
@@ -856,7 +857,7 @@ const processRegionSalesData = () => {
     let targetRegionId = record.regionId
     let targetRegionName = record.regionName
 
-    // 🔧 修复：如果是国家级视图，需要找到省级地区
+    // 修复：如果是国家级视图，需要找到省级地区
     if (currentLevel.value === 'country') {
       const recordRegion = baseData.value.regions.find((r) => r.regionId === record.regionId)
       if (recordRegion) {
@@ -867,13 +868,15 @@ const processRegionSalesData = () => {
         } else {
           // 是市级地区，找到其父级省份
           targetRegionId = recordRegion.parentRegionId
-          const parentRegion = baseData.value.regions.find(r => r.regionId === recordRegion.parentRegionId)
+          const parentRegion = baseData.value.regions.find(
+            (r) => r.regionId === recordRegion.parentRegionId,
+          )
           targetRegionName = parentRegion?.regionName || recordRegion.regionName
         }
       }
     }
 
-    // 🔧 修复：确保目标地区存在
+    //  修复：确保目标地区存在
     if (!regionSalesMap.has(targetRegionId)) {
       regionSalesMap.set(targetRegionId, {
         regionName: targetRegionName,
@@ -886,7 +889,7 @@ const processRegionSalesData = () => {
 
     const existing = regionSalesMap.get(targetRegionId)!
 
-    // 🔧 修复：累加销量数据 - 添加调试信息
+    // 修复：累加销量数据 - 添加调试信息
     if (recordYear === currentYear) {
       existing.salesVolume += record.saleCount
       existing.salesAmount += record.saleAmount
@@ -894,17 +897,17 @@ const processRegionSalesData = () => {
         新增销量: record.saleCount,
         累计销量: existing.salesVolume,
         新增销售额: record.saleAmount,
-        累计销售额: existing.salesAmount
+        累计销售额: existing.salesAmount,
       })
     } else if (recordYear === currentYear - 1) {
       existing.lastYearSalesVolume += record.saleCount
       existing.lastYearSalesAmount += record.saleAmount
       console.log(`累加去年数据到地区 ${targetRegionName}:`, {
         新增销量: record.saleCount,
-        累计销量: existing.lastYearSalesVolume
+        累计销量: existing.lastYearSalesVolume,
       })
     } else {
-      // 🔧 新增：处理其他年份的数据
+      // 新增：处理其他年份的数据
       console.log(`记录年份 ${recordYear} 不在当年或去年范围内，但仍计入当年数据`)
       existing.salesVolume += record.saleCount
       existing.salesAmount += record.saleAmount
@@ -919,7 +922,7 @@ const processRegionSalesData = () => {
       data.lastYearSalesVolume > 0
         ? ((data.salesVolume - data.lastYearSalesVolume) / data.lastYearSalesVolume) * 100
         : data.salesVolume > 0
-          ? 50 // 🔧 修复：没有去年数据时，设置合理的增长率
+          ? 50 //  修复：没有去年数据时，设置合理的增长率
           : 0
 
     return {
@@ -938,26 +941,29 @@ const processRegionSalesData = () => {
 
   console.log('转换后的地区数组:', regionsArray)
 
-  // 🔧 修复：计算市场份额
+  //  修复：计算市场份额
   const totalSales = regionsArray.reduce((sum, region) => sum + region.salesCount, 0)
   console.log('总销量:', totalSales)
-  
+
   regionsArray.forEach((region) => {
     region.marketShare = totalSales > 0 ? (region.salesCount / totalSales) * 100 : 0
   })
 
-  // 🔧 修复：只有有数据的地区才排序
+  //  修复：只有有数据的地区才排序
   regionsArray.sort((a, b) => b.salesCount - a.salesCount)
 
   salesData.value = regionsArray
-  console.log('📍 地区销量处理完成，覆盖', regionsArray.length, '个地区')
-  console.log('最终销量数据:', regionsArray.map(r => ({ 地区: r.regionName, 销量: r.salesCount, 销售额: r.salesAmount })))
+  console.log('地区销量处理完成，覆盖', regionsArray.length, '个地区')
+  console.log(
+    '最终销量数据:',
+    regionsArray.map((r) => ({ 地区: r.regionName, 销量: r.salesCount, 销售额: r.salesAmount })),
+  )
 }
 // 其他数据处理函数保持不变，但需要更新变量引用...
 
 // 计算业务指标函数保持不变...
 const calculateBusinessMetrics = () => {
-  console.log('📊 计算业务指标...')
+  console.log(' 计算业务指标...')
 
   if (salesData.value.length === 0) {
     businessMetrics.value = {
@@ -1031,12 +1037,12 @@ const calculateBusinessMetrics = () => {
         ? 100
         : 0
 
-  console.log('📊 业务指标计算完成:', businessMetrics.value)
+  console.log('业务指标计算完成:', businessMetrics.value)
 }
 
 const processAllData = () => {
   try {
-    console.log('🔄 开始处理所有数据...')
+    console.log('开始处理所有数据...')
 
     if (baseData.value.saleRecords.length === 0) {
       ElMessage.warning('销售记录为空，无法生成热力图')
@@ -1046,9 +1052,9 @@ const processAllData = () => {
     processRegionSalesData()
     calculateBusinessMetrics()
 
-    console.log('🔄 所有数据处理完成')
+    console.log('所有数据处理完成')
   } catch (error) {
-    console.error('❌ 数据处理失败:', error)
+    console.error(' 数据处理失败:', error)
     ElMessage.error('数据处理失败，请重试')
   }
 }
@@ -1116,9 +1122,9 @@ const formatCurrentPeriod = () => {
   }
 }
 
-// 🔧 修复：事件处理函数
+//  修复：事件处理函数
 const handleTimeRangeChange = () => {
-  console.log('🔄 时间范围变更:', timeRange.value)
+  console.log('时间范围变更:', timeRange.value)
   processAllData()
   nextTick(() => {
     initAllCharts()
@@ -1126,7 +1132,7 @@ const handleTimeRangeChange = () => {
 }
 
 const handleCustomDateChange = () => {
-  console.log('🔄 自定义时间范围变更:', customDateRange.value)
+  console.log('自定义时间范围变更:', customDateRange.value)
   processAllData()
   nextTick(() => {
     initAllCharts()
@@ -1134,7 +1140,7 @@ const handleCustomDateChange = () => {
 }
 
 const handleCarModelChange = () => {
-  console.log('🔄 车型筛选变更:', selectedCarModel.value)
+  console.log('车型筛选变更:', selectedCarModel.value)
   processAllData()
   nextTick(() => {
     initAllCharts()
@@ -1142,7 +1148,7 @@ const handleCarModelChange = () => {
 }
 
 const handleRegionLevelChange = () => {
-  console.log('🔄 地区层级变更:', regionLevel.value)
+  console.log('地区层级变更:', regionLevel.value)
   processAllData()
   nextTick(() => {
     initAllCharts()
@@ -1150,7 +1156,7 @@ const handleRegionLevelChange = () => {
 }
 
 const handleRankingTypeChange = () => {
-  console.log('🔄 排行类型变更:', rankingType.value)
+  console.log('排行类型变更:', rankingType.value)
 }
 
 // 图表初始化函数...省份地图数据URL映射等保持不变
@@ -1272,7 +1278,7 @@ const loadProvinceMapData = async (provinceName: string): Promise<string | null>
   }
 }
 
-// 🔧 修复：图表初始化函数
+//  修复：图表初始化函数
 const initChinaMap = async () => {
   if (!chinaMapChart.value) return
 
@@ -1295,7 +1301,7 @@ const initChinaMap = async () => {
   if (mapData.length === 0) {
     console.warn('地图数据为空，显示空白地图')
 
-    // 🔧 修复：即使数据为空也显示基础地图
+    // 修复：即使数据为空也显示基础地图
     const option = {
       title: {
         text: mapTitle.value,
@@ -1454,7 +1460,7 @@ const initChinaMap = async () => {
   console.log('地图初始化完成')
 }
 
-// 🔧 修复：散点图初始化函数
+// 散点图初始化函数
 const initScatterChart = async () => {
   if (!scatterChart.value) return
 
@@ -1466,7 +1472,7 @@ const initScatterChart = async () => {
 
   scatterChartInstance = echarts.init(scatterChart.value)
 
-  // 🔧 修复：处理空数据情况
+  // 处理空数据情况
   if (salesData.value.length === 0) {
     const option = {
       title: {
@@ -1776,7 +1782,7 @@ const refreshData = async () => {
     await initAllCharts()
     ElMessage.success('数据刷新完成')
   } catch (error) {
-    console.error('❌ 数据刷新失败:', error)
+    console.error('数据刷新失败:', error)
     ElMessage.error('数据刷新失败，请检查网络连接')
   } finally {
     loading.value = false
