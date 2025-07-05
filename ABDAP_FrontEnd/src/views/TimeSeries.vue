@@ -5,7 +5,7 @@ import { ElMessage } from 'element-plus'
 import axios from 'axios'
 
 
-// 主筛选类型
+// 筛选模式类型
 const compareMode = ref<'region' | 'carModel' | 'none'>('carModel')
 
 // 选项
@@ -39,6 +39,21 @@ const carModelOptions: carModelOption[] = [
   { label: '比亚迪汉EV', value: '5' }
 ]
 
+// 动力类型
+
+interface powerOption {
+  label: string
+  value: string
+}
+
+const powerOptions: powerOption[] = [
+  { label: '全部', value: 'all' },
+  { label: '燃油', value: 'fuel' },
+  { label: '新能源', value: 'electric' }
+]
+
+const powerType = ref<string>('all')
+
 // 筛选条件
 const dateRangeType = ref<'month' | 'quarter' | 'year'>('month')
 const dateRange = ref<[string, string]>(['2023-01', '2023-12'])
@@ -47,15 +62,13 @@ const regionArray = ref<string[]>([]);
 const carModelSingle = ref<string>(''); 
 const carModelArray = ref<string[]>([]);
 
-const powerType = ref<string>('全部')
-
 // 计算当前可选项和选择方式
 const carModelMultiple = computed(() => compareMode.value == 'carModel' || compareMode.value == 'none')
 const regionMultiple = computed(() => compareMode.value == 'region' || compareMode.value == 'none')
 const regionOptions = computed(() =>
-  compareMode.value !== 'region'
-    ? regionOptionsAll
-    : regionOptionsNoAll
+  compareMode.value !== 'carModel'
+    ? regionOptionsNoAll
+    : regionOptionsAll
 )
 
 // 计算当前选择数组还是对象
@@ -119,7 +132,7 @@ function showStatsDetail(stats: { name: string, min: number, max: number, avg: n
   statsDetailVisible.value = true
 }
 
-// 选择时自动修正选项
+// 选择筛选模式时自动修正选项
 watch(compareMode, (mode) => {
   if (mode === 'region') {
     // 地区多选，车型单选，不包含全国
@@ -415,9 +428,12 @@ onMounted(() => {
           </el-select>
           <!-- 动力类型选择 -->
           <el-select v-model="powerType" placeholder="动力类型" style="margin-left: 16px; width: 120px">
-            <el-option label="全部" :value="null" />
-            <el-option label="燃油" value="fuel" />
-            <el-option label="新能源" value="electric" />
+            <el-option
+              v-for="option in powerOptions"
+              :key="option.label"
+              :label="option.label"
+              :value="option.value"
+            />
           </el-select>
           <el-button @click="fetchDataAndRender" style="margin-left: 30px;">更新数据</el-button>
         </div>

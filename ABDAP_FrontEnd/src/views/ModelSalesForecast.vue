@@ -23,7 +23,7 @@ const router = useRouter()
 
 // 接口定义 - 车型预测专用
 interface CarModel {
-  carModelId: number
+  carModelId: string
   modelName: string
   brandName: string
   price: number
@@ -37,16 +37,6 @@ interface ModelLifecycleStage {
   description: string
   monthsInStage: number
   expectedDuration: number
-}
-
-interface VersionForecast {
-  version: string
-  currentSales: number
-  predictedSales: number
-  growthRate: number
-  marketShare: number
-  profitMargin: number
-  suggestions: string[]
 }
 
 interface CompetitorThreat {
@@ -91,16 +81,31 @@ interface CompetitorPricing {
   marketResponse: number
 }
 
+// 可选车型接口
+interface carModelOption {
+  label: string
+  value: string
+}
+
+// 查询车型的接口无法接通，先用fake数据
+const carModelOptionsFake: carModelOption[]=[
+  { label: '宝马X3', value: '1' },
+  { label: '奔驰C200L', value: '2' },
+  { label: '奥迪A4L', value: '3' },
+  { label: '特斯拉Model 3', value: '4' },
+  { label: '比亚迪汉EV', value: '5' }
+]
+const carModelOptions = ref<carModelOption[]>([])
+
 // 响应式数据
 const loading = ref(false)
 const analyzing = ref(false)
-const optimizing = ref(false)
 
 // 车型选择与分析
-const selectedModel = ref<number | null>(null)
-const forecastPeriod = ref('12M')
+const selectedModel = ref<string>('1')
+const forecastPeriod = ref('12')
 const forecastGranularity = ref('monthly')
-const comparisonModels = ref<number[]>([])
+const comparisonModels = ref<string[]>([])
 const comparisonDimensions = ref(['sales', 'price', 'market_share'])
 
 // 数据源
@@ -108,14 +113,10 @@ const carModelList = ref<CarModel[]>([])
 const modelResults = ref<any>(null)
 
 // 弹窗控制
-const showProductConfig = ref(false)
-const showConfigOptimizer = ref(false)
 const showPricingSimulator = ref(false)
 const showCompetitorInsights = ref(false)
 
 // 标签页控制
-const activeConfigTab = ref('versions')
-const activeOptimizerTab = ref('version')
 const activeProductTab = ref('lifecycle')
 
 // 产品生命周期数据
@@ -123,9 +124,6 @@ const currentLifecycleStage = ref<'introduction' | 'growth' | 'maturity' | 'decl
 const marketMaturity = ref(65)
 const growthPotential = ref(3)
 const expectedLifecycle = ref(48)
-
-// 配置组合数据
-const versionForecast = ref<VersionForecast[]>([])
 
 // 定价策略数据
 const priceElasticity = ref(-1.8)
@@ -143,11 +141,6 @@ const seasonalInventory = ref<SeasonalInventory[]>([])
 // 竞品分析数据
 const competitorThreats = ref<CompetitorThreat[]>([])
 
-// 优化器数据
-const optimizationTarget = ref('max_profit')
-const optimizationConstraints = ref(['production_capacity'])
-const optimizationResults = ref<OptimizationResult[] | null>(null)
-
 // 价格模拟器数据
 const priceAdjustment = ref(0)
 const competitorReaction = ref('partial_follow')
@@ -155,13 +148,13 @@ const marketCondition = ref('stable')
 const simulationResults = ref<SimulationResult | null>(null)
 
 // 图表实例
-const configurationChart = ref<HTMLDivElement>()
+const forecastChart = ref<HTMLDivElement>()
 const elasticityChart = ref<HTMLDivElement>()
 const inventoryChart = ref<HTMLDivElement>()
 const competitorChart = ref<HTMLDivElement>()
 const simulationChart = ref<HTMLDivElement>()
 
-let configurationChartInstance: echarts.ECharts | null = null
+let forecastChartInstance: echarts.ECharts | null = null
 let elasticityChartInstance: echarts.ECharts | null = null
 let inventoryChartInstance: echarts.ECharts | null = null
 let competitorChartInstance: echarts.ECharts | null = null
@@ -169,7 +162,7 @@ let simulationChartInstance: echarts.ECharts | null = null
 
 // 计算属性
 const filteredComparisonModels = computed(() => {
-  return carModelList.value.filter((model) => model.carModelId !== selectedModel.value)
+  return carModelOptionsFake.filter((model) => model.value !== selectedModel.value)
 })
 
 const lifecycleStageText = computed(() => {
@@ -226,9 +219,14 @@ const getMaturityColor = (value: number) => {
 // API调用函数
 const fetchCarModels = async () => {
   try {
-    const response = await axios.get('/api/carModels')
-    if (response.data.status === 1) {
-      carModelList.value = response.data.data
+    const response = await axios.get('/api/car-models')
+    if (response.data.status === 200) {
+      response.data.data.forEach((model: CarModel) => {
+        carModelOptions.value.push({
+          label: `${model.modelName}`, //要改，现在品牌和车型分开了，接口和模拟数据不匹配。
+          value: model.carModelId.toString(),
+        })
+      })
     } else {
       carModelList.value = generateMockCarModels()
     }
@@ -238,18 +236,24 @@ const fetchCarModels = async () => {
   }
 }
 
-const fetchModelAnalysis = async (modelId: number) => {
+const fetchModelAnalysis = async (modelId: string) => {
   try {
-    const params = {
-      carModelId: modelId,
-      period: forecastPeriod.value,
-      granularity: forecastGranularity.value,
-      comparisonModels: comparisonModels.value,
-      dimensions: comparisonDimensions.value,
-    }
+    const params = new URLSearchParams();
+    // 直传车型和预测周期参数
+    params.append('carModelId', selectedModel.value.toString())
+    params.append('months', forecastPeriod.value.toString())
 
-    const response = await axios.post('/api/model/analysis', params)
-    if (response.data.status === 1) {
+    // const params = {
+    //   carModelId: modelId,
+    //   period: forecastPeriod.value,
+    //   granularity: forecastGranularity.value,
+    //   comparisonModels: comparisonModels.value,
+    //   dimensions: comparisonDimensions.value,
+    // }
+
+    const response = await axios.get(`/api/prediction/ARIMA/detail?${params.toString()}`)
+    if (response.data.status === 200) {
+      console.log('获取车型分析数据:', response.data.data)
       return response.data.data
     } else {
       return generateMockModelAnalysis()
@@ -264,7 +268,7 @@ const fetchModelAnalysis = async (modelId: number) => {
 const generateMockCarModels = (): CarModel[] => {
   return [
     {
-      carModelId: 1,
+      carModelId: '1',
       modelName: 'Model Y',
       brandName: 'Tesla',
       price: 280000,
@@ -272,7 +276,7 @@ const generateMockCarModels = (): CarModel[] => {
       launchDate: '2021-01-01',
     },
     {
-      carModelId: 2,
+      carModelId: '2',
       modelName: 'Model 3',
       brandName: 'Tesla',
       price: 235000,
@@ -280,7 +284,7 @@ const generateMockCarModels = (): CarModel[] => {
       launchDate: '2019-02-01',
     },
     {
-      carModelId: 3,
+      carModelId: '3',
       modelName: '汉EV',
       brandName: 'BYD',
       price: 229800,
@@ -288,7 +292,7 @@ const generateMockCarModels = (): CarModel[] => {
       launchDate: '2020-07-01',
     },
     {
-      carModelId: 4,
+      carModelId: '4',
       modelName: 'ES6',
       brandName: 'NIO',
       price: 358000,
@@ -296,7 +300,7 @@ const generateMockCarModels = (): CarModel[] => {
       launchDate: '2019-06-01',
     },
     {
-      carModelId: 5,
+      carModelId: '5',
       modelName: 'P7',
       brandName: 'XPeng',
       price: 229900,
@@ -304,7 +308,7 @@ const generateMockCarModels = (): CarModel[] => {
       launchDate: '2020-04-01',
     },
     {
-      carModelId: 6,
+      carModelId: '6',
       modelName: 'Model S',
       brandName: 'Tesla',
       price: 789900,
@@ -312,7 +316,7 @@ const generateMockCarModels = (): CarModel[] => {
       launchDate: '2016-01-01',
     },
     {
-      carModelId: 7,
+      carModelId: '7',
       modelName: '唐EV',
       brandName: 'BYD',
       price: 279800,
@@ -320,7 +324,7 @@ const generateMockCarModels = (): CarModel[] => {
       launchDate: '2018-12-01',
     },
     {
-      carModelId: 8,
+      carModelId: '8',
       modelName: 'ES8',
       brandName: 'NIO',
       price: 468000,
@@ -328,7 +332,7 @@ const generateMockCarModels = (): CarModel[] => {
       launchDate: '2018-06-01',
     },
     {
-      carModelId: 9,
+      carModelId: '9',
       modelName: 'P5',
       brandName: 'XPeng',
       price: 179900,
@@ -336,7 +340,7 @@ const generateMockCarModels = (): CarModel[] => {
       launchDate: '2021-09-01',
     },
     {
-      carModelId: 10,
+      carModelId: '10',
       modelName: 'AION Y',
       brandName: 'GAC',
       price: 139600,
@@ -347,46 +351,6 @@ const generateMockCarModels = (): CarModel[] => {
 }
 
 const generateMockModelAnalysis = () => {
-  // 生成版本配置预测数据
-  versionForecast.value = [
-    {
-      version: '标准版',
-      currentSales: 15600,
-      predictedSales: 18200,
-      growthRate: 16.7,
-      marketShare: 45.2,
-      profitMargin: 12.8,
-      suggestions: ['主力版本', '稳定增长'],
-    },
-    {
-      version: '豪华版',
-      currentSales: 8900,
-      predictedSales: 9800,
-      growthRate: 10.1,
-      marketShare: 24.3,
-      profitMargin: 18.5,
-      suggestions: ['提升配置', '扩大差异'],
-    },
-    {
-      version: '性能版',
-      currentSales: 5200,
-      predictedSales: 6800,
-      growthRate: 30.8,
-      marketShare: 16.9,
-      profitMargin: 22.3,
-      suggestions: ['高增长', '重点推广'],
-    },
-    {
-      version: '长续航版',
-      currentSales: 3400,
-      predictedSales: 5500,
-      growthRate: 61.8,
-      marketShare: 13.6,
-      profitMargin: 16.2,
-      suggestions: ['快速增长', '加大产能'],
-    },
-  ]
-
   // 生成竞品定价数据
   competitorPricing.value = [
     {
@@ -457,7 +421,6 @@ const generateMockModelAnalysis = () => {
       potential: 3,
       expectedDuration: 48,
     },
-    versions: versionForecast.value,
     pricing: {
       elasticity: -1.8,
       optimal: 258000,
@@ -501,16 +464,15 @@ const handleGranularityChange = () => {
 }
 
 const resetSelection = () => {
-  selectedModel.value = null
+  selectedModel.value = ''
   comparisonModels.value = []
   comparisonDimensions.value = ['sales', 'price', 'market_share']
-  forecastPeriod.value = '12M'
+  forecastPeriod.value = '12'
   forecastGranularity.value = 'monthly'
   modelResults.value = null
 
   // 清理图表
   const chartInstances = [
-    configurationChartInstance,
     elasticityChartInstance,
     inventoryChartInstance,
     competitorChartInstance,
@@ -544,7 +506,6 @@ const startModelAnalysis = async () => {
     expectedLifecycle.value = results.lifecycle.expectedDuration
 
     // 更新其他数据
-    versionForecast.value = results.versions
     priceElasticity.value = results.pricing.elasticity
     optimalPrice.value = results.pricing.optimal
     maxProfitMargin.value = results.pricing.maxMargin
@@ -606,14 +567,6 @@ const exportAnalysis = () => {
     [''],
     ['版本配置分析'],
     ['版本', '当前销量', '预测销量', '增长率', '市场份额', '利润率'],
-    ...versionForecast.value.map((v) => [
-      v.version,
-      v.currentSales,
-      v.predictedSales,
-      `${v.growthRate}%`,
-      `${v.marketShare}%`,
-      `${v.profitMargin}%`,
-    ]),
   ]
     .map((row) => row.join(','))
     .join('\n')
@@ -625,79 +578,6 @@ const exportAnalysis = () => {
   link.click()
 
   ElMessage.success('分析报告已导出')
-}
-
-const exportConfigReport = () => {
-  ElMessage.info('配置报告导出功能开发中...')
-}
-
-// 优化器相关函数
-const runOptimization = async () => {
-  optimizing.value = true
-
-  try {
-    // 模拟优化计算
-    await new Promise((resolve) => setTimeout(resolve, 2000))
-
-    optimizationResults.value = [
-      {
-        configuration: '标准版',
-        currentRatio: 45.2,
-        recommendedRatio: 42.0,
-        expectedImpact: -2.1,
-        reasoning: '减少标准版占比，为高端版本让出空间',
-      },
-      {
-        configuration: '豪华版',
-        currentRatio: 24.3,
-        recommendedRatio: 28.0,
-        expectedImpact: 5.8,
-        reasoning: '增加豪华版产能，提升整体利润率',
-      },
-      {
-        configuration: '性能版',
-        currentRatio: 16.9,
-        recommendedRatio: 20.0,
-        expectedImpact: 12.3,
-        reasoning: '性能版需求强劲，建议扩大产能',
-      },
-      {
-        configuration: '长续航版',
-        currentRatio: 13.6,
-        recommendedRatio: 10.0,
-        expectedImpact: -8.5,
-        reasoning: '长续航版成本较高，适当减产',
-      },
-    ]
-
-    ElMessage.success('优化分析完成！')
-  } catch (error) {
-    ElMessage.error('优化失败')
-  } finally {
-    optimizing.value = false
-  }
-}
-
-const applyOptimization = () => {
-  if (!optimizationResults.value) return
-
-  ElMessageBox.confirm('确定要应用这些优化建议吗？这将影响生产计划和资源分配。', '确认应用优化', {
-    confirmButtonText: '确定应用',
-    cancelButtonText: '取消',
-    type: 'warning',
-  })
-    .then(() => {
-      // 应用优化建议的逻辑
-      ElMessage.success('优化建议已应用，请关注后续效果')
-      showConfigOptimizer.value = false
-    })
-    .catch(() => {
-      // 用户取消
-    })
-}
-
-const handleConfigOptimizerClose = () => {
-  showConfigOptimizer.value = false
 }
 
 // 价格模拟器相关函数
@@ -837,70 +717,162 @@ const showCounterStrategy = (threat: CompetitorThreat) => {
 // 图表初始化函数
 const initAllCharts = async () => {
   await Promise.all([
-    initConfigurationChart(),
+    initForecastChart(),
     initElasticityChart(),
     initInventoryChart(),
     initCompetitorChart(),
   ])
 }
 
-const initConfigurationChart = async () => {
-  if (!configurationChart.value) return
+const initForecastChart = async () => {
+  if (!forecastChart.value || !modelResults.value) return
 
   await nextTick()
 
-  if (configurationChartInstance) {
-    configurationChartInstance.dispose()
+  if (forecastChartInstance) {
+    forecastChartInstance.dispose()
   }
+  forecastChartInstance = echarts.init(forecastChart.value)
 
-  configurationChartInstance = echarts.init(configurationChart.value)
+  // 假设 modelResults.value.forecast 为 [{date, value, upper, lower}]
+  // 如无真实数据，可用模拟数据
+  const forecastData = modelResults.value.forecast || [
+    { date: '2023-01', value: 1200, upper: 1300, lower: 1100 },
+    { date: '2023-02', value: 1350, upper: 1450, lower: 1250 },
+    { date: '2023-03', value: 1500, upper: 1600, lower: 1400 },
+    { date: '2023-04', value: 1700, upper: 1800, lower: 1600 },
+    { date: '2023-05', value: 1600, upper: 1700, lower: 1500 },
+    { date: '2023-06', value: 1550, upper: 1650, lower: 1450 },
+  ]
+  const historyData =[
+    {"date": "2022-01", "value": 932},
+    {"date": "2022-02", "value": 1045},
+    {"date": "2022-03", "value": 876},
+    {"date": "2022-04", "value": 1152},
+    {"date": "2022-05", "value": 987},
+    {"date": "2022-06", "value": 1103},
+    {"date": "2022-07", "value": 821},
+    {"date": "2022-08", "value": 1176},
+    {"date": "2022-09", "value": 899},
+    {"date": "2022-10", "value": 1088},
+    {"date": "2022-11", "value": 954},
+    {"date": "2022-12", "value": 1192}
+  ]
+  const historySales = historyData.map((d: { date: string; value: number }) => d.value)
+  const historyDates = historyData.map((d: { date: string }) => d.date)
+  const forecastDates = forecastData.map((d: { date: string; value: number; upper: number; lower: number }) => d.date)
+  const values = forecastData.map((d: { date: string; value: number; upper: number; lower: number }) => d.value)
+  const upper = forecastData.map((d: { date: string; value: number; upper: number; lower: number }) => d.upper)
+  const lower = forecastData.map((d: { date: string; value: number; upper: number; lower: number }) => d.lower)
+
+  // 为预测数据添加前导null来正确对其
+  const forecastSales = new Array(historySales.length).fill(null).concat(values)
+  const forecastUpper = new Array(historySales.length).fill(null).concat(upper)
+  const forecastLower = new Array(historySales.length).fill(null).concat(lower)
 
   const option = {
     title: {
-      text: '版本配置销量预测',
+      text: '车型销量预测',
       left: 'center',
-      textStyle: { fontSize: 14 },
+      textStyle: { fontSize: 16, fontWeight: 'bold', color: '#333' },
     },
     tooltip: {
       trigger: 'axis',
-      axisPointer: { type: 'cross' },
+      formatter: (params: any) => {
+        let result = `<div style="font-weight: bold; margin-bottom: 6px;">${params[0].axisValue}</div>`
+        params.forEach((param: any) => {
+          if (param.value !== null && param.value !== undefined) {
+            const color = param.color
+            const seriesName = param.seriesName
+            const value = param.value.toLocaleString()
+            result += `<div style="margin-bottom: 3px;">
+              <span style="display: inline-block; width: 10px; height: 10px; background: ${color}; border-radius: 50%; margin-right: 6px;"></span>
+              ${seriesName}: <strong>${value}</strong> 台
+            </div>`
+          }
+        })
+        return result
+      },
     },
     legend: {
-      data: ['当前销量', '预测销量'],
+      data: ['预测销量', '置信区间'],
       top: 30,
+      textStyle: { fontSize: 12 },
     },
     grid: {
       left: '3%',
       right: '4%',
-      bottom: '3%',
-      top: '15%',
+      bottom: '15%',
+      top: '20%',
       containLabel: true,
     },
     xAxis: {
       type: 'category',
-      data: versionForecast.value.map((v) => v.version),
+      data: historyDates.concat(forecastDates),
+      axisLabel: { fontSize: 10, rotate: 45 },
+      axisTick: { alignWithLabel: true },
     },
     yAxis: {
       type: 'value',
       name: '销量(台)',
+      nameLocation: 'middle',
+      nameGap: 50,
+      axisLabel: {
+        formatter: (value: number) => (value >= 1000 ? (value / 1000).toFixed(1) + 'k' : value.toString()),
+      },
+      splitLine: { lineStyle: { type: 'dashed', color: '#e0e6ed' } },
     },
     series: [
       {
-        name: '当前销量',
-        type: 'bar',
-        data: versionForecast.value.map((v) => v.currentSales),
-        itemStyle: { color: '#409EFF' },
+        name: '历史销量',
+        type: 'line',
+        data: historySales,
+        itemStyle: { 
+          color: '#409EFF' 
+        },
+        lineStyle: { 
+          width: 2, 
+          type: 'dashed' 
+        },
+        symbol: 'circle',
+        symbolSize: 4,
       },
       {
         name: '预测销量',
-        type: 'bar',
-        data: versionForecast.value.map((v) => v.predictedSales),
-        itemStyle: { color: '#67C23A' },
+        type: 'line',
+        data: forecastSales,
+        itemStyle: { 
+          color: '#E6A23C' 
+        },
+        lineStyle: { 
+          width: 3 
+        },
+        symbol: 'diamond',
+        symbolSize: 6,
+      },
+      {
+        name: '置信区间',
+        type: 'line',
+        data: forecastUpper,
+        lineStyle: { opacity: 0 },
+        symbol: 'none',
+        stack: 'confidence-band',
+        areaStyle: { color: 'rgba(230, 162, 60, 0.3)' },
+      },
+      {
+        name: '置信区间下限',
+        type: 'line',
+        data: forecastLower,
+        lineStyle: { opacity: 0 },
+        symbol: 'none',
+        stack: 'confidence-band',
+        areaStyle: { color: 'rgba(255,255,255,0.8)' },
+        showInLegend: false,
       },
     ],
   }
 
-  configurationChartInstance.setOption(option)
+  forecastChartInstance.setOption(option)
 }
 
 const initElasticityChart = async () => {
@@ -1232,7 +1204,6 @@ const initSimulationChart = async () => {
 // 窗口大小调整
 const handleResize = () => {
   const chartInstances = [
-    configurationChartInstance,
     elasticityChartInstance,
     inventoryChartInstance,
     competitorChartInstance,
@@ -1260,7 +1231,7 @@ onMounted(async () => {
   ElMessage.success('欢迎使用车型销售预测系统！')
 
   try {
-    await fetchCarModels()
+    //await fetchCarModels()
     window.addEventListener('resize', handleResize)
   } catch (error) {
     console.error('页面初始化失败:', error)
@@ -1273,7 +1244,7 @@ onUnmounted(() => {
 
   // 销毁所有图表实例
   const chartInstances = [
-    configurationChartInstance,
+    forecastChartInstance,
     elasticityChartInstance,
     inventoryChartInstance,
     competitorChartInstance,
@@ -1337,10 +1308,10 @@ onUnmounted(() => {
                   style="width: 100%"
                 >
                   <el-option
-                    v-for="model in carModelList"
-                    :key="model.carModelId"
-                    :label="`${model.brandName} ${model.modelName}`"
-                    :value="model.carModelId"
+                    v-for="model in carModelOptionsFake"
+                    :key="model.label"
+                    :label="model.label"
+                    :value="model.value"
                   />
                 </el-select>
               </el-form-item>
@@ -1348,10 +1319,10 @@ onUnmounted(() => {
             <el-col :span="7">
               <el-form-item label="预测周期:">
                 <el-select v-model="forecastPeriod" @change="handlePeriodChange">
-                  <el-option label="未来3个月" value="3M" />
-                  <el-option label="未来6个月" value="6M" />
-                  <el-option label="未来12个月" value="12M" />
-                  <el-option label="未来18个月" value="18M" />
+                  <el-option label="未来3个月" value="3" />
+                  <el-option label="未来6个月" value="6" />
+                  <el-option label="未来12个月" value="12" />
+                  <el-option label="未来18个月" value="18" />
                 </el-select>
               </el-form-item>
             </el-col>
@@ -1392,9 +1363,9 @@ onUnmounted(() => {
                 >
                   <el-option
                     v-for="model in filteredComparisonModels"
-                    :key="model.carModelId"
-                    :label="`${model.brandName} ${model.modelName}`"
-                    :value="model.carModelId"
+                    :key="model.label"
+                    :label="model.label"
+                    :value="model.value"
                   />
                 </el-select>
               </el-form-item>
@@ -1414,7 +1385,7 @@ onUnmounted(() => {
       </div>
     </el-card>
 
-    <!-- 产品生命周期分析 -->
+    <!-- 产品生命周期分析与预测结果分析 -->
     <el-row :gutter="20" v-if="modelResults">
       <el-col :xs="24" :lg="8">
         <el-card shadow="never" class="lifecycle-card">
@@ -1473,79 +1444,41 @@ onUnmounted(() => {
           </div>
         </el-card>
       </el-col>
-
-      <!-- 配置组合分析 -->
+    
+      <!-- 预测结果 -->
       <el-col :xs="24" :lg="16">
-        <el-card shadow="never" class="configuration-card">
+        <!-- 新增生命周期预测图表 -->
+        <el-card shadow="never" class="result-card" style="margin-bottom: 20px;">
           <template #header>
             <div class="card-header">
-              <span>配置组合优化分析</span>
-              <div class="header-actions">
-                <el-button size="small" @click="showConfigOptimizer = true">配置优化器</el-button>
-                <el-button size="small" @click="exportConfigReport">导出配置报告</el-button>
-              </div>
+              <span>车型销量预测</span>
+              <!-- <div class="result-actions">
+                <el-button
+                  type="text"
+                  @click="toggleDataLabels"
+                  :icon="View"
+                >
+                  {{ showDataLabels ? '隐藏' : '显示' }}数据标签
+                </el-button>
+                <el-button
+                  v-if="predictionResults"
+                  type="text"
+                  @click="showBusinessInsights = true"
+                  :icon="DataAnalysis"
+                >
+                  业务洞察
+                </el-button>
+              </div> -->
             </div>
           </template>
-
-          <div class="configuration-analysis">
-            <!-- 配置销量预测图表 -->
-            <div class="config-forecast-chart">
-              <div ref="configurationChart" class="chart-container" v-loading="analyzing"></div>
-            </div>
-
-            <!-- 配置详细分析 -->
-            <div class="config-details">
-              <el-tabs v-model="activeConfigTab">
-                <el-tab-pane label="版本配置" name="versions">
-                  <div class="version-analysis">
-                    <el-table :data="versionForecast" style="width: 100%">
-                      <el-table-column prop="version" label="版本配置" width="150" />
-                      <el-table-column prop="currentSales" label="当前销量" width="120">
-                        <template #default="{ row }">
-                          {{ row.currentSales.toLocaleString() }} 台
-                        </template>
-                      </el-table-column>
-                      <el-table-column prop="predictedSales" label="预测销量" width="120">
-                        <template #default="{ row }">
-                          {{ row.predictedSales.toLocaleString() }} 台
-                        </template>
-                      </el-table-column>
-                      <el-table-column prop="growthRate" label="增长率" width="100">
-                        <template #default="{ row }">
-                          <span :class="row.growthRate >= 0 ? 'text-success' : 'text-danger'">
-                            {{ row.growthRate >= 0 ? '+' : '' }}{{ row.growthRate.toFixed(1) }}%
-                          </span>
-                        </template>
-                      </el-table-column>
-                      <el-table-column prop="marketShare" label="市场份额" width="100">
-                        <template #default="{ row }"> {{ row.marketShare.toFixed(1) }}% </template>
-                      </el-table-column>
-                      <el-table-column prop="profitMargin" label="利润率" width="100">
-                        <template #default="{ row }"> {{ row.profitMargin.toFixed(1) }}% </template>
-                      </el-table-column>
-                      <el-table-column label="优化建议" min-width="200">
-                        <template #default="{ row }">
-                          <el-tag
-                            v-for="tag in row.suggestions"
-                            :key="tag"
-                            size="small"
-                            style="margin-right: 4px"
-                          >
-                            {{ tag }}
-                          </el-tag>
-                        </template>
-                      </el-table-column>
-                    </el-table>
-                  </div>
-                </el-tab-pane>
-              </el-tabs>
-            </div>
-          </div>
+          <div ref="forecastChart" class="forecast-chart"></div>
         </el-card>
+        <!-- ...原有配置组合分析内容... -->
       </el-col>
     </el-row>
     <br>
-    
+
+
     <!-- 定价策略与库存规划 -->
     <el-row :gutter="20" v-if="modelResults">
       <el-col :xs="24" :lg="12">
@@ -1728,91 +1661,6 @@ onUnmounted(() => {
         </div>
       </div>
     </el-card>
-
-    <!-- 配置优化弹窗 -->
-    <el-dialog
-      v-model="showConfigOptimizer"
-      title="配置组合优化器"
-      width="80%"
-      :before-close="handleConfigOptimizerClose"
-    >
-      <div class="config-optimizer-content">
-        <el-tabs v-model="activeOptimizerTab">
-          <el-tab-pane label="版本优化" name="version">
-            <div class="version-optimizer">
-              <!-- 版本配置优化界面 -->
-              <div class="optimizer-controls">
-                <el-row :gutter="16">
-                  <el-col :span="8">
-                    <el-form-item label="优化目标:">
-                      <el-select v-model="optimizationTarget">
-                        <el-option label="最大化销量" value="max_sales" />
-                        <el-option label="最大化利润" value="max_profit" />
-                        <el-option label="最大化市场份额" value="max_share" />
-                        <el-option label="均衡发展" value="balanced" />
-                      </el-select>
-                    </el-form-item>
-                  </el-col>
-                  <el-col :span="8">
-                    <el-form-item label="约束条件:">
-                      <el-checkbox-group v-model="optimizationConstraints">
-                        <el-checkbox value="production_capacity">产能限制</el-checkbox>
-                        <el-checkbox value="cost_control">成本控制</el-checkbox>
-                        <el-checkbox value="market_positioning">市场定位</el-checkbox>
-                      </el-checkbox-group>
-                    </el-form-item>
-                  </el-col>
-                  <el-col :span="8">
-                    <el-button type="primary" @click="runOptimization" :loading="optimizing">
-                      运行优化
-                    </el-button>
-                  </el-col>
-                </el-row>
-              </div>
-
-              <div class="optimization-results" v-if="optimizationResults">
-                <h5>优化建议结果</h5>
-                <el-table :data="optimizationResults" style="width: 100%">
-                  <el-table-column prop="configuration" label="配置" width="150" />
-                  <el-table-column prop="currentRatio" label="当前占比" width="100">
-                    <template #default="{ row }"> {{ row.currentRatio.toFixed(1) }}% </template>
-                  </el-table-column>
-                  <el-table-column prop="recommendedRatio" label="建议占比" width="100">
-                    <template #default="{ row }"> {{ row.recommendedRatio.toFixed(1) }}% </template>
-                  </el-table-column>
-                  <el-table-column prop="expectedImpact" label="预期影响" width="120">
-                    <template #default="{ row }">
-                      <span :class="row.expectedImpact >= 0 ? 'text-success' : 'text-danger'">
-                        {{ row.expectedImpact >= 0 ? '+' : '' }}{{ row.expectedImpact.toFixed(1) }}%
-                      </span>
-                    </template>
-                  </el-table-column>
-                  <el-table-column prop="reasoning" label="优化理由" min-width="200" />
-                </el-table>
-              </div>
-            </div>
-          </el-tab-pane>
-
-          <el-tab-pane label="价格优化" name="pricing">
-            <div class="pricing-optimizer">
-              <!-- 价格优化界面 -->
-              <div class="price-optimization-content">
-                <!-- 价格优化控件和结果展示 -->
-              </div>
-            </div>
-          </el-tab-pane>
-        </el-tabs>
-      </div>
-
-      <template #footer>
-        <div class="dialog-footer">
-          <el-button @click="showConfigOptimizer = false">取消</el-button>
-          <el-button type="primary" @click="applyOptimization" :disabled="!optimizationResults">
-            应用优化建议
-          </el-button>
-        </div>
-      </template>
-    </el-dialog>
 
     <!-- 价格模拟器弹窗 -->
     <el-dialog v-model="showPricingSimulator" title="价格策略模拟器" width="70%">
@@ -2191,11 +2039,6 @@ onUnmounted(() => {
   padding: 8px 0;
 }
 
-.config-forecast-chart {
-  padding: 20px;
-  border-bottom: 1px solid #f0f2f5;
-}
-
 .chart-container {
   width: 100%;
   height: 320px;
@@ -2203,20 +2046,13 @@ onUnmounted(() => {
   border-radius: 8px;
 }
 
-.config-details {
-  padding: 20px;
-}
-
-.version-analysis .el-table {
+.forecast-chart {
+  width: 100%;
+  height: 520px;
+  min-height: 520px;
+  background: white;
   border-radius: 8px;
-  overflow: hidden;
-}
-
-.version-analysis .el-table th {
-  background: #f8fafb;
-  color: #606266;
-  font-weight: 600;
-  font-size: 13px;
+  padding: 16px;
 }
 
 .text-success {
@@ -2897,6 +2733,11 @@ onUnmounted(() => {
 }
 
 @media (max-width: 1200px) {
+  .forecast-chart {
+    height: 450px;
+    min-height: 450px;
+  }
+
   .chart-container {
     height: 260px;
   }
@@ -2907,6 +2748,12 @@ onUnmounted(() => {
 }
 
 @media (max-width: 768px) {
+  .forecast-chart {
+    height: 380px;
+    min-height: 380px;
+    padding: 8px;
+  }
+
   .model-sales-forecast {
     padding: 0 8px;
   }
@@ -3012,6 +2859,12 @@ onUnmounted(() => {
 }
 
 @media (max-width: 480px) {
+  .forecast-chart {
+    height: 300px;
+    min-height: 300px;
+    padding: 4px;
+  }
+
   .header-left h2 {
     font-size: 20px;
   }
@@ -3146,6 +2999,11 @@ onUnmounted(() => {
 
 /* 打印样式 */
 @media print {
+  .forecast-chart {
+    height: 400px !important;
+    break-inside: avoid;
+  }
+
   .model-sales-forecast {
     background: white !important;
     color: black !important;
