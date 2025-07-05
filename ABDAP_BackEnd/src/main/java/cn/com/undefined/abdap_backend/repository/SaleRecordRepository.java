@@ -23,7 +23,7 @@ public interface SaleRecordRepository extends JpaRepository<SaleRecord, Long> {
         * 根据地区ID查询销售记录
         */
        List<SaleRecord> findByRegionId(Long regionId);
-
+       
        /**
         * 根据车型ID和地区ID查询销售记录
         */

@@ -19,15 +19,8 @@ public class Region {
     @Column(name = "region_name", length = 64)
     private String regionName;
 
-    @Column(name = "parent_region_id")
-    private Long parentRegionId;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "parent_region_id", insertable = false, updatable = false)
-    private Region parentRegion;
-
-    @OneToMany(mappedBy = "parentRegion", fetch = FetchType.LAZY)
-    private List<Region> childRegions;
+    @Column(name = "parent_region")
+    private String parentRegion;
     
     /**
      * 该地区的所有销售记录（一对多关系）

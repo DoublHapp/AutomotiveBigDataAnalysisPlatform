@@ -54,7 +54,7 @@ public class SaleRecordService {
      * 根据车型ID查询销售记录
      */
     public List<SaleRecordDTO> findByCarModelId(Long carModelId) {
-        List<SaleRecord> saleRecords = repository.findByCarModelIdWithDetails(carModelId);
+        List<SaleRecord> saleRecords = repository.findByCarModelId(carModelId);
         return saleRecords.stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
@@ -64,7 +64,14 @@ public class SaleRecordService {
      * 根据地区ID查询销售记录
      */
     public List<SaleRecordDTO> findByRegionId(Long regionId) {
-        List<SaleRecord> saleRecords = repository.findByRegionIdWithDetails(regionId);
+        List<SaleRecord> saleRecords = repository.findByRegionId(regionId);
+        return saleRecords.stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
+    public List<SaleRecordDTO> findByRegionIds(List<Long> regionId) {
+        List<SaleRecord> saleRecords = repository.findByRegionIds(regionId);
         return saleRecords.stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());

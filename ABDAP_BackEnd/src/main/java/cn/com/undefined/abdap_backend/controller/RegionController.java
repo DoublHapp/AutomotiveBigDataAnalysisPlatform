@@ -23,10 +23,11 @@ public class RegionController {
     private RegionService regionService;
 
     /**
-     * 获取所有地区数据
+     * 获取所有地区数据（市级）
      * 
      * @return 地区数据列表
      */
+    @Deprecated
     @GetMapping
     public ResponseEntity<ApiResponse<List<RegionDTO>>> getAllRegions() {
         List<RegionDTO> regions = regionService.getAllRegions();
@@ -34,14 +35,14 @@ public class RegionController {
     }
 
     /**
-     * 根据父级地区ID获取子地区数据
+     * 根据父级地区名称获取子地区数据
      * 
-     * @param parentId 父级地区ID
+     * @param parentRegion 父级地区名称
      * @return 子地区数据列表
      */
-    @GetMapping("/parent/{parentId}")
-    public ResponseEntity<ApiResponse<List<RegionDTO>>> getRegionsByParent(@PathVariable Long parentId) {
-        List<RegionDTO> regions = regionService.getRegionsByParentId(parentId);
+    @GetMapping("/parent/{parentRegion}")
+    public ResponseEntity<ApiResponse<List<RegionDTO>>> getRegionsByParent(@PathVariable String parentRegion) {
+        List<RegionDTO> regions = regionService.getRegionsByParent(parentRegion);
         return ResponseUtil.success(regions);
     }
 
@@ -51,8 +52,8 @@ public class RegionController {
      * @return 顶级地区数据列表
      */
     @GetMapping("/top-level")
-    public ResponseEntity<ApiResponse<List<RegionDTO>>> getTopLevelRegions() {
-        List<RegionDTO> regions = regionService.getTopLevelRegions();
+    public ResponseEntity<ApiResponse<List<String>>> getTopLevelRegions() {
+        List<String> regions = regionService.getTopLevelRegions();
         return ResponseUtil.success(regions);
     }
 
@@ -63,19 +64,7 @@ public class RegionController {
      */
     @GetMapping("/non-top-level")
     public ResponseEntity<ApiResponse<List<RegionDTO>>> getNonTopLevelRegions() {
-        List<RegionDTO> regions = regionService.getNonTopLevelRegions();
-        return ResponseUtil.success(regions);
-    }
-
-    /**
-     * 根据地区名称搜索地区数据
-     * 
-     * @param name 地区名称关键字
-     * @return 匹配的地区数据列表
-     */
-    @GetMapping("/search")
-    public ResponseEntity<ApiResponse<List<RegionDTO>>> searchRegions(@RequestParam String name) {
-        List<RegionDTO> regions = regionService.searchRegionsByName(name);
+        List<RegionDTO> regions = regionService.getAllRegions();
         return ResponseUtil.success(regions);
     }
 }
