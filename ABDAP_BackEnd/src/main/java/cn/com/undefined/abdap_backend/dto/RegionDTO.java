@@ -24,9 +24,9 @@ public class RegionDTO {
     private String regionName;
     
     /**
-     * 父级地区ID
+     * 父级地区名称
      */
-    private Long parentRegionId;
+    private String parentRegion;
     
     /**
      * 父级地区名称（冗余字段，便于前端显示）

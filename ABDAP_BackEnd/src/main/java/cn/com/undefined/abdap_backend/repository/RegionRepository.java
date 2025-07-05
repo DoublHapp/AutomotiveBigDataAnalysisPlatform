@@ -13,42 +13,32 @@ import java.util.List;
  */
 @Repository
 public interface RegionRepository extends JpaRepository<Region, Long> {
-    
+
     /**
      * 根据地区名称查询地区信息
      */
     Region findByRegionName(String regionName);
-    
+
     /**
-     * 根据父级地区ID查询子地区
-     * @param parentRegionId 父级地区ID
-     * @return 子地区列表
-     */
-    List<Region> findByParentRegionId(Long parentRegionId);
-    
-    /**
-     * 查询所有顶级地区（没有父级地区的地区）
+     * 查询所有顶级地区
+     * 
      * @return 顶级地区列表
      */
-    List<Region> findByParentRegionIdIsNull();
-    
+    @Query("SELECT DISTINCT r.parentRegion FROM Region r WHERE r.parentRegion IS NOT NULL")
+    List<String> findParentRegions();
+
     /**
-     * 查询所有非顶级地区
-     * @return 非顶级地区列表
+     * 根据父级地区查询子地区
+     * @param parentRegion 父级地区名称
+     * @return 子地区列表
      */
-    List<Region> findByParentRegionIdIsNotNull();
-    
+    List<Region> findByParentRegion(String parentRegion);
+
     /**
-     * 根据地区名称模糊查询地区
-     * @param regionName 地区名称关键字
-     * @return 地区列表
+     * 根据父级地区列表查询子地区
+     * @param parentRegions 父级地区名称列表
+     * @return 子地区列表
      */
-    List<Region> findByRegionNameContaining(String regionName);
-    
-    /**
-     * 查询所有地区及其父级地区信息（用于DTO转换）
-     * @return 地区及父级信息列表
-     */
-    @Query("SELECT r FROM Region r LEFT JOIN FETCH r.parentRegion")
-    List<Region> findAllWithParent();
+    @Query("SELECT r FROM Region r WHERE r.parentRegion IN :parentRegions")
+    List<Region> findByParentRegions(List<String> parentRegions);
 }

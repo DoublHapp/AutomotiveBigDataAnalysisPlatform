@@ -19,64 +19,59 @@ public class RegionService {
     private RegionRepository regionRepository;
 
     /**
-     * 获取所有地区数据
+     * 获取所有地区数据（市级）
+     * 
      * @return 地区数据DTO列表
      */
     public List<RegionDTO> getAllRegions() {
-        List<Region> regions = regionRepository.findAllWithParent();
+        List<Region> regions = regionRepository.findAll();
         return regions.stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
     }
 
     /**
-     * 根据父级地区ID获取子地区数据
-     * @param parentRegionId 父级地区ID
+     * 根据父级地区获取子地区数据
+     * 
+     * @param parentRegion 父级地区名称
      * @return 子地区数据DTO列表
      */
-    public List<RegionDTO> getRegionsByParentId(Long parentRegionId) {
-        List<Region> regions = regionRepository.findByParentRegionId(parentRegionId);
+    public List<RegionDTO> getRegionsByParent(String parentRegion) {
+        List<Region> regions = regionRepository.findByParentRegion(parentRegion);
         return regions.stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
     }
 
     /**
-     * 获取所有顶级地区数据
-     * @return 顶级地区数据DTO列表
+     * 根据父级地区列表获取子地区数据
+     * 
+     * @param parentRegions 父级地区名称列表
+     * @return 子地区数据DTO列表
      */
-    public List<RegionDTO> getTopLevelRegions() {
-        List<Region> regions = regionRepository.findByParentRegionIdIsNull();
+    public List<RegionDTO> getRegionsByParent(List<String> parentRegions) {
+        List<Region> regions = regionRepository.findByParentRegions(parentRegions);
         return regions.stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
     }
 
     /**
-     * 查询所有非顶级地区数据
-     * @return
+     * 获取所有顶级地区数据（省）
+     * 
+     * @return 顶级地区名称列表
      */
-    public List<RegionDTO> getNonTopLevelRegions() {
-        List<Region> regions = regionRepository.findByParentRegionIdIsNotNull();
-        return regions.stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
-    }
-
-    /**
-     * 根据地区名称搜索地区数据
-     * @param regionName 地区名称关键字
-     * @return 地区数据DTO列表
-     */
-    public List<RegionDTO> searchRegionsByName(String regionName) {
-        List<Region> regions = regionRepository.findByRegionNameContaining(regionName);
-        return regions.stream()
-                .map(this::convertToDTO)
+    public List<String> getTopLevelRegions() {
+        List<String> parentRegions = regionRepository.findParentRegions();
+        return parentRegions.stream()
+                .filter(parentRegion -> parentRegion != null && !parentRegion.trim().isEmpty())
+                .distinct()
                 .collect(Collectors.toList());
     }
 
     /**
      * 将Region实体转换为RegionDTO
+     * 
      * @param region 地区实体
      * @return 地区数据DTO
      */
@@ -84,13 +79,8 @@ public class RegionService {
         RegionDTO dto = new RegionDTO();
         dto.setRegionId(region.getRegionId());
         dto.setRegionName(region.getRegionName());
-        dto.setParentRegionId(region.getParentRegionId());
-        
-        // 设置父级地区名称
-        if (region.getParentRegion() != null) {
-            dto.setParentRegionName(region.getParentRegion().getRegionName());
-        }
-        
+        dto.setParentRegion(region.getParentRegion());
+
         return dto;
     }
 }
