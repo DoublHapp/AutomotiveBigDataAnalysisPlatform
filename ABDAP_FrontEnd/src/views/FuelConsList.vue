@@ -47,7 +47,7 @@
                     style="width: 100%"
                     @change="calculateCost"
                   />
-                  <div class="input-tip">建议根据实际出行情况填写</div>
+                  <div class="input-tip">单位：公里，建议根据实际出行情况填写</div>
                 </el-form-item>
 
                 <el-form-item label="当前油价">
@@ -60,7 +60,22 @@
                     style="width: 100%"
                     @change="calculateCost"
                   />
-                  <div class="input-tip">请参考当地实际油价输入</div>
+                  <div class="input-tip">单位：元/L，请参考当地实际油价输入</div>
+                </el-form-item>
+
+                <el-form-item label="基础油耗/电耗">
+                  <el-input-number
+                    v-model="calculatorForm.baseFuelConsumption"
+                    :min="1"
+                    :max="100"
+                    :precision="1"
+                    placeholder="L/100km 或 kWh/100km"
+                    style="width: 100%"
+                    @change="calculateCost"
+                  />
+                  <div class="input-tip">
+                    单位：L/100km 或 kWh/100km，请输入您的车辆实际油耗或电耗
+                  </div>
                 </el-form-item>
 
                 <el-form-item label="驾驶风格">
@@ -69,7 +84,7 @@
                     <el-radio value="normal">温和</el-radio>
                     <el-radio value="aggressive">激进</el-radio>
                   </el-radio-group>
-                  <div class="input-tip">节能驾驶可降低15%油耗</div>
+                  <div class="input-tip">节能驾驶降低15%油耗，激进驾驶增加20%油耗</div>
                 </el-form-item>
 
                 <el-form-item label="使用场景">
@@ -78,7 +93,7 @@
                     <el-radio value="highway">高速长途</el-radio>
                     <el-radio value="mixed">混合路况</el-radio>
                   </el-radio-group>
-                  <div class="input-tip">城市驾驶油耗通常比高速高15%</div>
+                  <div class="input-tip">城市驾驶油耗增加15%，高速驾驶油耗减少12%</div>
                 </el-form-item>
               </el-form>
             </div>
@@ -622,6 +637,7 @@ interface CalculatorForm {
   fuelPrice: number
   drivingStyle: string
   usageScenario: string
+  baseFuelConsumption: number //百公里油耗,L/100km
 }
 
 interface CostResults {
@@ -661,6 +677,7 @@ const calculatorForm = ref<CalculatorForm>({
   fuelPrice: 7.5,
   drivingStyle: 'normal',
   usageScenario: 'mixed',
+  baseFuelConsumption: 7.0, // 默认值
 })
 
 const costResults = ref<CostResults>({
@@ -1108,9 +1125,8 @@ const isSelected = (modelId: number) => {
 // =============================================
 
 const calculateCost = () => {
-  const { dailyMileage, fuelPrice, drivingStyle, usageScenario } = calculatorForm.value
-
-  let baseFuelConsumption = 7.5
+  const { dailyMileage, fuelPrice, drivingStyle, usageScenario, baseFuelConsumption } =
+    calculatorForm.value
 
   const styleMultiplier = {
     eco: 0.85,

@@ -302,7 +302,26 @@
           <template #header>
             <div class="card-header">
               <span>增长趋势分析</span>
-              <el-button size="small" @click="showGrowthDetail = true"> 查看详情 </el-button>
+              <el-popover placement="left" width="350" trigger="click">
+                <template #reference>
+                  <el-button size="small" type="text" :icon="QuestionFilled" />
+                </template>
+                <div style="font-size: 14px; line-height: 1.8">
+                  <b>增长趋势分析各项数据说明：</b>
+                  <ul style="padding-left: 18px">
+                    <li>
+                      <b>增长地区</b>：增长率大于5%的地区数量（增长率 = 本年销量与去年销量同比）。
+                    </li>
+                    <li><b>平稳地区</b>：增长率在[-5%, 5%]之间的地区数量。</li>
+                    <li><b>下滑地区</b>：增长率小于-5%的地区数量。</li>
+                    <li><b>热门增长地区</b>：增长率大于0的地区，按增长率降序取前5名。</li>
+                    <li><b>占比</b>：各类地区数量占当前覆盖地区总数的百分比。</li>
+                    <li>
+                      所有数据均基于当前筛选条件（时间、车型、地区层级）下的真实销量数据动态计算。
+                    </li>
+                  </ul>
+                </div>
+              </el-popover>
             </div>
           </template>
           <div class="growth-content">
@@ -995,7 +1014,64 @@ const calculateBusinessMetrics = () => {
       ? growthRates.reduce((sum, rate) => sum + rate, 0) / growthRates.length
       : 0
 
-  businessMetrics.value.industryAverageGrowth = businessMetrics.value.averageGrowth * 0.85
+  // 计算行业平均增长率（所有车型，受时间和地区筛选影响，不受车型筛选影响）
+  let industryRecords = baseData.value.saleRecords
+
+  // 时间筛选
+  if (timeRange.value === 'custom' && customDateRange.value) {
+    const [startDate, endDate] = customDateRange.value
+    industryRecords = industryRecords.filter((record) => {
+      const recordDate = new Date(record.saleMonth)
+      return recordDate >= startDate && recordDate <= endDate
+    })
+  } else if (timeRange.value !== 'custom') {
+    const currentDate = new Date()
+    let monthsBack = 12
+    switch (timeRange.value) {
+      case 'month':
+        monthsBack = 1
+        break
+      case 'quarter':
+        monthsBack = 3
+        break
+      case 'year':
+        monthsBack = 12
+        break
+    }
+    const startDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - monthsBack, 1)
+    industryRecords = industryRecords.filter((record) => {
+      const recordDate = new Date(record.saleMonth)
+      return recordDate >= startDate
+    })
+  }
+
+  // 地区筛选（只受地区层级影响，不受车型筛选影响）
+  if (currentLevel.value === 'province' && currentProvinceId.value) {
+    // 只统计当前省份下的城市
+    const cityRegionIds = baseData.value.nonTopLevelRegions
+      .filter((region) => region.parentRegionId === currentProvinceId.value)
+      .map((region) => region.regionId)
+    industryRecords = industryRecords.filter((record) => cityRegionIds.includes(record.regionId))
+  }
+
+  // 计算本年和去年总销量
+  const currentYear = new Date().getFullYear()
+  let industryCurrentYearSales = 0
+  let industryLastYearSales = 0
+  industryRecords.forEach((record) => {
+    const year = new Date(record.saleMonth).getFullYear()
+    if (year === currentYear) {
+      industryCurrentYearSales += record.saleCount
+    } else if (year === currentYear - 1) {
+      industryLastYearSales += record.saleCount
+    }
+  })
+  businessMetrics.value.industryAverageGrowth =
+    industryLastYearSales > 0
+      ? ((industryCurrentYearSales - industryLastYearSales) / industryLastYearSales) * 100
+      : industryCurrentYearSales > 0
+        ? 100
+        : 0
 
   businessMetrics.value.positiveGrowthRegions = salesData.value.filter(
     (item) => item.growthRate > 5,
