@@ -402,8 +402,7 @@ interface SaleRecord {
 interface Region {
   regionId: number
   regionName: string
-  parentRegionId: number | null
-  parentRegionName: string | null
+  parentRegion: string | null
 }
 
 interface Opinion {
@@ -536,6 +535,7 @@ const fetchCarModels = async (): Promise<CarModel[]> => {
 const fetchSaleRecords = async (params?: {
   carModelId?: number
   regionId?: number
+  regionName?: string
 }): Promise<SaleRecord[]> => {
   try {
     console.log('正在获取销售记录...')
@@ -543,12 +543,15 @@ const fetchSaleRecords = async (params?: {
 
     if (params?.carModelId && params?.regionId) {
       url = `/api/sale-records?carModelId=${params.carModelId}&regionId=${params.regionId}`
+    } else if (params?.carModelId && params?.regionName) {
+      url = `/api/sale-records?carModelId=${params.carModelId}&regionName=${encodeURIComponent(params.regionName)}`
     } else if (params?.carModelId) {
       url = `/api/sale-records?carModelId=${params.carModelId}`
     } else if (params?.regionId) {
       url = `/api/sale-records?regionId=${params.regionId}`
+    } else if (params?.regionName) {
+      url = `/api/sale-records?regionName=${encodeURIComponent(params.regionName)}`
     }
-
     const response = await axios.get(url)
 
     if (response.data.status === 200 && response.data.data) {
@@ -585,7 +588,7 @@ const fetchRegions = async (): Promise<Region[]> => {
 const fetchTopLevelRegions = async (): Promise<Region[]> => {
   try {
     console.log('正在获取省份信息...')
-    const response = await axios.get('/api/regions/top-level')
+    const response = await axios.get('/api/regions/top-level/old')
 
     if (response.data.status === 200 && response.data.data) {
       console.log('获取省份信息成功:', response.data.data.length, '个省份')
@@ -685,6 +688,34 @@ const loadAllBaseData = async () => {
 }
 
 // =============================================
+// 地区筛选逻辑（省/市分流）
+// =============================================
+
+const loadSaleRecords = async () => {
+  // 判断当前地区筛选是省还是市
+  let params: { carModelId?: number; regionId?: number; regionName?: string } = {}
+  if (selectedCarModel.value) {
+    params.carModelId = parseInt(selectedCarModel.value)
+  }
+  if (selectedRegion.value) {
+    // 判断是省还是市
+    const region = availableRegions.value.find(
+      (r) => r.regionId?.toString() === selectedRegion.value,
+    )
+    if (region) {
+      // 市级有regionId且parentRegion不为空
+      if (region.parentRegion) {
+        params.regionId = region.regionId
+      } else {
+        // 省级只有regionName
+        params.regionName = region.regionName
+      }
+    }
+  }
+  baseData.value.saleRecords = await fetchSaleRecords(params)
+}
+
+// =============================================
 // 数据处理函数
 // =============================================
 
@@ -745,10 +776,19 @@ const processHotCarData = () => {
     filteredRecords = filteredRecords.filter((record) => record.carModelId === selectedModelId)
   }
 
-  // 地区筛选
+  // 地区筛选（省/市分流）
   if (selectedRegion.value) {
-    const selectedRegionId = parseInt(selectedRegion.value)
-    filteredRecords = filteredRecords.filter((record) => record.regionId === selectedRegionId)
+    const region = availableRegions.value.find(
+      (r) => r.regionId?.toString() === selectedRegion.value,
+    )
+    if (region) {
+      if (region.parentRegion) {
+        // 市级
+        filteredRecords = filteredRecords.filter((record) => record.regionId === region.regionId)
+      } else {
+        // 省级
+      }
+    }
   }
 
   console.log('筛选后销售记录数:', filteredRecords.length)
@@ -1044,6 +1084,7 @@ const handleFilterChange = async () => {
   loading.value = true
   currentPage.value = 1
   try {
+    await loadSaleRecords()
     processHotCarData()
     ElMessage.success('筛选已更新')
   } catch (error) {

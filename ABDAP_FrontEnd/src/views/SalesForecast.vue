@@ -232,20 +232,18 @@
 
             <!-- 地区选择 -->
             <el-form-item label="预测地区">
-              <el-select
-                v-model="forecastConfig.regionId"
-                placeholder="选择地区"
-                filterable
-                @change="handleRegionChange"
+              <el-autocomplete
+                v-model="regionInput"
+                :fetch-suggestions="querySearchRegion"
+                placeholder="输入地区名称"
+                :trigger-on-focus="false"
+                @select="handleRegionSelect"
+                style="width: 100%"
               >
-                <el-option label="全国" :value="null" />
-                <el-option
-                  v-for="region in availableRegions"
-                  :key="region.regionId"
-                  :label="region.regionName"
-                  :value="region.regionId"
-                />
-              </el-select>
+                <template #default="{ item }">
+                  <span>{{ item.regionName }}</span>
+                </template>
+              </el-autocomplete>
             </el-form-item>
 
             <!-- 预测周期 -->
@@ -733,8 +731,7 @@ interface CarModel {
 interface Region {
   regionId: number
   regionName: string
-  parentRegionId?: number | null
-  parentRegionName?: string | null
+  parentRegion?: string | null
 }
 
 interface SaleRecord {
@@ -923,6 +920,38 @@ const activeAdvancedTab = ref('external')
 const activeCollapseAdvanced = ref<string[]>(['arima'])
 const analysisView = ref('trend')
 
+const regionInput = ref('')
+const regionSearchResults = ref<Region[]>([])
+
+const querySearchRegion = (queryString: string, cb: (results: Region[]) => void) => {
+  if (!queryString) {
+    cb([])
+    return
+  }
+  const results = availableRegions.value.filter((region) => region.regionName.includes(queryString))
+  cb(results)
+}
+
+const handleRegionSelect = (region: Region) => {
+  forecastConfig.value.regionId = region.regionId
+  regionInput.value = region.regionName
+}
+
+// 判断当前选中的地区是省份还是城市
+function getRegionRequestParams() {
+  const region = availableRegions.value.find((r) => r.regionId === forecastConfig.value.regionId)
+  // 如果找不到region，或者region.parentRegion存在（即为市级），用regionId
+  if (region && region.parentRegion) {
+    return { regionId: region.regionId }
+  }
+  // 如果是省份（数据库没有regionId，只能用regionName）
+  if (region) {
+    return { regionName: region.regionName }
+  }
+  // fallback
+  return {}
+}
+
 // 基础数据存储
 const baseData = ref<BaseData>({
   carModels: [],
@@ -1052,7 +1081,7 @@ const fetchRegions = async (): Promise<Region[]> => {
 const fetchTopLevelRegions = async (): Promise<Region[]> => {
   try {
     console.log('正在获取省份信息...')
-    const response = await axios.get('/api/regions/top-level')
+    const response = await axios.get('/api/regions/top-level/old')
 
     if (response.data.status === 200 && response.data.data) {
       console.log('获取省份数据成功:', response.data.data.length, '个省份')
@@ -1088,6 +1117,7 @@ const fetchNonTopLevelRegions = async (): Promise<Region[]> => {
 const fetchSaleRecords = async (params?: {
   carModelId?: number
   regionId?: number
+  regionName?: string
 }): Promise<SaleRecord[]> => {
   try {
     console.log('正在获取销售记录...')
@@ -1095,10 +1125,14 @@ const fetchSaleRecords = async (params?: {
 
     if (params?.carModelId && params?.regionId) {
       url = `/api/sale-records?carModelId=${params.carModelId}&regionId=${params.regionId}`
+    } else if (params?.carModelId && params?.regionName) {
+      url = `/api/sale-records?carModelId=${params.carModelId}&regionName=${params.regionName}`
     } else if (params?.carModelId) {
       url = `/api/sale-records?carModelId=${params.carModelId}`
     } else if (params?.regionId) {
       url = `/api/sale-records?regionId=${params.regionId}`
+    } else if (params?.regionName) {
+      url = `/api/sale-records?regionName=${params.regionName}`
     }
 
     const response = await axios.get(url)
@@ -1174,7 +1208,8 @@ const fetchFuelEconomy = async (carModelId: number): Promise<FuelEconomy | null>
 
 const fetchARIMADetailPrediction = async (config: {
   carModelId: number
-  regionId: number
+  regionId?: number
+  regionName?: string
   months: number
   p?: number
   d?: number
@@ -1183,7 +1218,10 @@ const fetchARIMADetailPrediction = async (config: {
   try {
     console.log('开始ARIMA详细预测...')
     const { p, d, q } = config
-    let url = `/api/prediction/ARIMA/detail?carModelId=${config.carModelId}&regionId=${config.regionId}&months=${config.months}`
+
+    let url = `/api/prediction/ARIMA/detail?carModelId=${config.carModelId}&months=${config.months}`
+    if (config.regionId) url += `&regionId=${config.regionId}`
+    if (config.regionName) url += `&regionName=${encodeURIComponent(config.regionName)}`
 
     if (p !== undefined) url += `&p=${p}`
     if (d !== undefined) url += `&d=${d}`
@@ -1210,12 +1248,16 @@ const fetchARIMADetailPrediction = async (config: {
 
 const fetchProphetDetailPrediction = async (config: {
   carModelId: number
-  regionId: number
+  regionId?: number
+  regionName?: string
   months: number
 }): Promise<ProphetDetailResult> => {
   try {
     console.log('开始Prophet详细预测...')
-    const url = `/api/prediction/Prophet/detail?carModelId=${config.carModelId}&regionId=${config.regionId}&months=${config.months}`
+
+    let url = `/api/prediction/Prophet/detail?carModelId=${config.carModelId}&months=${config.months}`
+    if (config.regionId) url += `&regionId=${config.regionId}`
+    if (config.regionName) url += `&regionName=${encodeURIComponent(config.regionName)}`
 
     const response = await axios.get(url)
 
@@ -1685,21 +1727,23 @@ const startPrediction = async () => {
     const periodMonths = parseInt(forecastConfig.value.period.replace('M', ''))
     let rawResult: ARIMADetailResult | ProphetDetailResult
 
+    const regionParams = getRegionRequestParams()
+
     // 根据模型类型调用不同的API
     if (forecastConfig.value.modelType === 'ARIMA') {
       rawResult = await fetchARIMADetailPrediction({
         carModelId: forecastConfig.value.carModelId!,
-        regionId: forecastConfig.value.regionId!,
         months: periodMonths,
         p: forecastConfig.value.arimaParams.p,
         d: forecastConfig.value.arimaParams.d,
         q: forecastConfig.value.arimaParams.q,
+        ...regionParams,
       })
     } else {
       rawResult = await fetchProphetDetailPrediction({
         carModelId: forecastConfig.value.carModelId!,
-        regionId: forecastConfig.value.regionId!,
         months: periodMonths,
+        ...regionParams,
       })
     }
 
