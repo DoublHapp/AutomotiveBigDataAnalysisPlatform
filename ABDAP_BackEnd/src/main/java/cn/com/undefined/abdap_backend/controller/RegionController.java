@@ -80,7 +80,7 @@ public class RegionController {
      * @param parentRegionId 父级地区id
      * @return 子地区数据列表
      */
-    @GetMapping("/parentId/{parentRegionId}")
+    @GetMapping("/parentRegionId/{parentRegionId}")
     public ResponseEntity<ApiResponse<List<RegionDTO>>> getRegionsByParentId(@PathVariable Long parentRegionId) {
         List<RegionDTO> regions = regionService.getAllRegions()
                 .stream()

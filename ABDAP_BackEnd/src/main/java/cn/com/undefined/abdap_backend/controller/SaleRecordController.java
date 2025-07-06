@@ -131,6 +131,24 @@ public class SaleRecordController {
     }
 
     /**
+     * 根据车型ID和地区ID（省）查询销售记录
+     * GET 
+     * /api/sale-records/old?carModelId={carModelId}&regionId={regionId}
+     */
+    @GetMapping(path = "/old", params = { "carModelId", "regionId" })
+    public ResponseEntity<ApiResponse<List<SaleRecordDTO>>> getByCarModelIdAndRegionIdOld(
+            @RequestParam Long carModelId,
+            @RequestParam Long regionId) {
+        List<Long> regionIds = regionService.getAllRegions()
+                .stream()
+                .filter(region -> region.getParentRegion() != null
+                        && region.getParentRegion().hashCode() == regionId.intValue())
+                .map(RegionDTO::getRegionId)
+                .toList();
+        return getMultipleSaleRecords(List.of(carModelId), regionIds, null);
+    }
+
+    /**
      * 根据省份名称获取复杂结构化销售数据
      * 返回指定省份下的月度销售、品牌销售和地区销售的聚合数据
      * 
@@ -141,7 +159,7 @@ public class SaleRecordController {
      * 
      * @example
      * 
-     * <pre>
+     *          <pre>
      * {
      *   "status": 200,
      *   "message": "操作成功",
@@ -168,7 +186,7 @@ public class SaleRecordController {
      *     ]
      *   }
      * }
-     * </pre>
+     *          </pre>
      */
     @GetMapping("/complex-structure")
     public ResponseEntity<ApiResponse<Object>> getComplexStructureDataByRegionId(@RequestParam String regionName) {
