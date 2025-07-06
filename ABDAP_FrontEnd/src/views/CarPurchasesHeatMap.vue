@@ -532,7 +532,7 @@ interface Region {
   regionId: number
   regionName: string
   parentRegionId: number | null
-  parentRegionName: string | null
+  parentRegion: string | null
 }
 
 //  基础数据层
@@ -696,7 +696,7 @@ const fetchRegions = async (): Promise<Region[]> => {
 const fetchTopLevelRegions = async (): Promise<Region[]> => {
   try {
     console.log('正在获取省份信息...')
-    const response = await axios.get('/api/regions/top-level')
+    const response = await axios.get('/api/regions/top-level/old')
 
     if (response.data.status === 200 && response.data.data) {
       console.log(' 获取省份信息成功:', response.data.data.length, '个省份')
@@ -779,10 +779,10 @@ const processRegionSalesData = () => {
     return
   }
 
-  // 使用新的 ref 变量
+  // 1. 过滤销售记录
   let filteredRecords = baseData.value.saleRecords
 
-  // 时间筛选 - 修复逻辑
+  // 时间筛选
   if (timeRange.value === 'custom' && customDateRange.value) {
     const [startDate, endDate] = customDateRange.value
     filteredRecords = filteredRecords.filter((record) => {
@@ -792,7 +792,6 @@ const processRegionSalesData = () => {
   } else if (timeRange.value !== 'custom') {
     const currentDate = new Date()
     let monthsBack = 12
-
     switch (timeRange.value) {
       case 'month':
         monthsBack = 1
@@ -804,7 +803,6 @@ const processRegionSalesData = () => {
         monthsBack = 12
         break
     }
-
     const startDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - monthsBack, 1)
     filteredRecords = filteredRecords.filter((record) => {
       const recordDate = new Date(record.saleMonth)
@@ -821,163 +819,166 @@ const processRegionSalesData = () => {
   console.log('地区销量筛选后记录数:', filteredRecords.length)
   console.log('筛选后的记录样本:', filteredRecords.slice(0, 3))
 
-  //  修复：如果筛选后数据为空，使用原始数据
-  if (filteredRecords.length === 0) {
-    console.warn('筛选后数据为空，使用原始数据')
-    filteredRecords = baseData.value.saleRecords
-  }
-
-  // 确定使用的地区列表
-  let targetRegions: Region[] = []
+  // 2. 国家级视图：按省份(parentRegion)聚合
   if (currentLevel.value === 'country') {
-    targetRegions = baseData.value.topLevelRegions
-  } else if (currentLevel.value === 'province' && currentProvinceId.value) {
-    targetRegions = baseData.value.nonTopLevelRegions.filter(
-      (region) => region.parentRegionId === currentProvinceId.value,
-    )
-  }
-
-  console.log('目标地区数量:', targetRegions.length)
-  console.log('目标地区样本:', targetRegions.slice(0, 3))
-
-  if (targetRegions.length === 0) {
-    console.warn('没有找到目标地区，使用所有地区')
-    targetRegions = baseData.value.regions
-  }
-
-  // 修复：按地区聚合销售数据 - 简化逻辑
-  const regionSalesMap = new Map<
-    number,
-    {
-      regionName: string
-      salesVolume: number
-      salesAmount: number
-      lastYearSalesVolume: number
-      lastYearSalesAmount: number
-    }
-  >()
-
-  const currentYear = new Date().getFullYear()
-  console.log('当前年份:', currentYear)
-
-  // 修复：处理销售记录 - 改进逻辑
-  filteredRecords.forEach((record, index) => {
-    console.log(`处理记录 ${index + 1}:`, {
-      regionId: record.regionId,
-      regionName: record.regionName,
-      saleCount: record.saleCount,
-      saleAmount: record.saleAmount,
-      saleMonth: record.saleMonth,
+    const provinceSalesMap = new Map<
+      string,
+      {
+        regionId: number
+        regionName: string
+        salesVolume: number
+        salesAmount: number
+        lastYearSalesVolume: number
+        lastYearSalesAmount: number
+      }
+    >()
+    const currentYear = new Date().getFullYear()
+    filteredRecords.forEach((record) => {
+      const region = baseData.value.regions.find((r) => r.regionId === record.regionId)
+      if (!region) return
+      const provinceName = region.parentRegion
+      if (!provinceName) return
+      // 省级regionId用hashCode算法（与后端一致）
+      const provinceId = Number(
+        BigInt.asUintN(
+          32,
+          BigInt(
+            provinceName.split('').reduce((hash, c) => (hash << 5) - hash + c.charCodeAt(0), 0),
+          ),
+        ),
+      )
+      if (!provinceSalesMap.has(provinceName)) {
+        provinceSalesMap.set(provinceName, {
+          regionId: provinceId,
+          regionName: provinceName,
+          salesVolume: 0,
+          salesAmount: 0,
+          lastYearSalesVolume: 0,
+          lastYearSalesAmount: 0,
+        })
+      }
+      const data = provinceSalesMap.get(provinceName)!
+      const recordYear = new Date(record.saleMonth).getFullYear()
+      if (recordYear === currentYear) {
+        data.salesVolume += record.saleCount
+        data.salesAmount += record.saleAmount
+      } else if (recordYear === currentYear - 1) {
+        data.lastYearSalesVolume += record.saleCount
+        data.lastYearSalesAmount += record.saleAmount
+      }
     })
 
-    const recordDate = new Date(record.saleMonth)
-    const recordYear = recordDate.getFullYear()
-
-    let targetRegionId = record.regionId
-    let targetRegionName = record.regionName
-
-    // 修复：如果是国家级视图，需要找到省级地区
-    if (currentLevel.value === 'country') {
-      const recordRegion = baseData.value.regions.find((r) => r.regionId === record.regionId)
-      if (recordRegion) {
-        if (recordRegion.parentRegionId === null) {
-          // 已经是省级地区
-          targetRegionId = recordRegion.regionId
-          targetRegionName = recordRegion.regionName
-        } else {
-          // 是市级地区，找到其父级省份
-          targetRegionId = recordRegion.parentRegionId
-          const parentRegion = baseData.value.regions.find(
-            (r) => r.regionId === recordRegion.parentRegionId,
-          )
-          targetRegionName = parentRegion?.regionName || recordRegion.regionName
-        }
+    // 转换为数组
+    const regionsArray = Array.from(provinceSalesMap.values()).map((data) => {
+      const growthRate =
+        data.lastYearSalesVolume > 0
+          ? ((data.salesVolume - data.lastYearSalesVolume) / data.lastYearSalesVolume) * 100
+          : data.salesVolume > 0
+            ? 100
+            : 0
+      return {
+        regionId: data.regionId,
+        regionName: data.regionName,
+        salesCount: data.salesVolume,
+        salesAmount: data.salesAmount,
+        growthRate,
+        marketShare: 0,
       }
-    }
+    })
+    // 计算市场份额
+    const totalSales = regionsArray.reduce((sum, region) => sum + region.salesCount, 0)
+    regionsArray.forEach((region) => {
+      region.marketShare = totalSales > 0 ? (region.salesCount / totalSales) * 100 : 0
+    })
+    regionsArray.sort((a, b) => b.salesCount - a.salesCount)
+    salesData.value = regionsArray
+    return
+  }
 
-    //  修复：确保目标地区存在
-    if (!regionSalesMap.has(targetRegionId)) {
-      regionSalesMap.set(targetRegionId, {
-        regionName: targetRegionName,
-        salesVolume: 0,
-        salesAmount: 0,
-        lastYearSalesVolume: 0,
-        lastYearSalesAmount: 0,
-      })
-    }
+  // 3. 省级视图：按市级聚合
+  if (currentLevel.value === 'province' && currentProvince.value) {
+    const citySalesMap = new Map<
+      number,
+      {
+        regionName: string
+        salesVolume: number
+        salesAmount: number
+        lastYearSalesVolume: number
+        lastYearSalesAmount: number
+      }
+    >()
+    const currentYear = new Date().getFullYear()
+    // 兼容各种省份命名
+    const provinceNames = [
+      currentProvince.value,
+      currentProvince.value + '省',
+      currentProvince.value + '市',
+      currentProvince.value + '自治区',
+      currentProvince.value + '壮族自治区',
+      currentProvince.value + '回族自治区',
+      currentProvince.value + '维吾尔自治区',
+    ]
+    const cityRegions = baseData.value.nonTopLevelRegions.filter((r) =>
+      provinceNames.includes(r.parentRegion as string),
+    )
+    const cityRegionIds = cityRegions.map((r) => r.regionId)
+    console.log(
+      '下钻省份:',
+      currentProvince.value,
+      '匹配到城市数量:',
+      cityRegions.length,
+      cityRegions.map((r) => r.regionName),
+    )
+    filteredRecords = filteredRecords.filter((record) => cityRegionIds.includes(record.regionId))
+    filteredRecords.forEach((record) => {
+      if (!citySalesMap.has(record.regionId)) {
+        citySalesMap.set(record.regionId, {
+          regionName: record.regionName,
+          salesVolume: 0,
+          salesAmount: 0,
+          lastYearSalesVolume: 0,
+          lastYearSalesAmount: 0,
+        })
+      }
+      const data = citySalesMap.get(record.regionId)!
+      const recordYear = new Date(record.saleMonth).getFullYear()
+      if (recordYear === currentYear) {
+        data.salesVolume += record.saleCount
+        data.salesAmount += record.saleAmount
+      } else if (recordYear === currentYear - 1) {
+        data.lastYearSalesVolume += record.saleCount
+        data.lastYearSalesAmount += record.saleAmount
+      }
+    })
+    const regionsArray = Array.from(citySalesMap.entries()).map(([regionId, data]) => {
+      const growthRate =
+        data.lastYearSalesVolume > 0
+          ? ((data.salesVolume - data.lastYearSalesVolume) / data.lastYearSalesVolume) * 100
+          : data.salesVolume > 0
+            ? 100
+            : 0
+      return {
+        regionId,
+        regionName: data.regionName,
+        salesCount: data.salesVolume,
+        salesAmount: data.salesAmount,
+        growthRate,
+        marketShare: 0,
+      }
+    })
+    const totalSales = regionsArray.reduce((sum, region) => sum + region.salesCount, 0)
+    regionsArray.forEach((region) => {
+      region.marketShare = totalSales > 0 ? (region.salesCount / totalSales) * 100 : 0
+    })
+    regionsArray.sort((a, b) => b.salesCount - a.salesCount)
+    salesData.value = regionsArray
+    return
+  }
 
-    const existing = regionSalesMap.get(targetRegionId)!
-
-    // 修复：累加销量数据 - 添加调试信息
-    if (recordYear === currentYear) {
-      existing.salesVolume += record.saleCount
-      existing.salesAmount += record.saleAmount
-      console.log(`累加当年数据到地区 ${targetRegionName}:`, {
-        新增销量: record.saleCount,
-        累计销量: existing.salesVolume,
-        新增销售额: record.saleAmount,
-        累计销售额: existing.salesAmount,
-      })
-    } else if (recordYear === currentYear - 1) {
-      existing.lastYearSalesVolume += record.saleCount
-      existing.lastYearSalesAmount += record.saleAmount
-      console.log(`累加去年数据到地区 ${targetRegionName}:`, {
-        新增销量: record.saleCount,
-        累计销量: existing.lastYearSalesVolume,
-      })
-    } else {
-      // 新增：处理其他年份的数据
-      console.log(`记录年份 ${recordYear} 不在当年或去年范围内，但仍计入当年数据`)
-      existing.salesVolume += record.saleCount
-      existing.salesAmount += record.saleAmount
-    }
-  })
-
-  console.log('地区销量聚合结果:', Object.fromEntries(regionSalesMap))
-
-  // 转换为最终数据格式
-  const regionsArray = Array.from(regionSalesMap.entries()).map(([regionId, data]) => {
-    const growthRate =
-      data.lastYearSalesVolume > 0
-        ? ((data.salesVolume - data.lastYearSalesVolume) / data.lastYearSalesVolume) * 100
-        : data.salesVolume > 0
-          ? 50 //  修复：没有去年数据时，设置合理的增长率
-          : 0
-
-    return {
-      regionId,
-      regionName: data.regionName,
-      salesCount: data.salesVolume,
-      salesAmount: data.salesAmount,
-      growthRate,
-      marketShare: 0,
-      longitude: 116.4074 + (Math.random() - 0.5) * 20,
-      latitude: 39.9042 + (Math.random() - 0.5) * 10,
-      parentRegionId: currentLevel.value === 'province' ? currentProvinceId.value : null,
-      saleMonth: formatCurrentPeriod(),
-    }
-  })
-
-  console.log('转换后的地区数组:', regionsArray)
-
-  //  修复：计算市场份额
-  const totalSales = regionsArray.reduce((sum, region) => sum + region.salesCount, 0)
-  console.log('总销量:', totalSales)
-
-  regionsArray.forEach((region) => {
-    region.marketShare = totalSales > 0 ? (region.salesCount / totalSales) * 100 : 0
-  })
-
-  //  修复：只有有数据的地区才排序
-  regionsArray.sort((a, b) => b.salesCount - a.salesCount)
-
-  salesData.value = regionsArray
-  console.log('地区销量处理完成，覆盖', regionsArray.length, '个地区')
-  console.log(
-    '最终销量数据:',
-    regionsArray.map((r) => ({ 地区: r.regionName, 销量: r.salesCount, 销售额: r.salesAmount })),
-  )
+  // 4. 兜底：无数据
+  salesData.value = []
 }
+
 // 其他数据处理函数保持不变，但需要更新变量引用...
 
 // 计算业务指标函数保持不变...
