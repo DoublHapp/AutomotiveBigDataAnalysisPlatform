@@ -177,18 +177,25 @@
           </el-select>
         </div>
 
-        <div class="filter-group">
-          <label>地区筛选:</label>
-          <el-select v-model="globalFilters.region" @change="handleGlobalFilterChange" clearable>
-            <el-option label="全国" value="all" />
-            <el-option
-              v-for="region in availableRegions"
-              :key="region.id"
-              :label="region.name"
-              :value="region.id"
-            />
-          </el-select>
-        </div>
+        <el-select
+          v-model="globalFilters.region"
+          filterable
+          remote
+          reserve-keyword
+          placeholder="输入地区名称搜索"
+          :remote-method="searchRegionByName"
+          :loading="regionSearchLoading"
+          @change="handleGlobalFilterChange"
+          clearable
+          style="width: 200px"
+        >
+          <el-option
+            v-for="region in regionSearchResults"
+            :key="region.regionName"
+            :label="region.regionName"
+            :value="region.regionName"
+          />
+        </el-select>
       </div>
     </el-card>
 
@@ -697,6 +704,9 @@ const topN = ref(10)
 const showTargetDialog = ref(false)
 const targetFormRef = ref()
 
+const regionSearchResults = ref<Region[]>([])
+const regionSearchLoading = ref(false)
+
 //  基础数据存储
 const baseData = ref<BaseData>({
   carModels: [],
@@ -848,7 +858,7 @@ const fetchRegions = async (): Promise<Region[]> => {
 const fetchTopLevelRegions = async (): Promise<Region[]> => {
   try {
     console.log(' 正在获取省份信息...')
-    const response = await axios.get('/api/regions/top-level')
+    const response = await axios.get('/api/regions/top-level/old')
 
     if (response.data.status === 200 && response.data.data) {
       console.log(' 获取省份信息成功:', response.data.data.length, '个省份')
@@ -922,6 +932,22 @@ const loadAllBaseData = async () => {
   }
 }
 
+const searchRegionByName = async (query: string) => {
+  if (!query) {
+    regionSearchResults.value = []
+    return
+  }
+  regionSearchLoading.value = true
+  try {
+    // 本地过滤所有地区
+    regionSearchResults.value = baseData.value.regions.filter((region) =>
+      region.regionName.includes(query),
+    )
+  } finally {
+    regionSearchLoading.value = false
+  }
+}
+
 // 处理销量趋势数据
 const processSalesTrendData = () => {
   console.log('处理销量趋势数据...')
@@ -965,10 +991,8 @@ const processSalesTrendData = () => {
 
   // 地区筛选
   if (globalFilters.region !== 'all') {
-    const selectedRegionId = globalFilters.region
-    filteredRecords = filteredRecords.filter(
-      (record) => record.regionId.toString() === selectedRegionId.toString(),
-    )
+    const selectedRegionName = globalFilters.region
+    filteredRecords = filteredRecords.filter((record) => record.regionName === selectedRegionName)
   }
 
   // 聚合数据
@@ -1106,10 +1130,8 @@ const processSalesAmountData = () => {
 
   // 地区筛选
   if (globalFilters.region !== 'all') {
-    const selectedRegionId = globalFilters.region
-    filteredRecords = filteredRecords.filter(
-      (record) => record.regionId.toString() === selectedRegionId.toString(),
-    )
+    const selectedRegionName = globalFilters.region
+    filteredRecords = filteredRecords.filter((record) => record.regionName === selectedRegionName)
   }
 
   // 聚合数据
@@ -1234,10 +1256,8 @@ const processTopModelsData = () => {
 
   // 地区筛选
   if (globalFilters.region !== 'all') {
-    const selectedRegionId = globalFilters.region
-    filteredRecords = filteredRecords.filter(
-      (record) => record.regionId.toString() === selectedRegionId.toString(),
-    )
+    const selectedRegionName = globalFilters.region
+    filteredRecords = filteredRecords.filter((record) => record.regionName === selectedRegionName)
   }
 
   console.log('车型排行筛选后记录数:', filteredRecords.length)
@@ -1364,10 +1384,8 @@ const processRegionSalesData = () => {
   // 因为我们就是要看各个地区的分布情况
   // 除非用户选择了特定地区，那我们只显示该地区的数据
   if (globalFilters.region !== 'all') {
-    const selectedRegionId = globalFilters.region
-    filteredRecords = filteredRecords.filter(
-      (record) => record.regionId.toString() === selectedRegionId.toString(),
-    )
+    const selectedRegionName = globalFilters.region
+    filteredRecords = filteredRecords.filter((record) => record.regionName === selectedRegionName)
   }
 
   console.log('地区销量筛选后记录数:', filteredRecords.length)
@@ -1454,10 +1472,8 @@ const calculateBusinessMetrics = () => {
 
   // 应用地区筛选
   if (globalFilters.region !== 'all') {
-    const selectedRegionId = globalFilters.region
-    filteredRecords = filteredRecords.filter(
-      (record) => record.regionId.toString() === selectedRegionId.toString(),
-    )
+    const selectedRegionName = globalFilters.region
+    filteredRecords = filteredRecords.filter((record) => record.regionName === selectedRegionName)
   }
 
   console.log('业务指标计算筛选后记录数:', filteredRecords.length)
@@ -1499,10 +1515,8 @@ const calculateBusinessMetrics = () => {
   }
   // 地区筛选
   if (globalFilters.region !== 'all') {
-    const selectedRegionId = globalFilters.region
-    industryRecords = industryRecords.filter(
-      (record) => record.regionId.toString() === selectedRegionId.toString(),
-    )
+    const selectedRegionName = globalFilters.region
+    filteredRecords = filteredRecords.filter((record) => record.regionName === selectedRegionName)
   }
 
   // 真实行业总销量
@@ -1657,10 +1671,8 @@ const marketShareRank = computed(() => {
   }
   // 地区筛选
   if (globalFilters.region !== 'all') {
-    const selectedRegionId = globalFilters.region
-    industryRecords = industryRecords.filter(
-      (record) => record.regionId.toString() === selectedRegionId.toString(),
-    )
+    const selectedRegionName = globalFilters.region
+    industryRecords = industryRecords.filter((record) => record.regionName === selectedRegionName)
   }
 
   // 2. 按车型统计销量
