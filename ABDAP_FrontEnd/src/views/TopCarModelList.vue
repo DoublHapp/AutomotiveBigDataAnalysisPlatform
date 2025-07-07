@@ -56,19 +56,7 @@
               />
             </el-form-item>
           </el-col>
-          <el-col :xs="24" :sm="12" :md="6">
-            <el-form-item label="车型筛选:">
-              <el-select v-model="selectedCarModel" @change="handleFilterChange" clearable>
-                <el-option label="全部车型" value="" />
-                <el-option
-                  v-for="carModel in availableCarModels"
-                  :key="carModel.carModelId"
-                  :label="`${carModel.brandName} ${carModel.modelName}`"
-                  :value="carModel.carModelId.toString()"
-                />
-              </el-select>
-            </el-form-item>
-          </el-col>
+
           <el-col :xs="24" :sm="12" :md="6">
             <el-form-item label="地区筛选:">
               <el-select v-model="selectedRegion" @change="handleFilterChange" clearable>
@@ -132,6 +120,13 @@
               <el-radio-button value="hot">热度排行</el-radio-button>
               <el-radio-button value="value">性价比排行</el-radio-button>
             </el-radio-group>
+            <el-button
+              type="text"
+              style="margin-left: 8px; padding: 0"
+              @click="showRankingTip = true"
+            >
+              <el-icon><QuestionFilled /></el-icon>
+            </el-button>
             <el-select
               v-model="displayCount"
               @change="handleDisplayCountChange"
@@ -142,6 +137,19 @@
               <el-option label="TOP 50" :value="50" />
             </el-select>
           </div>
+          <el-dialog v-model="showRankingTip" title="排行榜计算逻辑说明" width="500px">
+            <ul style="font-size: 15px; line-height: 1.8; padding-left: 18px">
+              <li><b>销量排行：</b>按车型在当前筛选时间和地区内的真实销量总数从高到低排序。</li>
+              <li>
+                <b>热度排行：</b
+                >综合销量、同比增长率、用户评分等多维度数据加权计算热度指数（销量40%+增长趋势25%+评分10%+基础分），再按热度指数排序。
+              </li>
+              <li>
+                <b>性价比排行：</b
+                >基于车型配置价值、使用成本、价格等真实数据计算综合性价比评分，按性价比得分排序。
+              </li>
+            </ul>
+          </el-dialog>
         </div>
       </template>
 
@@ -160,15 +168,6 @@
           <!-- 排名标识 -->
           <div class="rank-badge">
             <span class="rank-number">{{ (currentPage - 1) * displayCount + index + 1 }}</span>
-            <div class="rank-change" v-if="car.rankChange !== 0">
-              <el-icon v-if="car.rankChange > 0" class="rank-up">
-                <CaretTop />
-              </el-icon>
-              <el-icon v-else class="rank-down">
-                <CaretBottom />
-              </el-icon>
-              <span>{{ Math.abs(car.rankChange) }}</span>
-            </div>
           </div>
 
           <!-- 车型图片 -->
@@ -187,17 +186,6 @@
             <div class="specs">
               <span class="spec-item">{{ car.type }}</span>
               <span class="spec-item">{{ car.engine }}</span>
-              <span class="spec-item">{{ car.transmission }}</span>
-            </div>
-            <div class="key-features" v-if="car.keyFeatures && car.keyFeatures.length > 0">
-              <el-tag
-                v-for="feature in car.keyFeatures.slice(0, 3)"
-                :key="feature"
-                size="small"
-                class="feature-tag"
-              >
-                {{ feature }}
-              </el-tag>
             </div>
           </div>
 
@@ -228,7 +216,6 @@
               <span class="label">用户评分</span>
               <div class="rating-wrapper">
                 <el-rate v-model="car.rating" disabled show-score size="small" />
-                <span class="rating-count">({{ car.reviewCount }}评价)</span>
               </div>
             </div>
           </div>
@@ -256,10 +243,10 @@
                     <el-icon><Share /></el-icon>
                     分享车型
                   </el-dropdown-item>
-                  <el-dropdown-item @click="subscribeCar(car)">
+                  <!-- <el-dropdown-item @click="subscribeCar(car)">
                     <el-icon><Bell /></el-icon>
                     价格提醒
-                  </el-dropdown-item>
+                  </el-dropdown-item> -->
                 </el-dropdown-menu>
               </template>
             </el-dropdown>
@@ -289,7 +276,7 @@
           <img :src="selectedCarDetail.image" :alt="selectedCarDetail.name" class="detail-image" />
           <div class="detail-info">
             <h2>{{ selectedCarDetail.brand }} {{ selectedCarDetail.name }}</h2>
-            <p class="detail-price">{{ selectedCarDetail.priceRange }}</p>
+            <p class="detail-price">官方指导价：{{ getOfficialPrice(selectedCarDetail.id) }} 万</p>
             <div class="detail-tags">
               <el-tag v-if="selectedCarDetail.isHot" type="danger">热销</el-tag>
               <el-tag v-if="selectedCarDetail.isNew" type="success">新款</el-tag>
@@ -325,7 +312,6 @@
             <h4>用户反馈</h4>
             <div class="user-feedback">
               <el-rate v-model="selectedCarDetail.rating" disabled show-score />
-              <span class="feedback-count">基于{{ selectedCarDetail.reviewCount }}条真实评价</span>
             </div>
           </div>
         </div>
@@ -386,6 +372,7 @@ interface CarModel {
   seatNum: number
   driveType?: string
   rangeKm?: number
+  imageUrl?: string
 }
 
 interface SaleRecord {
@@ -430,21 +417,21 @@ interface ProcessedCarModel {
   brand: string
   type: string
   engine: string
-  transmission: string
+  // transmission: string
   priceRange: string
   avgPrice: number
   sales: number
   hotIndex: number
   valueScore: number
   rating: number
-  reviewCount: number
+  // reviewCount: number
   salesGrowth: number
-  rankChange: number
+  // rankChange: number
   trendDirection: 'up' | 'down' | 'stable'
   image: string
   isHot: boolean
   isNew: boolean
-  keyFeatures: string[]
+  // keyFeatures: string[]
 }
 
 interface SelectedModel {
@@ -461,6 +448,8 @@ interface SelectedModel {
 
 const loading = ref(false)
 const analyzing = ref(false)
+
+const showRankingTip = ref(false)
 
 // 基础数据存储
 const baseData = ref<BaseData>({
@@ -480,7 +469,7 @@ const availableRegions = ref<Region[]>([])
 // 筛选条件
 const timeRange = ref('month')
 const customDateRange = ref<[Date, Date] | null>(null)
-const selectedCarModel = ref('')
+// const selectedCarModel = ref('')
 const selectedRegion = ref('')
 
 // 排行榜配置
@@ -494,6 +483,13 @@ const selectedModels = ref<SelectedModel[]>([])
 // 详情抽屉
 const showDetailDrawer = ref(false)
 const selectedCarDetail = ref<ProcessedCarModel | null>(null)
+
+// 获取官方指导价（万元，保留1位小数）
+const getOfficialPrice = (carModelId: number): string => {
+  const car = baseData.value.carModels.find((c) => c.carModelId === carModelId)
+  if (!car) return '-'
+  return (car.officialPrice / 10000).toFixed(1)
+}
 
 // 趋势图表
 const showTrendDialog = ref(false)
@@ -693,10 +689,14 @@ const loadAllBaseData = async () => {
 
 const loadSaleRecords = async () => {
   // 判断当前地区筛选是省还是市
-  let params: { carModelId?: number; regionId?: number; regionName?: string } = {}
-  if (selectedCarModel.value) {
-    params.carModelId = parseInt(selectedCarModel.value)
-  }
+  let params: {
+    // carModelId?: number;
+    regionId?: number
+    regionName?: string
+  } = {}
+  // if (selectedCarModel.value) {
+  //   params.carModelId = parseInt(selectedCarModel.value)
+  // }
   if (selectedRegion.value) {
     // 判断是省还是市
     const region = availableRegions.value.find(
@@ -771,10 +771,10 @@ const processHotCarData = () => {
   }
 
   // 车型筛选
-  if (selectedCarModel.value) {
-    const selectedModelId = parseInt(selectedCarModel.value)
-    filteredRecords = filteredRecords.filter((record) => record.carModelId === selectedModelId)
-  }
+  // if (selectedCarModel.value) {
+  //   const selectedModelId = parseInt(selectedCarModel.value)
+  //   filteredRecords = filteredRecords.filter((record) => record.carModelId === selectedModelId)
+  // }
 
   // 地区筛选（省/市分流）
   if (selectedRegion.value) {
@@ -830,7 +830,7 @@ const processHotCarData = () => {
     if (lastYearSales > 0) {
       return ((currentYearSales - lastYearSales) / lastYearSales) * 100
     } else if (currentYearSales > 0) {
-      return 50 // 新车型设置50%增长率
+      return 100 // 新车型设置100%增长率
     }
     return 0
   }
@@ -868,21 +868,21 @@ const processHotCarData = () => {
       }
       const carType = typeMapping[carModel.driveType || 'SUV'] || '轿车'
 
-      // 变速箱映射
-      const transmissionMapping: Record<string, string> = {
-        纯电动: '单速变速器',
-        混合动力: 'CVT',
-        燃油: '8AT',
-      }
-      const transmission = transmissionMapping[carModel.engineType] || '自动变速器'
+      // // 变速箱映射
+      // const transmissionMapping: Record<string, string> = {
+      //   纯电动: '单速变速器',
+      //   混合动力: 'CVT',
+      //   燃油: '8AT',
+      // }
+      // const transmission = transmissionMapping[carModel.engineType] || '自动变速器'
 
       // 价格区间
       const priceMin = Math.max(avgPrice - 5, avgPrice * 0.8)
       const priceMax = avgPrice + 8
       const priceRange = `${priceMin.toFixed(0)}-${priceMax.toFixed(0)}万`
 
-      // 特色功能
-      const keyFeatures = generateKeyFeatures(carModel)
+      // // 特色功能
+      // const keyFeatures = generateKeyFeatures(carModel)
 
       return {
         id: carModel.carModelId,
@@ -890,21 +890,17 @@ const processHotCarData = () => {
         brand: carModel.brandName,
         type: carType,
         engine: carModel.engineType,
-        transmission,
         priceRange,
         avgPrice,
         sales: salesData.totalSales,
         hotIndex,
         valueScore,
         rating,
-        reviewCount: Math.floor(rating * 200) + 50, // 基于评分估算评价数量
         salesGrowth,
-        rankChange: 0, // 需要历史排名数据才能计算
         trendDirection: salesGrowth > 5 ? 'up' : salesGrowth < -5 ? 'down' : 'stable',
         image: generateCarImage(carModel),
         isHot: hotIndex > 800,
         isNew: isNewModel(carModel.launchDate),
-        keyFeatures,
       }
     })
 
@@ -1047,9 +1043,13 @@ const generateKeyFeatures = (carModel: CarModel): string[] => {
   return features.slice(0, 3)
 }
 
-// 生成车型图片URL
+// 使用车型图片URL
 const generateCarImage = (carModel: CarModel): string => {
-  // 基于车型ID生成稳定的图片URL
+  // 优先使用后端真实图片URL
+  if (carModel.imageUrl && carModel.imageUrl.trim() !== '') {
+    return carModel.imageUrl
+  }
+  // 否则使用占位图
   return `https://picsum.photos/300/200?random=${carModel.carModelId}`
 }
 
@@ -1126,7 +1126,7 @@ const handlePageChange = (page: number) => {
 const resetFilters = async () => {
   timeRange.value = 'month'
   customDateRange.value = null
-  selectedCarModel.value = ''
+  // selectedCarModel.value = ''
   selectedRegion.value = ''
   currentPage.value = 1
 
@@ -1187,7 +1187,7 @@ const startComparison = () => {
 
 // 车型操作
 const handleCarItemClick = (car: ProcessedCarModel) => {
-  ElMessage.info(`查看 ${car.brand} ${car.name} 的详细信息`)
+  viewDetails(car)
 }
 
 const viewDetails = (car: ProcessedCarModel) => {
@@ -1228,9 +1228,9 @@ const shareCar = (car: ProcessedCarModel) => {
   }
 }
 
-const subscribeCar = (car: ProcessedCarModel) => {
-  ElMessage.info('价格提醒功能开发中...')
-}
+// const subscribeCar = (car: ProcessedCarModel) => {
+//   ElMessage.info('价格提醒功能开发中...')
+// }
 
 const handleImageError = (event: Event) => {
   const img = event.target as HTMLImageElement
@@ -1294,9 +1294,16 @@ const initTrendChart = async (car: ProcessedCarModel) => {
 
   trendChartInstance = echarts.init(trendChart.value)
 
-  // 基于真实数据生成趋势数据
+  // 只取近12个月的真实销量数据
+  const now = new Date()
+  const oneYearAgo = new Date(now.getFullYear(), now.getMonth() - 11, 1)
   const carSalesData = baseData.value.saleRecords
-    .filter((record) => record.carModelId === car.id)
+    .filter(
+      (record) =>
+        record.carModelId === car.id &&
+        new Date(record.saleMonth) >= oneYearAgo &&
+        new Date(record.saleMonth) <= now,
+    )
     .sort((a, b) => new Date(a.saleMonth).getTime() - new Date(b.saleMonth).getTime())
 
   const months = carSalesData.map((record) => {
@@ -1361,7 +1368,6 @@ const initTrendChart = async (car: ProcessedCarModel) => {
       },
     ],
   }
-
   trendChartInstance.setOption(option)
 }
 
