@@ -6,6 +6,8 @@ import cn.com.undefined.abdap_backend.repository.CarModelRepository;
 import jakarta.persistence.EntityNotFoundException;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -25,11 +27,14 @@ public class CarModelService {
      * 返回DTO格式用于前端展示
      */
     public List<CarModelDTO> getAllCarModels() {
-        return carModelRepository.findAllCarModelDTOs();
-        /* List<CarModel> carModels = carModelRepository.findAll();
-        return carModels.stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList()); */
+        Pageable pageable = PageRequest.of(0, 100); // 第0页，每页100条
+        return carModelRepository.findAllCarModelDTOs(pageable);
+        /*
+         * List<CarModel> carModels = carModelRepository.findAll();
+         * return carModels.stream()
+         * .map(this::convertToDTO)
+         * .collect(Collectors.toList());
+         */
     }
 
     /**
