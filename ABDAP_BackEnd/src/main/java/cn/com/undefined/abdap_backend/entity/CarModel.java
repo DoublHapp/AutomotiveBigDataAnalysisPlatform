@@ -24,9 +24,13 @@ public class CarModel {
     @Column(name = "car_model_id")
     private Long carModelId;
     
-    @Column(name = "model_name", length = 64, nullable = false)
-    private String modelName;
-    
+    /**
+     * 例如 “星愿 xxx版”
+     * TODO:目前未在其他地方使用，仅做实体对应，如有需要再作调整
+     */
+    @Column(name = "model_full_name", length = 64, nullable = false)
+    private String modelFullName;
+
     @Column(name = "brand_id", nullable = false)
     private Long brandId;
     
@@ -50,6 +54,12 @@ public class CarModel {
     
     @Column(name = "range_km")
     private Integer rangeKm;
+    
+    @Column(name = "model_name", length = 64, nullable = false)
+    private String modelName;
+
+    @Column(name = "image_url", length = 255)
+    private String imageUrl;
     
     // 建立与Brand实体的关联关系
     @ManyToOne(fetch = FetchType.LAZY)
