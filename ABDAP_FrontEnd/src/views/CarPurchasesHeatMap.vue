@@ -220,7 +220,6 @@
               <span>{{
                 currentLevel === 'country' ? '省份销量分析' : `${currentProvince}城市销量分析`
               }}</span>
-              <el-button size="small" @click="showScatterDetail = true"> 详细分析 </el-button>
             </div>
           </template>
           <div ref="scatterChart" class="scatter-chart-container" v-loading="loading"></div>
