@@ -24,6 +24,11 @@ public class CarModelDTO {
      * 车型名称
      */
     private String modelName;
+
+    /**
+     * 车型全名
+     */
+    private String modelFullName;
     
     /**
      * 品牌ID
@@ -66,4 +71,9 @@ public class CarModelDTO {
      * 续航里程（公里）
      */
     private Integer rangeKm;
+
+    /**
+     * 车型图片URL
+     */
+    private String imageUrl;
 }

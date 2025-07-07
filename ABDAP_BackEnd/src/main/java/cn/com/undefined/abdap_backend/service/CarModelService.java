@@ -48,6 +48,7 @@ public class CarModelService {
         CarModelDTO dto = new CarModelDTO();
         dto.setCarModelId(carModel.getCarModelId());
         dto.setModelName(carModel.getModelName());
+        dto.setModelFullName(carModel.getModelFullName());
         dto.setBrandId(carModel.getBrandId());
         // 安全设置品牌名称
         try {
@@ -69,6 +70,7 @@ public class CarModelService {
         dto.setSeatNum(carModel.getSeatNum());
         dto.setDriveType(carModel.getDriveType());
         dto.setRangeKm(carModel.getRangeKm());
+        dto.setImageUrl(carModel.getImageUrl());
 
         return dto;
     }
