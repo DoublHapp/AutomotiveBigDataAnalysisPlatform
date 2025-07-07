@@ -6,7 +6,10 @@ import cn.com.undefined.abdap_backend.repository.CarModelRepository;
 import jakarta.persistence.EntityNotFoundException;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.web.bind.annotation.GetMapping;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -26,10 +29,12 @@ public class CarModelService {
      * 返回DTO格式用于前端展示
      */
     public List<CarModelDTO> getAllCarModels() {
-        List<CarModel> carModels = carModelRepository.findAll();
-        return carModels.stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
+        return carModelRepository.findAllCarModelDTOsByPage();
+    }
+
+    public List<CarModelDTO> getCarModelsByPage(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        return carModelRepository.findAllCarModelDTOsByPage(pageable);
     }
 
     /**
