@@ -17,11 +17,11 @@ interface regionOption {
 
 const regionOptionsAll: regionOption[] = [
   { label: '全国', value: '0' },
-  { label: '北京省', value: '1' },
-  { label: '上海省', value: '2' },
-  { label: '广东省', value: '3' },
-  { label: '浙江省', value: '4' },
-  { label: '山东省', value: '5' }
+  { label: '北京市', value: '北京' },
+  { label: '上海市', value: '上海' },
+  { label: '广东省', value: '广东' },
+  { label: '浙江省', value: '浙江' },
+  { label: '山东省', value: '山东' }
 ]
 const regionOptionsNoAll = regionOptionsAll.slice(1) // 不含全国
 
@@ -57,7 +57,7 @@ const powerType = ref<string>('all')
 // 筛选条件
 const dateRangeType = ref<'month' | 'quarter' | 'year'>('month')
 const dateRange = ref<[string, string]>(['2023-01', '2023-12'])
-const regionSingle = ref<string>('1'); 
+const regionSingle = ref<string>('北京'); 
 const regionArray = ref<string[]>([]);
 const carModelSingle = ref<string>(''); 
 const carModelArray = ref<string[]>([]);
@@ -211,7 +211,7 @@ function processResponseData(salesData: repsonseData[]): chartData[] {
   // 创建一个Map来按名称分组数据
   const groupedData = new Map<string, { counts: number[]; dates: string[] }>();
 
-  console.log(salesData[0].regionId,typeof salesData[0].regionName,salesData[0].regionName === "null")
+  console.log(salesData[0].regionId,typeof salesData[0].regionName,salesData[0].regionName === null)
   // 遍历所有销售记录
   salesData.forEach(record => {
     const key = record.regionName ===  "全国"?`${record.carModelName}`:`${record.carModelName}--${record.regionId}`;
@@ -258,12 +258,13 @@ async function fetchTrendData() {
   const params = new URLSearchParams();
   if(regionMultiple.value){
     regionArray.value.forEach(item => {
-      params.append('regionIds', item.toString());
+      params.append('regionNames', item.toString());
     });
   }else{
-    params.append('regionIds', regionSingle.value.toString());
+    console.log(regionSingle.value)
+    params.append('regionNames', regionSingle.value.toString());
   }
-
+  console.log('params:',params.toString())
   if(carModelMultiple.value){
     carModelArray.value.forEach(item => {
       params.append('carModelIds', item.toString());
@@ -271,7 +272,8 @@ async function fetchTrendData() {
   }else{
     params.append('carModelIds', carModelSingle.value.toString());
   }
-  
+  console.log('params:',params.toString())
+
   console.log(`/api/sale-records/multiple?${params.toString()}`)
   const res = await axios.get(`/api/sale-records/multiple?${params.toString()}`)
   console.log('请求参数:', res.data)
