@@ -9,7 +9,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * 车型服务类
@@ -26,10 +25,11 @@ public class CarModelService {
      * 返回DTO格式用于前端展示
      */
     public List<CarModelDTO> getAllCarModels() {
-        List<CarModel> carModels = carModelRepository.findAll();
+        return carModelRepository.findAllCarModelDTOs();
+        /* List<CarModel> carModels = carModelRepository.findAll();
         return carModels.stream()
                 .map(this::convertToDTO)
-                .collect(Collectors.toList());
+                .collect(Collectors.toList()); */
     }
 
     /**
