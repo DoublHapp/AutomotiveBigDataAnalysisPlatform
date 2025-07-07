@@ -184,7 +184,7 @@
         </div>
 
         <!-- 主要用途 -->
-        <div class="filter-section">
+        <!-- <div class="filter-section">
           <div class="section-label">
             <el-icon><Guide /></el-icon>
             <span>主要用途</span>
@@ -203,7 +203,7 @@
               <span class="option-desc">{{ option.desc }}</span>
             </div>
           </div>
-        </div>
+        </div> -->
 
         <!-- 日均里程 -->
         <div class="filter-section">
@@ -271,7 +271,7 @@
             <el-icon><Trophy /></el-icon>
             <span>AI推荐结果</span>
             <div class="summary-tags">
-              <el-tag :type="getScenarioTagType()">{{ getUserScenarioLabel() }}</el-tag>
+              <!-- <el-tag :type="getScenarioTagType()">{{ getUserScenarioLabel() }}</el-tag> -->
               <el-tag type="success">基于{{ businessMetrics.totalSalesRecords }}条真实销量</el-tag>
               <el-tag type="info">{{ businessMetrics.totalOpinions }}条用户口碑</el-tag>
             </div>
@@ -307,10 +307,6 @@
             <el-icon><Medal /></el-icon>
             <span>最佳推荐</span>
             <div class="confidence-info">
-              <el-tag type="success" size="large">
-                <el-icon><Check /></el-icon>
-                置信度 {{ recommendationResult.primaryRecommendation.confidence }}%
-              </el-tag>
               <el-tag v-if="recommendationResult.primaryRecommendation.isHot" type="danger">
                 🔥 销量冠军
               </el-tag>
@@ -445,26 +441,11 @@
 
         <div class="primary-actions">
           <el-button
-            type="primary"
-            size="large"
-            @click="viewModelDetails(recommendationResult.primaryRecommendation)"
-          >
-            <el-icon><Monitor /></el-icon>
-            查看详情
-          </el-button>
-          <el-button
             size="large"
             @click="addToComparison(recommendationResult.primaryRecommendation)"
           >
             <el-icon><DataBoard /></el-icon>
             加入对比
-          </el-button>
-          <el-button
-            size="large"
-            @click="predictSalesForModel(recommendationResult.primaryRecommendation.id)"
-          >
-            <el-icon><TrendCharts /></el-icon>
-            销量预测
           </el-button>
         </div>
       </el-card>
@@ -483,9 +464,6 @@
                 style="width: 120px"
               >
                 <el-option label="匹配度" value="matchScore" />
-                <el-option label="销量" value="sales" />
-                <el-option label="口碑" value="rating" />
-                <el-option label="价格" value="price" />
               </el-select>
               <el-button
                 size="small"
@@ -1004,6 +982,7 @@ interface CarModel {
   seatNum: number
   driveType: string
   rangeKm: number
+  imageUrl?: string
 }
 
 interface SaleRecord {
@@ -1147,7 +1126,7 @@ const questionnaireData = ref({
   energyType: '',
   passengers: '',
   brandPreference: [] as string[],
-  primaryUsage: '',
+  // primaryUsage: '',
   dailyMileage: '',
 })
 
@@ -1200,12 +1179,12 @@ const passengerOptions = [
   { value: 'any', label: '不限', desc: '灵活选择' },
 ]
 
-const usageOptions = [
-  { value: 'daily', label: '日常通勤', desc: '上下班代步', icon: Timer },
-  { value: 'family', label: '家用出行', desc: '全家出游', icon: Van },
-  { value: 'business', label: '商务用车', desc: '工作需要', icon: Service },
-  { value: 'travel', label: '长途旅行', desc: '自驾游', icon: Location },
-]
+// const usageOptions = [
+//   { value: 'daily', label: '日常通勤', desc: '上下班代步', icon: Timer },
+//   { value: 'family', label: '家用出行', desc: '全家出游', icon: Van },
+//   { value: 'business', label: '商务用车', desc: '工作需要', icon: Service },
+//   { value: 'travel', label: '长途旅行', desc: '自驾游', icon: Location },
+// ]
 
 const mileageOptions = [
   { value: 'low', label: '30km以下', desc: '市内短途' },
@@ -1288,7 +1267,7 @@ const fetchRegions = async (): Promise<Region[]> => {
 
 const fetchTopLevelRegions = async (): Promise<Region[]> => {
   try {
-    const response = await axios.get('/api/regions/top-level')
+    const response = await axios.get('/api/regions/top-level/old')
     if (response.data.status === 200 && response.data.data) {
       return response.data.data
     } else {
@@ -1453,9 +1432,9 @@ const processCarModelsForRecommendation = (): ProcessedCarModel[] => {
     const opinion = baseData.value.opinions.find((op) => op.carModelId === carModel.carModelId)
     const userRating = opinion ? opinion.score : 3.5
 
-    // 计算价格区间
+    // 官方指导价
     const price = carModel.officialPrice / 10000
-    const priceRange = `${(price * 0.9).toFixed(1)}-${(price * 1.1).toFixed(1)}万`
+    const priceRange = `${price.toFixed(1)}万`
 
     // 计算市场热度（基于销量排名）
     const allSales = baseData.value.carModels
@@ -1488,7 +1467,10 @@ const processCarModelsForRecommendation = (): ProcessedCarModel[] => {
     }
 
     // 生成车型图片URL
-    const image = `https://picsum.photos/400/300?random=${carModel.carModelId}`
+    const image =
+      carModel.imageUrl && carModel.imageUrl.trim() !== ''
+        ? carModel.imageUrl
+        : `https://picsum.photos/400/300?random=${carModel.carModelId}`
 
     // 生成亮点标签
     let highlight = '品质之选'
@@ -1537,7 +1519,9 @@ const calculateMatchScore = (carModel: ProcessedCarModel): number => {
       '30-50': [30, 50],
       over50: [50, 200],
     }
-    const [minBudget, maxBudget] = budgetRanges[questionnaireData.value.budget] || [0, 200]
+    const [minBudget, maxBudget] = budgetRanges[
+      questionnaireData.value.budget as keyof typeof budgetRanges
+    ] || [0, 200]
 
     if (carModel.avgPrice >= minBudget && carModel.avgPrice <= maxBudget) {
       score += 30
@@ -1648,7 +1632,7 @@ const generateRecommendation = async () => {
     const topCandidate = candidateCarModels[0]
     const primaryRecommendation: PrimaryRecommendation = {
       ...topCandidate,
-      confidence: Math.min(95, topCandidate.matchScore + (topCandidate.userRating - 3) * 5),
+
       reasons: [
         {
           id: '1',
@@ -1877,9 +1861,9 @@ const toggleBrandPreference = (brand: string) => {
   }
 }
 
-const selectPrimaryUsage = (usage: string) => {
-  questionnaireData.value.primaryUsage = usage
-}
+// const selectPrimaryUsage = (usage: string) => {
+//   questionnaireData.value.primaryUsage = usage
+// }
 
 const selectDailyMileage = (mileage: string) => {
   questionnaireData.value.dailyMileage = mileage
@@ -2033,21 +2017,21 @@ const getPrimaryRecommendationSalesRank = (): number => {
 //  UI辅助函数
 // =============================================
 
-const getScenarioTagType = () => {
-  if (questionnaireData.value.primaryUsage === 'business') return 'warning'
-  if (questionnaireData.value.primaryUsage === 'family') return 'success'
-  return 'info'
-}
+// const getScenarioTagType = () => {
+//   if (questionnaireData.value.primaryUsage === 'business') return 'warning'
+//   if (questionnaireData.value.primaryUsage === 'family') return 'success'
+//   return 'info'
+// }
 
-const getUserScenarioLabel = () => {
-  const usageLabels = {
-    daily: '日常通勤',
-    family: '家用出行',
-    business: '商务用车',
-    travel: '长途旅行',
-  }
-  return usageLabels[questionnaireData.value.primaryUsage] || '智能推荐'
-}
+// const getUserScenarioLabel = () => {
+//   const usageLabels = {
+//     daily: '日常通勤',
+//     family: '家用出行',
+//     business: '商务用车',
+//     travel: '长途旅行',
+//   }
+//   return usageLabels[questionnaireData.value.primaryUsage] || '智能推荐'
+// }
 
 const getAnalysisTime = () => {
   return recommendationResult.value?.analysisTime.toFixed(1) || '0.0'
@@ -2062,19 +2046,8 @@ const getHeatColor = (heat: number) => {
 
 const getSortedAlternatives = (alternatives: ProcessedCarModel[]) => {
   if (!alternatives) return []
-
-  return [...alternatives].sort((a, b) => {
-    switch (alternativeSortBy.value) {
-      case 'sales':
-        return b.totalSales - a.totalSales
-      case 'rating':
-        return b.userRating - a.userRating
-      case 'price':
-        return a.avgPrice - b.avgPrice
-      default:
-        return b.matchScore - a.matchScore
-    }
-  })
+  // 只按匹配度排序
+  return [...alternatives].sort((a, b) => b.matchScore - a.matchScore)
 }
 
 // =============================================
@@ -2354,20 +2327,6 @@ const startDetailedComparison = () => {
   })
 }
 
-const viewModelDetails = (model: ProcessedCarModel | PrimaryRecommendation) => {
-  router.push({
-    name: 'VehicleConfiguration',
-    params: { id: model.id },
-  })
-}
-
-const predictSalesForModel = (modelId: number) => {
-  router.push({
-    name: 'SalesForecast',
-    query: { carModelId: modelId },
-  })
-}
-
 const handleImageError = (event: Event) => {
   const target = event.target as HTMLImageElement
   target.src = 'https://via.placeholder.com/400x300/f0f2f5/909399?text=暂无图片'
@@ -2461,7 +2420,7 @@ const restartQuestionnaire = () => {
         energyType: '',
         passengers: '',
         brandPreference: [],
-        primaryUsage: '',
+        // primaryUsage: '',
         dailyMileage: '',
       }
       recommendationResult.value = null
