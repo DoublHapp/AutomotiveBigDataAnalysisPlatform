@@ -118,7 +118,11 @@ public class PredictionController {
             @RequestParam Long carModelId,
             @RequestParam(required = false) Long regionId,
             @RequestParam(required = false) String regionName,
-            @RequestParam(defaultValue = "6") int months) {
+            @RequestParam(defaultValue = "6") Integer months,
+            @RequestParam(required = false) Integer seasonalityPeriod,
+            @RequestParam(required = false) Double seasonalityStrength,
+            @RequestParam(required = false) Double trendFlexibility,
+            @RequestParam(required = false) Boolean includeHolidays) {
 
         // regionId和regionName不能同时存在
         if (regionId != null && regionName != null) {
@@ -136,7 +140,14 @@ public class PredictionController {
         }
 
         // 进行预测
-        List<SaleRecordDTO> predictions = predictionService.predictSalesWithProphet(historicalData, months);
+        List<SaleRecordDTO> predictions;
+        if (seasonalityPeriod != null && seasonalityStrength != null && trendFlexibility != null
+                && includeHolidays != null) {
+            predictions = predictionService.predictSalesWithProphet(
+                    historicalData, months, seasonalityPeriod, seasonalityStrength, trendFlexibility, includeHolidays);
+        } else {
+            predictions = predictionService.predictSalesWithProphet(historicalData, months);
+        }
 
         return ResponseUtil.success(predictions);
     }
@@ -151,7 +162,11 @@ public class PredictionController {
             @RequestParam Long carModelId,
             @RequestParam(required = false) Long regionId,
             @RequestParam(required = false) String regionName,
-            @RequestParam(defaultValue = "6") int months) {
+            @RequestParam(defaultValue = "6") int months,
+            @RequestParam(required = false) Integer seasonalityPeriod,
+            @RequestParam(required = false) Double seasonalityStrength,
+            @RequestParam(required = false) Double trendFlexibility,
+            @RequestParam(required = false) Boolean includeHolidays) {
 
         // regionId和regionName不能同时存在
         if (regionId != null && regionName != null) {
@@ -169,7 +184,14 @@ public class PredictionController {
         }
 
         // 进行预测
-        ProphetResultDTO prophetResult = predictionService.predictSalesWithProphetDetail(historicalData, months);
+        ProphetResultDTO prophetResult;
+        if (seasonalityPeriod != null && seasonalityStrength != null && trendFlexibility != null
+                && includeHolidays != null) {
+            prophetResult = predictionService.predictSalesWithProphetDetail(
+                    historicalData, months, seasonalityPeriod, seasonalityStrength, trendFlexibility, includeHolidays);
+        } else {
+            prophetResult = predictionService.predictSalesWithProphetDetail(historicalData, months);
+        }
 
         return ResponseUtil.success(prophetResult);
     }

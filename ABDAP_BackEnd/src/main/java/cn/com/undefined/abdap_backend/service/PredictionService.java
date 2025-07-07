@@ -123,12 +123,43 @@ public class PredictionService {
     }
 
     /**
+     * 基于销售记录进行Prophet时间序列预测（带参数配置版本）
+     * 返回预测模型结果数据
+     * 
+     * @param saleRecords         销售记录列表，需按时间顺序排列
+     * @param monthsToForecast    预测月数，建议1-24个月
+     * @param seasonalityPeriod   季节性周期
+     * @param seasonalityStrength 季节性强度 (0.0-1.0)
+     * @param trendFlexibility    趋势灵活性 (0.0-1.0)
+     * @param includeHolidays     是否包含假期影响
+     * 
+     * @return ProphetResultDTO 预测结果的销售记录DTO
+     * @throws IllegalArgumentException 当销售记录数据不足或格式不正确时抛出
+     */
+    public ProphetResultDTO predictSalesWithProphetDetail(List<SaleRecord> saleRecords, int monthsToForecast,
+            int seasonalityPeriod,
+            double seasonalityStrength, double trendFlexibility,
+            boolean includeHolidays) {
+        validatePredictionParameters(saleRecords, monthsToForecast);
+
+        List<Double> salesData = extractAndValidateSalesData(saleRecords);
+
+        // 进行Prophet预测
+        ProphetUtil.ProphetConfig config = ProphetUtil.createCustomConfig(
+                seasonalityPeriod, seasonalityStrength, trendFlexibility, includeHolidays);
+        ProphetUtil.ProphetResult prophetResult = ProphetUtil.forecastCarSales(salesData, monthsToForecast, config);
+
+        return ProphetResultDTO.fromProphetResult(prophetResult);
+    }
+
+    /**
      * 基于销售记录进行Prophet时间序列预测
      * 返回预测模型结果数据
      * 
      * @param saleRecords      销售记录列表，需按时间顺序排列
      * @param monthsToForecast 预测月数，建议1-24个月
-     * @return List<SaleRecordDTO> 预测结果的销售记录DTO列表
+     * 
+     * @return ProphetResultDTO 预测结果的销售记录DTO
      * @throws IllegalArgumentException 当销售记录数据不足或格式不正确时抛出
      */
     public ProphetResultDTO predictSalesWithProphetDetail(List<SaleRecord> saleRecords, int monthsToForecast) {
@@ -170,7 +201,7 @@ public class PredictionService {
      */
     public List<SaleRecordDTO> predictSalesWithProphet(List<SaleRecord> saleRecords, int monthsToForecast,
             int seasonalityPeriod, double seasonalityStrength,
-            double trendFlexibility) {
+            double trendFlexibility, boolean includeHolidays) {
 
         validatePredictionParameters(saleRecords, monthsToForecast);
 
@@ -178,7 +209,7 @@ public class PredictionService {
 
         // 创建自定义Prophet配置
         ProphetUtil.ProphetConfig config = ProphetUtil.createCustomConfig(
-                seasonalityPeriod, seasonalityStrength, trendFlexibility, false);
+                seasonalityPeriod, seasonalityStrength, trendFlexibility, includeHolidays);
 
         // 进行Prophet预测
         double[] data = salesData.stream().mapToDouble(Double::doubleValue).toArray();
