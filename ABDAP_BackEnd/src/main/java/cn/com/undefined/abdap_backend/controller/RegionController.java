@@ -58,6 +58,39 @@ public class RegionController {
     }
 
     /**
+     * 获取所有顶级地区数据（省）
+     * 返回封装后的RegionDTO，用于适配前端的结构
+     * 
+     * @return 顶级地区数据列表
+     */
+    @GetMapping("/top-level/old")
+    public ResponseEntity<ApiResponse<List<RegionDTO>>> getTopLevelRegionsDTO() {
+        List<String> regions = regionService.getTopLevelRegions();
+        // DTO设置为地区名称的hash值
+        List<RegionDTO> regionDTOs = regions.stream()
+                .map(region -> new RegionDTO(Integer.toUnsignedLong(region.hashCode()), region, null))
+                .toList();
+        return ResponseUtil.success(regionDTOs);
+    }
+
+    /**
+     * 根据父级地区id（现在实际为名称的哈希值）获取子地区数据
+     * 用于适配前端的结构
+     * 
+     * @param parentRegionId 父级地区id
+     * @return 子地区数据列表
+     */
+    @GetMapping("/parentRegionId/{parentRegionId}")
+    public ResponseEntity<ApiResponse<List<RegionDTO>>> getRegionsByParentId(@PathVariable Long parentRegionId) {
+        List<RegionDTO> regions = regionService.getAllRegions()
+                .stream()
+                .filter(region -> region.getParentRegion() != null
+                        && region.getParentRegion().hashCode() == parentRegionId.intValue())
+                .toList();
+        return ResponseUtil.success(regions);
+    }
+
+    /**
      * 获取所有非顶级地区数据（市）
      * 
      * @return 非顶级地区数据列表
