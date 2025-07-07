@@ -252,9 +252,8 @@ function processResponseData(salesData: repsonseData[]): chartData[] {
   return result;
 }
 
-// 预留接口函数
+// API接口调用函数
 async function fetchTrendData() {
-  // 这里实际应调用后端接口
   const params = new URLSearchParams();
   if(regionMultiple.value){
     regionArray.value.forEach(item => {

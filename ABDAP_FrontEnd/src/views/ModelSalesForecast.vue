@@ -81,6 +81,23 @@ interface CompetitorPricing {
   marketResponse: number
 }
 
+// 预测结果接口
+interface repsonseData {
+  historicalData: number[]
+  fittedValues: number[]
+  forecastValues: number[]
+  forecastUpperBounds: number[]
+  forecastLowerBounds: number[]
+  residuals: number[]
+  mape: number
+  confidenceLevel: number
+  forecastStartIndex: number
+  completeTimeSeries: number[]
+  completeFittedSeries: number[]
+  historicalDataCount: number
+  forecastDataCount: number
+}
+
 // 可选车型接口
 interface carModelOption {
   label: string
@@ -160,9 +177,21 @@ let inventoryChartInstance: echarts.ECharts | null = null
 let competitorChartInstance: echarts.ECharts | null = null
 let simulationChartInstance: echarts.ECharts | null = null
 
+// 预测数据
+let historySales: number[]
+let historyDates: string[]
+let historyPeriods: number
+let forecastDates: string[]
+let forecastPeriods: number
+let values : number[]
+let upper : number[]
+let lower : number[]
+
+
 // 计算属性
 const filteredComparisonModels = computed(() => {
-  return carModelOptionsFake.filter((model) => model.value !== selectedModel.value)
+  return carModelOptions.value.filter((model) => model.value !== selectedModel.value)
+  // return carModelOptionsFake.filter((model) => model.value !== selectedModel.value)
 })
 
 const lifecycleStageText = computed(() => {
@@ -221,12 +250,13 @@ const fetchCarModels = async () => {
   try {
     const response = await axios.get('/api/car-models')
     if (response.data.status === 200) {
-      response.data.data.forEach((model: CarModel) => {
+      response.data.data.forEach((model: any) => {
         carModelOptions.value.push({
           label: `${model.modelName}`, //要改，现在品牌和车型分开了，接口和模拟数据不匹配。
           value: model.carModelId.toString(),
         })
       })
+      console.log('获取车型列表成功:', carModelOptions.value)
     } else {
       carModelList.value = generateMockCarModels()
     }
@@ -234,6 +264,12 @@ const fetchCarModels = async () => {
     console.error('获取车型列表失败:', error)
     carModelList.value = generateMockCarModels()
   }
+}
+
+
+// 获取车型分析数据以及数据处理
+function processAnalysisResponseData(){
+
 }
 
 const fetchModelAnalysis = async (modelId: string) => {
@@ -496,28 +532,37 @@ const startModelAnalysis = async () => {
   analyzing.value = true
 
   try {
-    const results = await fetchModelAnalysis(selectedModel.value)
+    const res = await fetchModelAnalysis(selectedModel.value)
+    const results: repsonseData = res.data.data
     modelResults.value = results
 
+    historySales = results.historicalData   
+    historyPeriods = results.historicalDataCount
+    forecastPeriods = results.forecastDataCount
+    values = results.forecastValues
+    upper = results.forecastUpperBounds
+    lower = results.forecastLowerBounds
+    historyDates = generateTimeSeries('2025/06', -historyPeriods)
+    forecastDates = generateTimeSeries('2025/07', forecastPeriods)
     // 更新生命周期数据
-    currentLifecycleStage.value = results.lifecycle.stage
-    marketMaturity.value = results.lifecycle.maturity
-    growthPotential.value = results.lifecycle.potential
-    expectedLifecycle.value = results.lifecycle.expectedDuration
+    // currentLifecycleStage.value = results.lifecycle.stage
+    // marketMaturity.value = results.lifecycle.maturity
+    // growthPotential.value = results.lifecycle.potential
+    // expectedLifecycle.value = results.lifecycle.expectedDuration
 
-    // 更新其他数据
-    priceElasticity.value = results.pricing.elasticity
-    optimalPrice.value = results.pricing.optimal
-    maxProfitMargin.value = results.pricing.maxMargin
-    competitorPricing.value = results.pricing.competitors
+    // // 更新其他数据
+    // priceElasticity.value = results.pricing.elasticity
+    // optimalPrice.value = results.pricing.optimal
+    // maxProfitMargin.value = results.pricing.maxMargin
+    // competitorPricing.value = results.pricing.competitors
 
-    safetyStock.value = results.inventory.safety
-    targetTurnover.value = results.inventory.turnover
-    replenishmentCycle.value = results.inventory.cycle
-    inventoryValue.value = results.inventory.value
-    seasonalInventory.value = results.inventory.seasonal
+    // safetyStock.value = results.inventory.safety
+    // targetTurnover.value = results.inventory.turnover
+    // replenishmentCycle.value = results.inventory.cycle
+    // inventoryValue.value = results.inventory.value
+    // seasonalInventory.value = results.inventory.seasonal
 
-    competitorThreats.value = results.competition.threats
+    // competitorThreats.value = results.competition.threats
 
     ElMessage.success('车型分析完成！')
 
@@ -714,6 +759,54 @@ const showCounterStrategy = (threat: CompetitorThreat) => {
   })
 }
 
+// 计算日期
+function generateTimeSeries(baseTime: string, period: number): string[] {
+  // 验证输入格式
+  if (!/^\d{4}\/\d{2}$/.test(baseTime)) {
+    throw new Error('基准时间格式不正确，应为 "yyyy/mm"');
+  }
+
+  const [yearStr, monthStr] = baseTime.split('/');
+  let year = parseInt(yearStr, 10);
+  let month = parseInt(monthStr, 10);
+
+  // 验证月份是否有效
+  if (month < 1 || month > 12) {
+    throw new Error('月份必须在 1-12 之间');
+  }
+
+  const result: string[] = [];
+  const direction = period > 0 ? 1 : -1;
+  const count = Math.abs(period);
+
+  for (let i = 0; i < count; i++) {
+    // 计算当前月份和年份
+    let currentMonth = month;
+    let currentYear = year;
+
+    if (direction > 0) {
+      // 正向计算
+      currentMonth += i;
+      currentYear += Math.floor((currentMonth - 1) / 12);
+      currentMonth = ((currentMonth - 1) % 12) + 1;
+    } else {
+      // 反向计算
+      currentMonth -= i;
+      // 处理跨年
+      while (currentMonth < 1) {
+        currentMonth += 12;
+        currentYear -= 1;
+      }
+    }
+
+    // 格式化月份为两位数
+    const formattedMonth = currentMonth.toString().padStart(2, '0');
+    result.push(`${currentYear}/${formattedMonth}`);
+  }
+
+  return result;
+}
+
 // 图表初始化函数
 const initAllCharts = async () => {
   await Promise.all([
@@ -736,39 +829,43 @@ const initForecastChart = async () => {
 
   // 假设 modelResults.value.forecast 为 [{date, value, upper, lower}]
   // 如无真实数据，可用模拟数据
-  const forecastData = modelResults.value.forecast || [
-    { date: '2023-01', value: 1200, upper: 1300, lower: 1100 },
-    { date: '2023-02', value: 1350, upper: 1450, lower: 1250 },
-    { date: '2023-03', value: 1500, upper: 1600, lower: 1400 },
-    { date: '2023-04', value: 1700, upper: 1800, lower: 1600 },
-    { date: '2023-05', value: 1600, upper: 1700, lower: 1500 },
-    { date: '2023-06', value: 1550, upper: 1650, lower: 1450 },
-  ]
-  const historyData =[
-    {"date": "2022-01", "value": 932},
-    {"date": "2022-02", "value": 1045},
-    {"date": "2022-03", "value": 876},
-    {"date": "2022-04", "value": 1152},
-    {"date": "2022-05", "value": 987},
-    {"date": "2022-06", "value": 1103},
-    {"date": "2022-07", "value": 821},
-    {"date": "2022-08", "value": 1176},
-    {"date": "2022-09", "value": 899},
-    {"date": "2022-10", "value": 1088},
-    {"date": "2022-11", "value": 954},
-    {"date": "2022-12", "value": 1192}
-  ]
-  const historySales = historyData.map((d: { date: string; value: number }) => d.value)
-  const historyDates = historyData.map((d: { date: string }) => d.date)
-  const forecastDates = forecastData.map((d: { date: string; value: number; upper: number; lower: number }) => d.date)
-  const values = forecastData.map((d: { date: string; value: number; upper: number; lower: number }) => d.value)
-  const upper = forecastData.map((d: { date: string; value: number; upper: number; lower: number }) => d.upper)
-  const lower = forecastData.map((d: { date: string; value: number; upper: number; lower: number }) => d.lower)
+  // const forecastData = modelResults.value.forecast || [
+  //   { date: '2023-01', value: 1200, upper: 1300, lower: 1100 },
+  //   { date: '2023-02', value: 1350, upper: 1450, lower: 1250 },
+  //   { date: '2023-03', value: 1500, upper: 1600, lower: 1400 },
+  //   { date: '2023-04', value: 1700, upper: 1800, lower: 1600 },
+  //   { date: '2023-05', value: 1600, upper: 1700, lower: 1500 },
+  //   { date: '2023-06', value: 1550, upper: 1650, lower: 1450 },
+  // ]
+  // const historyData =[
+  //   {"date": "2022-01", "value": 932},
+  //   {"date": "2022-02", "value": 1045},
+  //   {"date": "2022-03", "value": 876},
+  //   {"date": "2022-04", "value": 1152},
+  //   {"date": "2022-05", "value": 987},
+  //   {"date": "2022-06", "value": 1103},
+  //   {"date": "2022-07", "value": 821},
+  //   {"date": "2022-08", "value": 1176},
+  //   {"date": "2022-09", "value": 899},
+  //   {"date": "2022-10", "value": 1088},
+  //   {"date": "2022-11", "value": 954},
+  //   {"date": "2022-12", "value": 1192}
+  // ]
+  // const historySales = historyData.map((d: { date: string; value: number }) => d.value)
+  // const historyDates = historyData.map((d: { date: string }) => d.date)
+  // const forecastDates = forecastData.map((d: { date: string; value: number; upper: number; lower: number }) => d.date)
+  // const values = forecastData.map((d: { date: string; value: number; upper: number; lower: number }) => d.value)
+  // const upper = forecastData.map((d: { date: string; value: number; upper: number; lower: number }) => d.upper)
+  // const lower = forecastData.map((d: { date: string; value: number; upper: number; lower: number }) => d.lower)
 
-  // 为预测数据添加前导null来正确对其
-  const forecastSales = new Array(historySales.length).fill(null).concat(values)
-  const forecastUpper = new Array(historySales.length).fill(null).concat(upper)
-  const forecastLower = new Array(historySales.length).fill(null).concat(lower)
+  // // 为预测数据添加前导null来正确对其
+  // const forecastSales = new Array(historySales.length).fill(null).concat(values)
+  // const forecastUpper = new Array(historySales.length).fill(null).concat(upper)
+  // const forecastLower = new Array(historySales.length).fill(null).concat(lower)
+
+  const forecastSales = new Array(historyPeriods).fill(null).concat(values)
+  const forecastUpper = new Array(historyPeriods).fill(null).concat(upper)
+  const forecastLower = new Array(historyPeriods).fill(null).concat(lower)
 
   const option = {
     title: {
@@ -1231,7 +1328,7 @@ onMounted(async () => {
   ElMessage.success('欢迎使用车型销售预测系统！')
 
   try {
-    //await fetchCarModels()
+    await fetchCarModels()
     window.addEventListener('resize', handleResize)
   } catch (error) {
     console.error('页面初始化失败:', error)
@@ -1307,8 +1404,9 @@ onUnmounted(() => {
                   @change="handleModelChange"
                   style="width: 100%"
                 >
+                <!-- 使用 carModelOptionsFake 代替 carModelOptions -->
                   <el-option
-                    v-for="model in carModelOptionsFake"
+                    v-for="model in carModelOptions" 
                     :key="model.label"
                     :label="model.label"
                     :value="model.value"
