@@ -36,15 +36,4 @@ public class RecommendHistory {
     
     @Column(name = "enumtIsDel")
     private Short enumtIsDel;
-    
-    // 建立与PurchaseSurvey实体的关联关系
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "survey_id", insertable = false, updatable = false)
-    private PurchaseSurvey purchaseSurvey;
-    
-    // 建立与User实体的关联关系（用户ID可能为空）
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", insertable = false, updatable = false)
-    private User user;
-    
 }

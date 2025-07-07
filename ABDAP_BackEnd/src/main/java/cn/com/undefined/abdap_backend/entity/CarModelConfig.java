@@ -34,14 +34,4 @@ public class CarModelConfig {
     
     @Column(name = "score")
     private Byte score;
-    
-    // 建立与CarModel实体的关联关系
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "car_model_id", insertable = false, updatable = false)
-    private CarModel carModel;
-    
-    // 建立与Config实体的关联关系
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "config_id", insertable = false, updatable = false)
-    private Config config;
 }

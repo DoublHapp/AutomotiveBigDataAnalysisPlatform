@@ -4,9 +4,12 @@ import cn.com.undefined.abdap_backend.dto.ARIMAResultDTO;
 import cn.com.undefined.abdap_backend.dto.ProphetResultDTO;
 import cn.com.undefined.abdap_backend.dto.SaleRecordDTO;
 import cn.com.undefined.abdap_backend.entity.SaleRecord;
+import cn.com.undefined.abdap_backend.repository.CarModelRepository;
+import cn.com.undefined.abdap_backend.repository.RegionRepository;
 import cn.com.undefined.abdap_backend.util.ARIMAUtil;
 import cn.com.undefined.abdap_backend.util.ProphetUtil;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -28,6 +31,13 @@ import java.util.stream.Collectors;
  */
 @Service
 public class PredictionService {
+
+    @Autowired
+    private CarModelRepository carModelRepository;
+
+    @Autowired
+    private RegionRepository regionRepository;
+
     /**
      * 基于销售记录进行ARIMA时间序列预测
      * 
@@ -227,6 +237,29 @@ public class PredictionService {
         // 获取最后一个销售记录作为基础数据
         SaleRecord lastRecord = saleRecords.get(saleRecords.size() - 1);
 
+        // 使用repository获取车型和地区信息，避免懒加载问题
+        String carModelName = "未知车型";
+        String regionName = "未知地区";
+
+        try {
+            // 通过CarModelRepository获取车型名称
+            if (lastRecord.getCarModelId() != null) {
+                carModelName = carModelRepository.findById(lastRecord.getCarModelId())
+                        .map(carModel -> carModel.getModelName())
+                        .orElse("未知车型");
+            }
+
+            // 通过RegionRepository获取地区名称
+            if (lastRecord.getRegionId() != null) {
+                regionName = regionRepository.findById(lastRecord.getRegionId())
+                        .map(region -> region.getRegionName())
+                        .orElse("未知地区");
+            }
+        } catch (Exception e) {
+            // 如果查询失败，使用默认值
+            System.err.println("获取车型或地区信息时出错: " + e.getMessage());
+        }
+
         // 为每个预测月份创建SaleRecordDTO
         for (int i = 0; i < forecastValues.length; i++) {
             double prediction = forecastValues[i];
@@ -235,17 +268,16 @@ public class PredictionService {
             SaleRecordDTO predictionDTO = new SaleRecordDTO();
             predictionDTO.setSaleId(null); // 预测记录没有ID
             predictionDTO.setCarModelId(lastRecord.getCarModelId());
-            predictionDTO.setCarModelName(
-                    lastRecord.getCarModel() != null ? lastRecord.getCarModel().getModelName() : "未知车型");
+            predictionDTO.setCarModelName(carModelName); // 使用从repository获取的名称
             predictionDTO.setRegionId(lastRecord.getRegionId());
-            predictionDTO.setRegionName(
-                    lastRecord.getRegion() != null ? lastRecord.getRegion().getRegionName() : "未知地区");
+            predictionDTO.setRegionName(regionName); // 使用从repository获取的名称
             predictionDTO.setSaleMonth(lastRecord.getSaleMonth().plusMonths(i + 1)); // 未来第i+1个月
             predictionDTO.setSaleCount((int) Math.round(prediction)); // 预测的销售数量
             predictionDTO.setSaleAmount(BigDecimal.valueOf(prediction * 50000)); // 估算销售金额
 
             predictionResults.add(predictionDTO);
         }
+
         return predictionResults;
     }
 

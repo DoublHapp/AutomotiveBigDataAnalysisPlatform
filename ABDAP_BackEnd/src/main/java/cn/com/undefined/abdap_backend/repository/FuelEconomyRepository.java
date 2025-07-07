@@ -25,12 +25,4 @@ public interface FuelEconomyRepository extends JpaRepository<FuelEconomy, Long> 
      * @return 油耗数据列表
      */
     List<FuelEconomy> findByFuelType(String fuelType);
-    
-    /**
-     * 根据车型ID和燃料类型查询油耗数据（一对一关系）
-     * @param carModelId 车型ID
-     * @param fuelType 燃料类型
-     * @return 油耗数据
-     */
-    Optional<FuelEconomy> findByCarModelCarModelIdAndFuelType(Long carModelId, String fuelType);
 }

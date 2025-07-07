@@ -5,7 +5,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Entity
 @Table(name = "purchase_survey")
@@ -48,18 +47,4 @@ public class PurchaseSurvey {
     
     @Column(name = "drive_type", length = 16)
     private String driveType;
-    
-    // 建立与User实体的关联关系
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", insertable = false, updatable = false)
-    private User user;
-    
-    /**
-     * 基于该调研表生成的所有推荐记录（一对多关系）
-     * 使用mappedBy属性建立双向关联，避免生成中间表
-     * 懒加载，只有在访问时才从数据库查询
-     */
-    @OneToMany(mappedBy = "purchaseSurvey", fetch = FetchType.LAZY)
-    private List<RecommendHistory> recommendHistories;
-    
 }
