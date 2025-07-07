@@ -5,8 +5,6 @@ import cn.com.undefined.abdap_backend.entity.Region;
 import cn.com.undefined.abdap_backend.entity.SaleRecord;
 import cn.com.undefined.abdap_backend.repository.RegionRepository;
 import cn.com.undefined.abdap_backend.repository.SaleRecordRepository;
-import jakarta.persistence.EntityNotFoundException;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,37 +30,32 @@ public class SaleRecordService {
      * 查询所有销售记录
      */
     public List<SaleRecordDTO> findAll() {
-        List<SaleRecord> saleRecords = repository.findAllWithCarModelAndRegion();
-        return saleRecords.stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
+        return repository.findAllSaleRecordDTOs();
     }
 
     /**
      * 根据车型ID查询销售记录
      */
     public List<SaleRecordDTO> findByCarModelId(Long carModelId) {
-        List<SaleRecord> saleRecords = repository.findByCarModelId(carModelId);
-        return saleRecords.stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
+        return repository.findSaleRecordDTOsByCarModelIds(List.of(carModelId));
     }
 
     /**
      * 根据地区ID查询销售记录
      */
     public List<SaleRecordDTO> findByRegionId(Long regionId) {
-        List<SaleRecord> saleRecords = repository.findByRegionId(regionId);
-        return saleRecords.stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
+        return repository.findSaleRecordDTOsByRegionIds(List.of(regionId));
     }
 
     public List<SaleRecordDTO> findByRegionIds(List<Long> regionId) {
-        List<SaleRecord> saleRecords = repository.findByRegionIds(regionId);
-        return saleRecords.stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
+        return repository.findSaleRecordDTOsByRegionIds(regionId);
+    }
+    
+    /**
+     * 根据车型ID和地区ID查询销售记录
+     */
+    public List<SaleRecordDTO> getSaleRecordsByCarModelIdAndRegionId(Long carModelId, Long regionId) {
+        return repository.findSaleRecordDTOsByCarModelIdsAndRegionIds(List.of(carModelId), List.of(regionId));
     }
 
     /**
@@ -73,26 +66,24 @@ public class SaleRecordService {
      * @return 符合条件的销售记录DTO列表
      */
     public List<SaleRecordDTO> getMultipleSaleRecords(List<Long> carModelIds, List<Long> regionIds) {
-        List<SaleRecord> saleRecords;
+        List<SaleRecordDTO> saleRecordDTOs;
         // 根据参数情况选择不同的查询策略
         if ((carModelIds == null || carModelIds.isEmpty()) && (regionIds == null || regionIds.isEmpty())) {
             // 两个参数都为空，返回所有记录
-            saleRecords = repository.findAll();
+            saleRecordDTOs = repository.findAllSaleRecordDTOs();
         } else if (carModelIds == null || carModelIds.isEmpty()) {
             // 只有地区ID参数
-            saleRecords = repository.findByRegionIds(regionIds);
+            saleRecordDTOs = repository.findSaleRecordDTOsByRegionIds(regionIds);
         } else if (regionIds == null || regionIds.isEmpty()) {
             // 只有车型ID参数
-            saleRecords = repository.findByCarModelIds(carModelIds);
+            saleRecordDTOs = repository.findSaleRecordDTOsByCarModelIds(carModelIds);
         } else {
             // 两个参数都有值
-            saleRecords = repository.findByCarModelIdsAndRegionIds(carModelIds, regionIds);
+            saleRecordDTOs = repository.findSaleRecordDTOsByCarModelIdsAndRegionIds(carModelIds, regionIds);
         }
 
         // 转换为DTO并返回
-        return saleRecords.stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
+        return saleRecordDTOs;
     }
 
     /**
@@ -107,20 +98,7 @@ public class SaleRecordService {
         }
 
         // 根据地区ID查询销售记录
-        List<SaleRecord> saleRecords = repository.findByRegionIdWithDetails(region.getRegionId());
-        return saleRecords.stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
-    }
-
-    /**
-     * 根据车型ID和地区ID查询销售记录
-     */
-    public List<SaleRecordDTO> getSaleRecordsByCarModelIdAndRegionId(Long carModelId, Long regionId) {
-        List<SaleRecord> saleRecords = repository.findByCarModelIdAndRegionId(carModelId, regionId);
-        return saleRecords.stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
+        return repository.findSaleRecordDTOsByRegionIds(List.of(region.getRegionId()));
     }
 
     /**
@@ -162,51 +140,8 @@ public class SaleRecordService {
         }
 
         // 根据车型ID和地区ID查询销售记录
-        List<SaleRecord> saleRecords = repository.findByCarModelIdAndRegionId(carModelId, region.getRegionId());
-        return saleRecords.stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
-    }
-
-    /**
-     * 将SaleRecord实体转换为SaleRecordDTO
-     * 
-     * @param saleRecord 销售记录实体
-     * @return 销售记录数据DTO
-     */
-    private SaleRecordDTO convertToDTO(SaleRecord saleRecord) {
-        SaleRecordDTO dto = new SaleRecordDTO();
-        dto.setSaleId(saleRecord.getSaleId());
-        dto.setCarModelId(saleRecord.getCarModelId());
-        dto.setRegionId(saleRecord.getRegionId());
-        dto.setSaleMonth(saleRecord.getSaleMonth());
-        dto.setSaleCount(saleRecord.getSaleCount());
-        dto.setSaleAmount(saleRecord.getSaleAmount());
-        // 安全设置车型名称
-        try {
-            if (saleRecord.getCarModel() != null) {
-                dto.setCarModelName(saleRecord.getCarModel().getModelName());
-            } else {
-                dto.setCarModelName(null);
-            }
-        } catch (EntityNotFoundException e) {
-            // 如果获取车型信息失败，设置为null
-            dto.setCarModelName(null);
-        }
-
-        // 安全设置地区名称
-        try {
-            if (saleRecord.getRegion() != null) {
-                dto.setRegionName(saleRecord.getRegion().getRegionName());
-            } else {
-                dto.setRegionName(null);
-            }
-        } catch (EntityNotFoundException e) {
-            // 如果获取地区信息失败，设置为null
-            dto.setRegionName(null);
-        }
-
-        return dto;
+        return repository.findSaleRecordDTOsByCarModelIdsAndRegionIds(
+                List.of(carModelId), List.of(region.getRegionId()));
     }
 
 }

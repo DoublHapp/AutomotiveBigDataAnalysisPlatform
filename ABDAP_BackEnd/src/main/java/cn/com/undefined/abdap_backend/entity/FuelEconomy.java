@@ -36,12 +36,4 @@ public class FuelEconomy {
     
     @Column(name = "collect_time")
     private LocalDate collectTime;
-      /**
-     * 关联的车型（一对一关系）
-     * 通过car_model_id外键建立关联
-     * 每个车型只有一个油耗经济性数据记录
-     */
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "car_model_id", insertable = false, updatable = false)
-    private CarModel carModel;
 }

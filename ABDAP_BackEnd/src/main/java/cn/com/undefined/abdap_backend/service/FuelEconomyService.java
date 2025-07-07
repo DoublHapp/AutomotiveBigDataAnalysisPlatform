@@ -20,6 +20,7 @@ public class FuelEconomyService {
 
     /**
      * 获取所有燃油经济性数据
+     * 
      * @return 燃油经济性数据DTO列表
      */
     public List<FuelEconomyDTO> getAllFuelEconomy() {
@@ -27,8 +28,11 @@ public class FuelEconomyService {
         return fuelEconomies.stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
-    }    /**
+    }
+
+    /**
      * 根据车型ID获取燃油经济性数据（一对一关系）
+     * 
      * @param carModelId 车型ID
      * @return 燃油经济性数据DTO，如果不存在则返回null
      */
@@ -40,6 +44,7 @@ public class FuelEconomyService {
 
     /**
      * 根据燃料类型获取燃油经济性数据
+     * 
      * @param fuelType 燃料类型
      * @return 燃油经济性数据DTO列表
      */
@@ -48,27 +53,18 @@ public class FuelEconomyService {
         return fuelEconomies.stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
-    }    /**
-     * 根据车型ID和燃料类型获取燃油经济性数据（一对一关系）
-     * @param carModelId 车型ID
-     * @param fuelType 燃料类型
-     * @return 燃油经济性数据DTO，如果不存在则返回null
-     */
-    public FuelEconomyDTO getFuelEconomyByCarModelIdAndFuelType(Long carModelId, String fuelType) {
-        return fuelEconomyRepository.findByCarModelCarModelIdAndFuelType(carModelId, fuelType)
-                .map(this::convertToDTO)
-                .orElse(null);
     }
 
     /**
      * 将FuelEconomy实体转换为FuelEconomyDTO
+     * 
      * @param fuelEconomy 燃油经济性实体
      * @return 燃油经济性数据DTO
      */
     private FuelEconomyDTO convertToDTO(FuelEconomy fuelEconomy) {
         FuelEconomyDTO dto = new FuelEconomyDTO();
         dto.setFuelId(fuelEconomy.getFuelId());
-        dto.setCarModelId(fuelEconomy.getCarModel() != null ? fuelEconomy.getCarModel().getCarModelId() : null);
+        dto.setCarModelId(fuelEconomy.getCarModelId());
         dto.setFuelType(fuelEconomy.getFuelType());
         dto.setAvgFuel(fuelEconomy.getAvgFuel());
         dto.setSampleCount(fuelEconomy.getSampleCount());
