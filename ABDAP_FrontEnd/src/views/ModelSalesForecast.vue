@@ -292,9 +292,10 @@ function fillSeasonalInventoryByForecastPeriods() {
 }
 
 // 在补货周期或历史销量变化时调用
-watch([() => replenishmentCycle.value, () => historySales], () => {
+function onReplenishmentCycleChange() {
   fillSeasonalInventoryByForecastPeriods()
-})
+  updateInventoryChart()
+}
 
 // 监听补货周期变化是否合理
 watch(replenishmentCycle, (val) => {
@@ -1402,6 +1403,7 @@ onUnmounted(() => {
                 :controls="false"
                 placeholder="补货周期"
                 style="width: 120px"
+                @change="onReplenishmentCycleChange"
               />
             </el-form-item>
             <!-- 库存预测图表 -->

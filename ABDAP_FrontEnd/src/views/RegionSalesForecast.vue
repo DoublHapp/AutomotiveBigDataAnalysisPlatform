@@ -57,10 +57,7 @@ interface InventoryRecommendation {
   currentLevel: number
   recommendedLevel: number
   adjustment: number
-  urgency: {
-    type: 'success' | 'warning' | 'danger'
-    text: string
-  }
+  adjustmentPercent: number
 }
 
 interface OptimizationResult {
@@ -122,10 +119,9 @@ const hasResults = ref(false)
 // 预测指标
 const predictedSales = ref(15800)
 const marketShare = ref(12.5)
-const targetShare = ref(15.0)
 const salesGrowth = ref(8.3)
 const avgMonthlyGrowth = ref(2.1)
-const industryGrowth = ref(1.8)
+const industryGrowth = ref(3.28)
 const forecastAccuracy = ref(89.2)
 const confidenceLevel = ref(85)
 
@@ -452,28 +448,29 @@ const generateMockRegionAnalysis = () => {
       currentLevel: 1200,
       recommendedLevel: 1400,
       adjustment: 16.7,
-      urgency: { type: 'warning', text: '中等' },
+      adjustmentPercent: 16.7,
+
     },
     {
       region: '海淀区',
       currentLevel: 800,
       recommendedLevel: 850,
       adjustment: 6.3,
-      urgency: { type: 'success', text: '低' },
+      adjustmentPercent: 6.3,
     },
     {
       region: '西城区',
       currentLevel: 650,
       recommendedLevel: 580,
       adjustment: -10.8,
-      urgency: { type: 'danger', text: '高' },
+      adjustmentPercent: -10.8,
     },
     {
       region: '东城区',
       currentLevel: 450,
       recommendedLevel: 520,
       adjustment: 15.6,
-      urgency: { type: 'warning', text: '中等' },
+      adjustmentPercent: 15.6,
     },
   ]
 
@@ -546,6 +543,18 @@ function generateTimeSeries(baseTime: string, period: number): string[] {
   return result;
 }
 
+function computeAvgMonthlyGrowth(salesRecord: number[]){
+  let growth: number[] = []
+  for (let i = 1; i < salesRecord.length; i++) {
+    growth.push(((salesRecord[i] - salesRecord[i - 1]) / salesRecord[i - 1]) * 100)
+  }
+  if (growth.length === 0) {
+    return 0
+  } else {
+    return growth.reduce((a, b) => a + b, 0) / growth.length
+  }
+}
+
 const startAnalysis = async () => {
   if (!selectedRegion.value) {
     ElMessage.warning('请先选择要分析的地区')
@@ -560,14 +569,27 @@ const startAnalysis = async () => {
     historySales = analysisData.historicalData   
     historyPeriods = analysisData.historicalDataCount
     forecastPeriods = analysisData.forecastDataCount
-    values = analysisData.forecastValues
-    upper = analysisData.forecastUpperBounds
-    lower = analysisData.forecastLowerBounds
+    values = analysisData.forecastValues.map((v: number) => Math.round(v))
+    upper = analysisData.forecastUpperBounds.map((v: number) => Math.round(v))
+    lower = analysisData.forecastLowerBounds.map((v: number) => Math.round(v))
     historyDates = generateTimeSeries('2025/06', -historyPeriods)
     forecastDates = generateTimeSeries('2025/07', forecastPeriods)
 
-    citiesData = (await fetchCitiesData()) || []
+    // 区域销售预测小字
+    predictedSales.value = values[0]
+    salesGrowth.value = (values[0]-historySales[historySales.length - 1]) / historySales[historySales.length - 1] * 100
+    avgMonthlyGrowth.value = computeAvgMonthlyGrowth(historySales)
+    confidenceLevel.value = analysisData.confidenceLevel || 85
+    forecastAccuracy.value = analysisData.mape
 
+    citiesData = (await fetchCitiesData()) || []
+    inventoryRecommendations.value = citiesData.map(city => ({
+      region: city.name,
+      currentLevel: city.inventory || 0,
+      recommendedLevel: city.recommendedStock || 0,
+      adjustment: ((city.recommendedStock || 0) - (city.inventory || 0)),
+      adjustmentPercent: ((city.recommendedStock || 0) - (city.inventory || 0)) / (city.inventory || 1) * 100,
+    }))
     // 初始化图表
     await nextTick()
     await initAllCharts()
@@ -1040,33 +1062,26 @@ onUnmounted(() => {
               <!-- 预测关键指标 -->
               <div class="forecast-metrics">
                 <el-row :gutter="16">
-                  <el-col :span="6">
+                  <el-col :span="8">
                     <div class="metric-card">
                       <div class="metric-value">{{ predictedSales.toLocaleString() }}</div>
                       <div class="metric-label">预测销量(台)</div>
                       <div class="metric-change" :class="salesGrowthType">
-                        {{ salesGrowth >= 0 ? '+' : '' }}{{ salesGrowth.toFixed(1) }}%
+                        {{ salesGrowth >= 0 ? '+' : '-' }}{{ salesGrowth.toFixed(1) }}%
                       </div>
                     </div>
                   </el-col>
-                  <el-col :span="6">
-                    <div class="metric-card">
-                      <div class="metric-value">{{ marketShare.toFixed(1) }}%</div>
-                      <div class="metric-label">市场份额</div>
-                      <div class="metric-target">目标: {{ targetShare.toFixed(1) }}%</div>
-                    </div>
-                  </el-col>
-                  <el-col :span="6">
+                  <el-col :span="8">
                     <div class="metric-card">
                       <div class="metric-value">{{ avgMonthlyGrowth.toFixed(1) }}%</div>
                       <div class="metric-label">月均增长</div>
                       <div class="metric-benchmark">行业: {{ industryGrowth.toFixed(1) }}%</div>
                     </div>
                   </el-col>
-                  <el-col :span="6">
+                  <el-col :span="8">
                     <div class="metric-card">
                       <div class="metric-value">{{ forecastAccuracy.toFixed(1) }}%</div>
-                      <div class="metric-label">预测准确度</div>
+                      <div class="metric-label">MAPE</div>
                       <div class="metric-confidence">置信度: {{ confidenceLevel }}%</div>
                     </div>
                   </el-col>
@@ -1155,18 +1170,18 @@ onUnmounted(() => {
                       {{ row.recommendedLevel.toLocaleString() }}台
                     </template>
                   </el-table-column>
-                  <el-table-column prop="adjustment" label="调整幅度" width="100">
+                  <el-table-column prop="adjustment" label="调整差值" width="100">
                     <template #default="{ row }">
                       <span :class="row.adjustment >= 0 ? 'text-success' : 'text-danger'">
-                        {{ row.adjustment >= 0 ? '+' : '' }}{{ row.adjustment.toFixed(1) }}%
+                        {{ row.adjustment >= 0 ? '+' : '' }}{{ row.adjustment.toFixed(1) }}
                       </span>
                     </template>
                   </el-table-column>
-                  <el-table-column prop="urgency" label="紧急度" width="100">
+                  <el-table-column prop="adjustmentPercent" label="调整幅度" width="100">
                     <template #default="{ row }">
-                      <el-tag :type="row.urgency.type" size="small">
-                        {{ row.urgency.text }}
-                      </el-tag>
+                      <span :class="row.adjustmentPercent >= 0 ? 'text-success' : 'text-danger'">
+                        {{ row.adjustmentPercent >= 0 ? '+' : '' }}{{ row.adjustmentPercent.toFixed(1) }}%
+                      </span>
                     </template>
                   </el-table-column>
                 </el-table>
