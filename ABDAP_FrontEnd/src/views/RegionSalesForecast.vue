@@ -222,7 +222,6 @@ const fetchRegionTree = async () => {
   try {
     const response = await axios.get('/api/regions')
     if (response.data.status === 200) {
-      console.log('获取区域树数据:', response.data.data)
       const res: any[] = response.data.data
       res.forEach((region: any) => {
         addChildNode(regionTree.value, {
@@ -231,7 +230,6 @@ const fetchRegionTree = async () => {
           parentRegion: region.parentRegion,
         })
       })
-      console.log('区域树数据:', regionTree.value)
     } else {
       console.error('获取区域树失败:', response.data.message)
       regionTree.value = generateMockRegionTree()
@@ -249,6 +247,7 @@ const fetchRegionAnalysis = async () => {
     params.append('regionName', selectedRegion.value.toString())
     params.append('months', forecastPeriod.value.toString())
 
+    console.log('请求地区分析url:', `/api/prediction/ARIMA/detail?regionId=110&months=6`)
     const response = await axios.get(`/api/prediction/ARIMA/detail?${params.toString()}`)
     if (response.data.status === 200) {
       console.log('获取地区分析数据:', response)
@@ -296,7 +295,6 @@ function processResponseData(salesData: repsonseData[]): inventoryChartData[] {
   // 创建一个Map来按名称分组数据
   const groupedData = new Map<string, { counts: number[]}>();
 
-  console.log(salesData[0].regionId,typeof salesData[0].regionName,salesData[0].regionName === null)
   // 遍历所有销售记录
   salesData.forEach(record => {
     const key = record.regionName || '未知地区'; // 使用地区名称作为key，如果没有则使用默认值
@@ -485,7 +483,7 @@ const generateMockRegionAnalysis = () => {
 // 事件处理函数
 const handleRegionChange = (value: string[]) => {
   hasResults.value = false
-  ElMessage.info(`已选择区域: ${value[value.length - 1]}`)
+  ElMessage.info(`已选择区域: ${value}`)
 }
 
 const handlePeriodChange = () => {
@@ -554,6 +552,7 @@ const startAnalysis = async () => {
     return
   }
   analyzing.value = true
+  hasResults.value = true
 
   try {
     const analysisData = await fetchRegionAnalysis()
@@ -618,6 +617,7 @@ const exportReport = () => {
 
 // 图表初始化函数
 const initAllCharts = async () => {
+  console.log("1111111111111111111")
   await Promise.all([
     initRegionTrendChart(),
     initCompetitionChart(),
@@ -626,8 +626,12 @@ const initAllCharts = async () => {
 }
 
 const initRegionTrendChart = async () => {
-  if (!regionTrendChart.value) return
-
+  console.log(regionTrendChart.value, "区域趋势图元素")
+  if (!regionTrendChart.value) {
+    console.log("1111111111111111111")
+    return
+  }
+  
   await nextTick()
 
   if (regionTrendChartInstance) {
@@ -635,7 +639,7 @@ const initRegionTrendChart = async () => {
   }
 
   regionTrendChartInstance = echarts.init(regionTrendChart.value)
-
+  console.log("区域趋势图初始化完成111111111111111111111111111111111")
   // const months = ['1月', '2月', '3月', '4月', '5月', '6月']
   // const historicalData = [1200, 1350, 1180, 1420, 1380, 1450]
   // const forecastData = [1520, 1680, 1750, 1890, 1950, 2100]

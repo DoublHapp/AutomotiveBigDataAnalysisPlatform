@@ -357,7 +357,7 @@ function calcLifecycleStage(launchDate: string, expectedLifecycle: number=84) {
 // API调用函数
 const fetchCarModels = async () => {
   try {
-    const response = await axios.get('/api/car-models')
+    const response = await axios.get('/api/car-models/page?=page=1&size=20')
     if (response.data.status === 200) {
       response.data.data.forEach((model: any) => {
         carModelOptions.value.push({
