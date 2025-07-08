@@ -1,7 +1,6 @@
 package cn.com.undefined.abdap_backend.repository;
 
 import cn.com.undefined.abdap_backend.dto.CarModelDTO;
-import cn.com.undefined.abdap_backend.dto.CarModelDTO;
 import cn.com.undefined.abdap_backend.entity.CarModel;
 
 import java.util.List;

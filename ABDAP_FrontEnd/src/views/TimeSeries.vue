@@ -10,6 +10,21 @@ const compareMode = ref<'region' | 'carModel' | 'none'>('carModel')
 
 // 选项
 // 地区
+interface RegionNode {
+  id: string
+  name: string
+  value?: string
+  children?: RegionNode[]
+}
+
+interface Region{
+  id: string
+  name: string
+  parentRegion: string
+}
+
+const regionTree = ref<RegionNode[]>([])
+
 interface regionOption {
   label: string
   value: string
@@ -81,9 +96,44 @@ const carModelTargets = computed<any>({
   },
 });
 
+// 在<script setup>中添加
+// 构建el-cascader所需的options
+const regionCascaderOptions = computed(() => {
+  // regionTree.value 需为 [{ label, value, children: [...] }]
+  // 若regionTree为空可用regionOptionsAllFake等模拟
+  if (regionTree.value.length > 0) {
+    // 转换RegionNode为el-cascader格式
+    return regionTree.value.map(province => ({
+      label: province.name,
+      value: province.id,
+      children: province.children?.map(city => ({
+        label: city.name,
+        value: city.id
+      })) || []
+    }))
+  } else {
+    // 用模拟数据
+    return regionOptionsNoAllFake.map(opt => ({
+      label: opt.label,
+      value: opt.value
+    }))
+  }
+})
+
+// el-cascader props
+const regionCascaderProp = {
+  checkStrictly: false, // 只可选叶子节点
+  emitPath: false // 只返回选中节点的value
+}
+const regionCascaderProps = {
+  multiple: true,
+  checkStrictly: false, // 只可选叶子节点
+  emitPath: false // 只返回选中节点的value
+}
+
 const regionTargets = computed<any>({
   get() {
-    return regionMultiple ? regionArray.value : regionSingle.value;
+    return regionMultiple.value ? regionArray.value : regionSingle.value;
   },
   set(newVal) {
     if (carModelMultiple) {
@@ -130,6 +180,8 @@ function showStatsDetail(stats: { name: string, min: number, max: number, avg: n
 
 // 选择筛选模式时自动修正选项
 watch(compareMode, (mode) => {
+  console.log('当前筛选模式:', regionMultiple.value, carModelMultiple.value)  
+  console.log('当前地区选项:', regionTargets.value, typeof regionArray.value, regionSingle.value)
   if (mode === 'region') {
     // 地区多选，车型单选，不包含全国
     regionArray.value = [];
@@ -207,7 +259,6 @@ function processResponseData(salesData: repsonseData[]): chartData[] {
   // 创建一个Map来按名称分组数据
   const groupedData = new Map<string, { counts: number[]; dates: string[] }>();
 
-  console.log(salesData[0].regionId,typeof salesData[0].regionName,salesData[0].regionName === null)
   // 遍历所有销售记录
   salesData.forEach(record => {
     const key = record.regionName ===  "全国"?`${record.carModelName}`:`${record.carModelName}--${record.regionName}`;
@@ -251,7 +302,7 @@ function processResponseData(salesData: repsonseData[]): chartData[] {
 // API接口调用函数
 const fetchCarModels = async () => {
   try {
-    const response = await axios.get('/api/car-models')
+    const response = await axios.get('/api/car-models/page?page=1&size=20')
     if (response.data.status === 200) {
       response.data.data.forEach((model: any) => {
         carModelOptions.value.push({
@@ -268,11 +319,56 @@ const fetchCarModels = async () => {
   }
 }
 
+// 创建树结构
+function addChildNode(
+  tree: RegionNode[],
+  newRegion: Region
+): boolean {
+  for (const node of tree) {
+    if (node.name === newRegion.parentRegion) {
+      if (!node.children) {
+        node.children = []
+      }
+      // 添加市级节点
+      const newChild: RegionNode = {
+        id: newRegion.id,
+        name: newRegion.name,
+      }
+      node.children.push(newChild)
+      return true
+    }
+  }
+
+  // 找不到目标节点，创建一个新的省级节点
+  const newNode: RegionNode = {
+    id: newRegion.parentRegion,
+    name: newRegion.parentRegion,
+    children: []
+  }
+  tree.push(newNode)
+
+  // 添加市级节点
+  const newChild: RegionNode = {
+    id: newRegion.id,
+    name: newRegion.name,
+  }
+  const lastNode = tree[tree.length - 1]
+  lastNode.children!.push(newChild)
+  return true // 成功添加新节点
+}
+
+
 const fetchRegions = async () => {
   try {
     const response = await axios.get('/api/regions')
     if (response.data.status === 200) {
-      response.data.data.forEach((region: any) => {
+      const res: any[] = response.data.data
+      res.forEach((region: any) => {
+        addChildNode(regionTree.value, {
+          id: region.regionId,
+          name: region.regionName,
+          parentRegion: region.parentRegion,
+        })
         regionOptions.value.push({
           label: region.parentRegion.toString(),
           value: region.regionId.toString(),
@@ -291,11 +387,11 @@ async function fetchTrendData() {
   const params = new URLSearchParams();
   if(regionMultiple.value){
     regionArray.value.forEach(item => {
-      params.append('regionNames', item.toString());
+      params.append('regionIds', item.toString());
     });
   }else{
     console.log(regionSingle.value)
-    params.append('regionNames', regionSingle.value.toString());
+    params.append('regionIds', regionSingle.value.toString());
   }
   console.log('params:',params.toString())
   if(carModelMultiple.value){
@@ -305,11 +401,7 @@ async function fetchTrendData() {
   }else{
     params.append('carModelIds', carModelSingle.value.toString());
   }
-  console.log('params:',params.toString())
-
-  console.log(`/api/sale-records/multiple?${params.toString()}`)
   const res = await axios.get(`/api/sale-records/multiple?${params.toString()}`)
-  console.log('请求参数:', res.data)
   return processResponseData(res.data.data)
 }
 
@@ -445,7 +537,38 @@ onMounted(() => {
             />
           </el-select>
           <!-- 地区选择 -->
-          <el-select
+          <el-cascader
+            v-if="regionMultiple==false"
+            v-model="regionSingle"
+            :options="regionCascaderOptions"
+            :props="regionCascaderProp"
+            :show-all-levels="false"
+            filterable
+            clearable
+            collapse-tags
+            collapse-tags-tooltip
+            placeholder="选择地区"
+            style="margin-left: 16px; width: 220px; vertical-align: middle;"
+            @change="(...args: any[]) => { console.log('el-cascader multiple:', regionMultiple, args) }"
+          />
+          <el-cascader
+            v-else
+            class="multiple-cascader"
+            v-model="regionTargets"
+            :options="regionCascaderOptions"
+            :props="regionCascaderProps"
+            :show-all-levels="false"
+            multiple=true
+            filterable
+            clearable
+            collapse-tags
+            collapse-tags-tooltip
+            placeholder="选择地区"
+            style="margin-left: 16px; width: 220px; vertical-align: middle;"
+            @change="(...args: any[]) => { console.log('el-cascader multiple:', regionMultiple, args) }"
+          />
+          
+          <!-- <el-select
             v-model="regionTargets"
             :multiple="regionMultiple"
             filterable
@@ -460,7 +583,7 @@ onMounted(() => {
               :label="item.label"
               :value="item.value"
             />
-          </el-select>
+          </el-select> -->
           <!-- 动力类型选择 -->
           <el-select v-model="powerType" placeholder="动力类型" style="margin-left: 16px; width: 120px">
             <el-option

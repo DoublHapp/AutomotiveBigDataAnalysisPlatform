@@ -6,6 +6,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+
+import java.math.BigDecimal;
 import java.util.List;
 
 /**
@@ -101,6 +103,15 @@ public interface SaleRecordRepository extends JpaRepository<SaleRecord, Long> {
                      @Param("carModelIds") List<Long> carModelIds,
                      @Param("regionIds") List<Long> regionIds);
 
+       /**
+        * 按月份、地区、车型统计销售汇总数据
+        *
+        * @param startMonth 开始月份（格式：yyyy-MM-dd，建议为月初日期）
+        * @param endMonth   结束月份（格式：yyyy-MM-dd，建议为月末日期）
+        * @param region     地区名称（为null时统计全部地区）
+        * @param carModel   车型名称（为null时统计全部车型）
+        * @return 每行包含：month（String）、region（String）、carModel（String）、saleCount（Long）、saleAmount（BigDecimal）
+        */
        @Query(value = "SELECT " +
                      "DATE_FORMAT(sr.sale_month, '%Y-%m') as month, " +
                      "COALESCE(:region, 'all') as region, " +
@@ -120,4 +131,16 @@ public interface SaleRecordRepository extends JpaRepository<SaleRecord, Long> {
                      @Param("endMonth") String endMonth,
                      @Param("region") String region,
                      @Param("carModel") String carModel);
+
+       /**
+        * 查询指定时间范围和地区的总销量（原生SQL实现）
+        */
+       @Query(value = "SELECT SUM(sr.sale_count) FROM sale_record sr " +
+                     "LEFT JOIN region r ON sr.region_id = r.region_id " +
+                     "WHERE sr.sale_month >= :startMonth AND sr.sale_month <= :endMonth " +
+                     "AND (:region IS NULL OR r.region_name = :region OR r.parent_region = :region)", nativeQuery = true)
+       BigDecimal findTotalSalesByMonthAndRegion(
+                     @Param("startMonth") String startMonth,
+                     @Param("endMonth") String endMonth,
+                     @Param("region") String region);
 }
