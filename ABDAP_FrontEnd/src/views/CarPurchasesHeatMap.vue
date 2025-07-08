@@ -64,7 +64,7 @@
           />
 
           <!-- 车型筛选 -->
-          <el-select
+          <!-- <el-select
             v-model="selectedCarModel"
             placeholder="选择车型"
             clearable
@@ -78,7 +78,7 @@
               :label="`${model.brandName} ${model.modelName}`"
               :value="model.carModelId.toString()"
             />
-          </el-select>
+          </el-select> -->
 
           <!-- 地区层级选择 -->
           <el-select
@@ -113,7 +113,7 @@
         </el-card>
       </el-col>
 
-      <el-col :xs="24" :sm="12" :md="6">
+      <!-- <el-col :xs="24" :sm="12" :md="6">
         <el-card shadow="never" class="overview-card">
           <div class="overview-content">
             <div class="overview-icon total-amount">
@@ -128,7 +128,7 @@
             </div>
           </div>
         </el-card>
-      </el-col>
+      </el-col> -->
 
       <el-col :xs="24" :sm="12" :md="6">
         <el-card shadow="never" class="overview-card">
@@ -141,7 +141,7 @@
               <div class="overview-label">
                 覆盖{{ currentLevel === 'country' ? '省份' : '城市' }}
               </div>
-              <div class="overview-trend">最高: {{ topRegionName }}</div>
+              <div class="overview-trend">销量最高: {{ topRegionName }}</div>
             </div>
           </div>
         </el-card>
@@ -242,7 +242,7 @@
                   size="small"
                 >
                   <el-radio-button value="sales">销量</el-radio-button>
-                  <el-radio-button value="amount">销售额</el-radio-button>
+                  <!-- <el-radio-button value="amount">销售额</el-radio-button> -->
                   <el-radio-button value="growth">增长率</el-radio-button>
                 </el-radio-group>
               </div>
@@ -266,8 +266,6 @@
                     {{
                       rankingType === 'sales'
                         ? item.salesCount.toLocaleString() + '台'
-                        : rankingType === 'amount'
-                          ? (item.salesAmount / 10000).toFixed(0) + '万元'
                           : (item.growthRate >= 0 ? '+' : '') + item.growthRate.toFixed(1) + '%'
                     }}
                   </span>
@@ -536,11 +534,11 @@ interface Region {
 
 //  基础数据层
 interface BaseData {
-  carModels: CarModel[]
-  saleRecords: SaleRecord[]
-  regions: Region[]
-  topLevelRegions: Region[]
-  nonTopLevelRegions: Region[]
+  carModels?: CarModel[]
+  saleRecords?: SaleRecord[]
+  regions?: Region[]
+  topLevelRegions?: Region[]
+  nonTopLevelRegions?: Region[]
 }
 
 // 计算数据层
@@ -583,7 +581,7 @@ const showGrowthDetail = ref(false)
 const selectedRegionDetail = ref<RegionSalesData | null>(null)
 const timeRange = ref<'month' | 'quarter' | 'year' | 'custom'>('year')
 const customDateRange = ref<[Date, Date] | null>(null)
-const selectedCarModel = ref('')
+// const selectedCarModel = ref('')
 const regionLevel = ref<'province' | 'city'>('province')
 
 //  基础数据存储
@@ -597,7 +595,9 @@ const baseData = ref<BaseData>({
 
 //  计算后的业务数据
 const salesData = ref<RegionSalesData[]>([])
-const availableCarModels = ref<CarModel[]>([])
+
+// const availableCarModels = ref<CarModel[]>([])
+
 const businessMetrics = ref<BusinessMetrics>({
   totalSales: 0,
   totalSalesAmount: 0,
@@ -612,19 +612,12 @@ const businessMetrics = ref<BusinessMetrics>({
   totalAmountGrowth: 0,
 })
 
-//  修复：使用 ref 变量代替 reactive 对象
-// const globalFilters = reactive({
-//   timeRange: 'year' as 'month' | 'quarter' | 'year' | 'custom',
-//   customDateRange: null as [Date, Date] | null,
-//   selectedCarModel: '',
-//   regionLevel: 'province' as 'province' | 'city'
-// })
 
 // 图表和显示控制
 const currentLevel = ref<'country' | 'province' | 'city'>('country')
 const currentProvince = ref('')
 const currentProvinceId = ref<number | null>(null)
-const rankingType = ref<'sales' | 'amount' | 'growth'>('sales')
+const rankingType = ref<'sales'  | 'growth'>('sales')
 
 // 图表实例
 const chinaMapChart = ref<HTMLDivElement>()
@@ -638,41 +631,9 @@ let detailScatterChartInstance: echarts.ECharts | null = null
 let growthTrendChartInstance: echarts.ECharts | null = null
 
 // API 调用函数保持不变...
-const fetchCarModels = async (): Promise<CarModel[]> => {
-  try {
-    console.log('正在获取车型列表...')
-    const response = await axios.get('/api/car-models')
 
-    if (response.data.status === 200 && response.data.data) {
-      console.log('获取车型数据成功:', response.data.data.length, '个车型')
-      return response.data.data
-    } else {
-      throw new Error(`API返回错误状态: ${response.data.status}`)
-    }
-  } catch (error) {
-    console.error('获取车型列表失败:', error)
-    ElMessage.error('车型数据加载失败')
-    throw error
-  }
-}
 
-const fetchSaleRecords = async (): Promise<SaleRecord[]> => {
-  try {
-    console.log('正在获取销售记录...')
-    const response = await axios.get('/api/sale-records')
 
-    if (response.data.status === 200 && response.data.data) {
-      console.log('获取销售记录成功:', response.data.data.length, '条记录')
-      return response.data.data
-    } else {
-      throw new Error(`API返回错误状态: ${response.data.status}`)
-    }
-  } catch (error) {
-    console.error('获取销售记录失败:', error)
-    ElMessage.error('销售数据加载失败')
-    throw error
-  }
-}
 
 const fetchRegions = async (): Promise<Region[]> => {
   try {
@@ -728,38 +689,53 @@ const fetchNonTopLevelRegions = async (): Promise<Region[]> => {
   }
 }
 
+
+const fetchRegionSalesRanking = async (
+  startMonth: string,
+  endMonth: string,
+  region: string = 'all',
+  top: number = 31 // 全国省份最多31个
+) => {
+  try {
+    const response = await axios.get('/api/ranking/region-sales', {
+      params: { startMonth, endMonth, region, top }
+    })
+    if (response.data.status === 200 && response.data.data) {
+      return response.data.data
+    } else {
+      throw new Error(response.data.message || 'API返回错误')
+    }
+  } catch (error) {
+    ElMessage.error('获取地区销量排行榜数据失败')
+    return []
+  }
+}
+
+
+
+
 const loadAllBaseData = async () => {
   try {
     console.log('开始加载基础数据...')
 
-    const [carModels, saleRecords, regions, topLevelRegions, nonTopLevelRegions] =
+    const [ regions, topLevelRegions, nonTopLevelRegions] =
       await Promise.all([
-        fetchCarModels(),
-        fetchSaleRecords(),
         fetchRegions(),
         fetchTopLevelRegions(),
         fetchNonTopLevelRegions(),
       ])
 
     baseData.value = {
-      carModels,
-      saleRecords,
       regions,
       topLevelRegions,
       nonTopLevelRegions,
     }
 
     console.log(' 基础数据加载完成:', {
-      车型数量: carModels.length,
-      销售记录数量: saleRecords.length,
       地区数量: regions.length,
       省份数量: topLevelRegions.length,
       城市数量: nonTopLevelRegions.length,
     })
-
-    // 更新可用车型列表
-    availableCarModels.value = carModels
-
     ElMessage.success('基础数据加载完成')
   } catch (error) {
     console.error(' 基础数据加载失败:', error)
@@ -768,219 +744,52 @@ const loadAllBaseData = async () => {
   }
 }
 
-//  修复：数据处理函数
-const processRegionSalesData = () => {
-  console.log(' 处理地区销售数据...')
-
-  if (baseData.value.saleRecords.length === 0) {
-    console.warn('销售记录为空')
-    salesData.value = []
-    return
+//  数据处理函数
+const processRegionSalesData = async () => {
+  console.log('处理地区销量数据...')
+  // 计算时间范围
+  const now = new Date()
+  let monthsBack = 12
+  switch (timeRange.value) {
+    case 'month': monthsBack = 1; break
+    case 'quarter': monthsBack = 3; break
+    case 'year': monthsBack = 12; break
   }
+  const endMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+  const start = new Date(now.getFullYear(), now.getMonth() - monthsBack + 1, 1)
+  const startMonth = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}`
 
-  // 1. 过滤销售记录
-  let filteredRecords = baseData.value.saleRecords
-
-  // 时间筛选
-  if (timeRange.value === 'custom' && customDateRange.value) {
-    const [startDate, endDate] = customDateRange.value
-    filteredRecords = filteredRecords.filter((record) => {
-      const recordDate = new Date(record.saleMonth)
-      return recordDate >= startDate && recordDate <= endDate
-    })
-  } else if (timeRange.value !== 'custom') {
-    const currentDate = new Date()
-    let monthsBack = 12
-    switch (timeRange.value) {
-      case 'month':
-        monthsBack = 1
-        break
-      case 'quarter':
-        monthsBack = 3
-        break
-      case 'year':
-        monthsBack = 12
-        break
-    }
-    const startDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - monthsBack, 1)
-    filteredRecords = filteredRecords.filter((record) => {
-      const recordDate = new Date(record.saleMonth)
-      return recordDate >= startDate
-    })
-  }
-
-  // 车型筛选
-  if (selectedCarModel.value) {
-    const selectedModelId = parseInt(selectedCarModel.value)
-    filteredRecords = filteredRecords.filter((record) => record.carModelId === selectedModelId)
-  }
-
-  console.log('地区销量筛选后记录数:', filteredRecords.length)
-  console.log('筛选后的记录样本:', filteredRecords.slice(0, 3))
-
-  // 2. 国家级视图：按省份(parentRegion)聚合
-  if (currentLevel.value === 'country') {
-    const provinceSalesMap = new Map<
-      string,
-      {
-        regionId: number
-        regionName: string
-        salesVolume: number
-        salesAmount: number
-        lastYearSalesVolume: number
-        lastYearSalesAmount: number
-      }
-    >()
-    const currentYear = new Date().getFullYear()
-    filteredRecords.forEach((record) => {
-      const region = baseData.value.regions.find((r) => r.regionId === record.regionId)
-      if (!region) return
-      const provinceName = region.parentRegion
-      if (!provinceName) return
-      // 省级regionId用hashCode算法（与后端一致）
-      const provinceId = Number(
-        BigInt.asUintN(
-          32,
-          BigInt(
-            provinceName.split('').reduce((hash, c) => (hash << 5) - hash + c.charCodeAt(0), 0),
-          ),
-        ),
-      )
-      if (!provinceSalesMap.has(provinceName)) {
-        provinceSalesMap.set(provinceName, {
-          regionId: provinceId,
-          regionName: provinceName,
-          salesVolume: 0,
-          salesAmount: 0,
-          lastYearSalesVolume: 0,
-          lastYearSalesAmount: 0,
-        })
-      }
-      const data = provinceSalesMap.get(provinceName)!
-      const recordYear = new Date(record.saleMonth).getFullYear()
-      if (recordYear === currentYear) {
-        data.salesVolume += record.saleCount
-        data.salesAmount += record.saleAmount
-      } else if (recordYear === currentYear - 1) {
-        data.lastYearSalesVolume += record.saleCount
-        data.lastYearSalesAmount += record.saleAmount
-      }
-    })
-
-    // 转换为数组
-    const regionsArray = Array.from(provinceSalesMap.values()).map((data) => {
-      const growthRate =
-        data.lastYearSalesVolume > 0
-          ? ((data.salesVolume - data.lastYearSalesVolume) / data.lastYearSalesVolume) * 100
-          : data.salesVolume > 0
-            ? 100
-            : 0
-      return {
-        regionId: data.regionId,
-        regionName: data.regionName,
-        salesCount: data.salesVolume,
-        salesAmount: data.salesAmount,
-        growthRate,
-        marketShare: 0,
-      }
-    })
-    // 计算市场份额
-    const totalSales = regionsArray.reduce((sum, region) => sum + region.salesCount, 0)
-    regionsArray.forEach((region) => {
-      region.marketShare = totalSales > 0 ? (region.salesCount / totalSales) * 100 : 0
-    })
-    regionsArray.sort((a, b) => b.salesCount - a.salesCount)
-    salesData.value = regionsArray
-    return
-  }
-
-  // 3. 省级视图：按市级聚合
+  // 关键：全国用'all'，省份用短名
+  let region = 'all'
   if (currentLevel.value === 'province' && currentProvince.value) {
-    const citySalesMap = new Map<
-      number,
-      {
-        regionName: string
-        salesVolume: number
-        salesAmount: number
-        lastYearSalesVolume: number
-        lastYearSalesAmount: number
-      }
-    >()
-    const currentYear = new Date().getFullYear()
-    // 兼容各种省份命名
-    const provinceNames = [
-      currentProvince.value,
-      currentProvince.value + '省',
-      currentProvince.value + '市',
-      currentProvince.value + '自治区',
-      currentProvince.value + '壮族自治区',
-      currentProvince.value + '回族自治区',
-      currentProvince.value + '维吾尔自治区',
-    ]
-    const cityRegions = baseData.value.nonTopLevelRegions.filter((r) =>
-      provinceNames.includes(r.parentRegion as string),
-    )
-    const cityRegionIds = cityRegions.map((r) => r.regionId)
-    console.log(
-      '下钻省份:',
-      currentProvince.value,
-      '匹配到城市数量:',
-      cityRegions.length,
-      cityRegions.map((r) => r.regionName),
-    )
-    filteredRecords = filteredRecords.filter((record) => cityRegionIds.includes(record.regionId))
-    filteredRecords.forEach((record) => {
-      if (!citySalesMap.has(record.regionId)) {
-        citySalesMap.set(record.regionId, {
-          regionName: record.regionName,
-          salesVolume: 0,
-          salesAmount: 0,
-          lastYearSalesVolume: 0,
-          lastYearSalesAmount: 0,
-        })
-      }
-      const data = citySalesMap.get(record.regionId)!
-      const recordYear = new Date(record.saleMonth).getFullYear()
-      if (recordYear === currentYear) {
-        data.salesVolume += record.saleCount
-        data.salesAmount += record.saleAmount
-      } else if (recordYear === currentYear - 1) {
-        data.lastYearSalesVolume += record.saleCount
-        data.lastYearSalesAmount += record.saleAmount
-      }
-    })
-    const regionsArray = Array.from(citySalesMap.entries()).map(([regionId, data]) => {
-      const growthRate =
-        data.lastYearSalesVolume > 0
-          ? ((data.salesVolume - data.lastYearSalesVolume) / data.lastYearSalesVolume) * 100
-          : data.salesVolume > 0
-            ? 100
-            : 0
-      return {
-        regionId,
-        regionName: data.regionName,
-        salesCount: data.salesVolume,
-        salesAmount: data.salesAmount,
-        growthRate,
-        marketShare: 0,
-      }
-    })
-    const totalSales = regionsArray.reduce((sum, region) => sum + region.salesCount, 0)
-    regionsArray.forEach((region) => {
-      region.marketShare = totalSales > 0 ? (region.salesCount / totalSales) * 100 : 0
-    })
-    regionsArray.sort((a, b) => b.salesCount - a.salesCount)
-    salesData.value = regionsArray
-    return
+    region = getShortProvinceName(currentProvince.value)
   }
 
-  // 4. 兜底：无数据
-  salesData.value = []
+  // top参数：全国一般31，省份可用100或省内城市数
+  const top = currentLevel.value === 'country' ? 31 : 100
+
+  const data = await fetchRegionSalesRanking(startMonth, endMonth, region, top)
+
+  // 适配接口返回结构
+  salesData.value = data.map((item: any) => ({
+    regionId: item.regionId,
+    regionName:
+    currentLevel.value === 'province'
+      ? item.regionName + '市'
+      : provinceNameMapping[item.regionName] || item.regionName, // 关键：标准化
+    salesCount: item.saleCount,
+    salesAmount: 0, // 如有销售额字段可补充
+    growthRate: item.saleGrowthRate != null ? item.saleGrowthRate * 100 : 0,
+    marketShare: item.marketShare != null ? item.marketShare * 100 : 0,
+    parentRegion: item.parentRegion,
+    regionType: item.regionType,
+  }))
+  console.log('地区销量排行数据已更新:', salesData.value.length)
 }
 
 // 其他数据处理函数保持不变，但需要更新变量引用...
 
-// 计算业务指标函数保持不变...
+// 计算业务指标函数
 const calculateBusinessMetrics = () => {
   console.log(' 计算业务指标...')
 
@@ -1014,65 +823,7 @@ const calculateBusinessMetrics = () => {
       ? growthRates.reduce((sum, rate) => sum + rate, 0) / growthRates.length
       : 0
 
-  // 计算行业平均增长率（所有车型，受时间和地区筛选影响，不受车型筛选影响）
-  let industryRecords = baseData.value.saleRecords
-
-  // 时间筛选
-  if (timeRange.value === 'custom' && customDateRange.value) {
-    const [startDate, endDate] = customDateRange.value
-    industryRecords = industryRecords.filter((record) => {
-      const recordDate = new Date(record.saleMonth)
-      return recordDate >= startDate && recordDate <= endDate
-    })
-  } else if (timeRange.value !== 'custom') {
-    const currentDate = new Date()
-    let monthsBack = 12
-    switch (timeRange.value) {
-      case 'month':
-        monthsBack = 1
-        break
-      case 'quarter':
-        monthsBack = 3
-        break
-      case 'year':
-        monthsBack = 12
-        break
-    }
-    const startDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - monthsBack, 1)
-    industryRecords = industryRecords.filter((record) => {
-      const recordDate = new Date(record.saleMonth)
-      return recordDate >= startDate
-    })
-  }
-
-  // 地区筛选（只受地区层级影响，不受车型筛选影响）
-  if (currentLevel.value === 'province' && currentProvinceId.value) {
-    // 只统计当前省份下的城市
-    const cityRegionIds = baseData.value.nonTopLevelRegions
-      .filter((region) => region.parentRegionId === currentProvinceId.value)
-      .map((region) => region.regionId)
-    industryRecords = industryRecords.filter((record) => cityRegionIds.includes(record.regionId))
-  }
-
-  // 计算本年和去年总销量
-  const currentYear = new Date().getFullYear()
-  let industryCurrentYearSales = 0
-  let industryLastYearSales = 0
-  industryRecords.forEach((record) => {
-    const year = new Date(record.saleMonth).getFullYear()
-    if (year === currentYear) {
-      industryCurrentYearSales += record.saleCount
-    } else if (year === currentYear - 1) {
-      industryLastYearSales += record.saleCount
-    }
-  })
-  businessMetrics.value.industryAverageGrowth =
-    industryLastYearSales > 0
-      ? ((industryCurrentYearSales - industryLastYearSales) / industryLastYearSales) * 100
-      : industryCurrentYearSales > 0
-        ? 100
-        : 0
-
+  // 只基于 salesData 统计增长趋势
   businessMetrics.value.positiveGrowthRegions = salesData.value.filter(
     (item) => item.growthRate > 5,
   ).length
@@ -1089,45 +840,23 @@ const calculateBusinessMetrics = () => {
   )
   businessMetrics.value.topRegionName = topRegion.regionName
 
+  // 总体增长率（基于 salesData）
   const currentYearTotal = businessMetrics.value.totalSales
-  const lastYear = new Date().getFullYear() - 1
-  const lastYearTotal = baseData.value.saleRecords
-    .filter((record) => new Date(record.saleMonth).getFullYear() === lastYear)
-    .reduce((sum, record) => sum + record.saleCount, 0)
+  // 这里无法再用 saleRecords 计算去年同期，只能置为 0 或根据后端返回的数据补充
+  businessMetrics.value.totalSalesGrowth = 0
+  businessMetrics.value.totalAmountGrowth = 0
 
-  businessMetrics.value.totalSalesGrowth =
-    lastYearTotal > 0
-      ? ((currentYearTotal - lastYearTotal) / lastYearTotal) * 100
-      : currentYearTotal > 0
-        ? 100
-        : 0
-
-  const lastYearAmount = baseData.value.saleRecords
-    .filter((record) => new Date(record.saleMonth).getFullYear() === lastYear)
-    .reduce((sum, record) => sum + record.saleAmount, 0)
-
-  businessMetrics.value.totalAmountGrowth =
-    lastYearAmount > 0
-      ? ((businessMetrics.value.totalSalesAmount - lastYearAmount) / lastYearAmount) * 100
-      : businessMetrics.value.totalSalesAmount > 0
-        ? 100
-        : 0
+  // 行业平均增长率也无法再用 saleRecords 计算，只能置为 0 或根据后端返回的数据补充
+  businessMetrics.value.industryAverageGrowth = 0
 
   console.log('业务指标计算完成:', businessMetrics.value)
 }
 
-const processAllData = () => {
+const processAllData = async () => {
   try {
     console.log('开始处理所有数据...')
-
-    if (baseData.value.saleRecords.length === 0) {
-      ElMessage.warning('销售记录为空，无法生成热力图')
-      return
-    }
-
-    processRegionSalesData()
+    await processRegionSalesData()
     calculateBusinessMetrics()
-
     console.log('所有数据处理完成')
   } catch (error) {
     console.error(' 数据处理失败:', error)
@@ -1135,9 +864,12 @@ const processAllData = () => {
   }
 }
 
+
 // 计算属性保持不变...
 const totalSales = computed(() => businessMetrics.value.totalSales)
-const totalSalesAmount = computed(() => businessMetrics.value.totalSalesAmount)
+
+// const totalSalesAmount = computed(() => businessMetrics.value.totalSalesAmount)
+
 const totalRegions = computed(() => businessMetrics.value.totalRegions)
 const averageGrowth = computed(() => businessMetrics.value.averageGrowth)
 const industryAverageGrowth = computed(() => businessMetrics.value.industryAverageGrowth)
@@ -1146,7 +878,8 @@ const stableGrowthRegions = computed(() => businessMetrics.value.stableGrowthReg
 const negativeGrowthRegions = computed(() => businessMetrics.value.negativeGrowthRegions)
 const topRegionName = computed(() => businessMetrics.value.topRegionName)
 const totalSalesGrowth = computed(() => businessMetrics.value.totalSalesGrowth)
-const totalAmountGrowth = computed(() => businessMetrics.value.totalAmountGrowth)
+
+// const totalAmountGrowth = computed(() => businessMetrics.value.totalAmountGrowth)
 
 const mapTitle = computed(() => {
   if (currentLevel.value === 'country') {
@@ -1163,9 +896,6 @@ const rankingData = computed(() => {
   switch (rankingType.value) {
     case 'sales':
       sortedData.sort((a, b) => b.salesCount - a.salesCount)
-      break
-    case 'amount':
-      sortedData.sort((a, b) => b.salesAmount - a.salesAmount)
       break
     case 'growth':
       sortedData.sort((a, b) => b.growthRate - a.growthRate)
@@ -1215,13 +945,13 @@ const handleCustomDateChange = () => {
   })
 }
 
-const handleCarModelChange = () => {
-  console.log('车型筛选变更:', selectedCarModel.value)
-  processAllData()
-  nextTick(() => {
-    initAllCharts()
-  })
-}
+// const handleCarModelChange = () => {
+//   console.log('车型筛选变更:', selectedCarModel.value)
+//   processAllData()
+//   nextTick(() => {
+//     initAllCharts()
+//   })
+// }
 
 const handleRegionLevelChange = () => {
   console.log('地区层级变更:', regionLevel.value)
@@ -1237,76 +967,87 @@ const handleRankingTypeChange = () => {
 
 // 图表初始化函数...省份地图数据URL映射等保持不变
 const provinceMapUrls: Record<string, string> = {
-  北京: 'https://geo.datav.aliyun.com/areas_v3/bound/110000_full.json',
-  天津: 'https://geo.datav.aliyun.com/areas_v3/bound/120000_full.json',
-  上海: 'https://geo.datav.aliyun.com/areas_v3/bound/310000_full.json',
-  重庆: 'https://geo.datav.aliyun.com/areas_v3/bound/500000_full.json',
-  河北: 'https://geo.datav.aliyun.com/areas_v3/bound/130000_full.json',
-  山西: 'https://geo.datav.aliyun.com/areas_v3/bound/140000_full.json',
-  辽宁: 'https://geo.datav.aliyun.com/areas_v3/bound/210000_full.json',
-  吉林: 'https://geo.datav.aliyun.com/areas_v3/bound/220000_full.json',
-  黑龙江: 'https://geo.datav.aliyun.com/areas_v3/bound/230000_full.json',
-  江苏: 'https://geo.datav.aliyun.com/areas_v3/bound/320000_full.json',
-  浙江: 'https://geo.datav.aliyun.com/areas_v3/bound/330000_full.json',
-  安徽: 'https://geo.datav.aliyun.com/areas_v3/bound/340000_full.json',
-  福建: 'https://geo.datav.aliyun.com/areas_v3/bound/350000_full.json',
-  江西: 'https://geo.datav.aliyun.com/areas_v3/bound/360000_full.json',
-  山东: 'https://geo.datav.aliyun.com/areas_v3/bound/370000_full.json',
-  河南: 'https://geo.datav.aliyun.com/areas_v3/bound/410000_full.json',
-  湖北: 'https://geo.datav.aliyun.com/areas_v3/bound/420000_full.json',
-  湖南: 'https://geo.datav.aliyun.com/areas_v3/bound/430000_full.json',
-  广东: 'https://geo.datav.aliyun.com/areas_v3/bound/440000_full.json',
-  广西: 'https://geo.datav.aliyun.com/areas_v3/bound/450000_full.json',
-  海南: 'https://geo.datav.aliyun.com/areas_v3/bound/460000_full.json',
-  四川: 'https://geo.datav.aliyun.com/areas_v3/bound/510000_full.json',
-  贵州: 'https://geo.datav.aliyun.com/areas_v3/bound/520000_full.json',
-  云南: 'https://geo.datav.aliyun.com/areas_v3/bound/530000_full.json',
-  陕西: 'https://geo.datav.aliyun.com/areas_v3/bound/610000_full.json',
-  甘肃: 'https://geo.datav.aliyun.com/areas_v3/bound/620000_full.json',
-  青海: 'https://geo.datav.aliyun.com/areas_v3/bound/630000_full.json',
-  宁夏: 'https://geo.datav.aliyun.com/areas_v3/bound/640000_full.json',
-  新疆: 'https://geo.datav.aliyun.com/areas_v3/bound/650000_full.json',
-  西藏: 'https://geo.datav.aliyun.com/areas_v3/bound/540000_full.json',
-  内蒙古: 'https://geo.datav.aliyun.com/areas_v3/bound/150000_full.json',
+   北京市: 'https://geo.datav.aliyun.com/areas_v3/bound/110000_full.json',
+  天津市: 'https://geo.datav.aliyun.com/areas_v3/bound/120000_full.json',
+  上海市: 'https://geo.datav.aliyun.com/areas_v3/bound/310000_full.json',
+  重庆市: 'https://geo.datav.aliyun.com/areas_v3/bound/500000_full.json',
+  河北省: 'https://geo.datav.aliyun.com/areas_v3/bound/130000_full.json',
+  山西省: 'https://geo.datav.aliyun.com/areas_v3/bound/140000_full.json',
+  辽宁省: 'https://geo.datav.aliyun.com/areas_v3/bound/210000_full.json',
+  吉林省: 'https://geo.datav.aliyun.com/areas_v3/bound/220000_full.json',
+  黑龙江省: 'https://geo.datav.aliyun.com/areas_v3/bound/230000_full.json',
+  江苏省: 'https://geo.datav.aliyun.com/areas_v3/bound/320000_full.json',
+  浙江省: 'https://geo.datav.aliyun.com/areas_v3/bound/330000_full.json',
+  安徽省: 'https://geo.datav.aliyun.com/areas_v3/bound/340000_full.json',
+  福建省: 'https://geo.datav.aliyun.com/areas_v3/bound/350000_full.json',
+  江西省: 'https://geo.datav.aliyun.com/areas_v3/bound/360000_full.json',
+  山东省: 'https://geo.datav.aliyun.com/areas_v3/bound/370000_full.json',
+  河南省: 'https://geo.datav.aliyun.com/areas_v3/bound/410000_full.json',
+  湖北省: 'https://geo.datav.aliyun.com/areas_v3/bound/420000_full.json',
+  湖南省: 'https://geo.datav.aliyun.com/areas_v3/bound/430000_full.json',
+  广东省: 'https://geo.datav.aliyun.com/areas_v3/bound/440000_full.json',
+  广西壮族自治区: 'https://geo.datav.aliyun.com/areas_v3/bound/450000_full.json',
+  海南省: 'https://geo.datav.aliyun.com/areas_v3/bound/460000_full.json',
+  四川省: 'https://geo.datav.aliyun.com/areas_v3/bound/510000_full.json',
+  贵州省: 'https://geo.datav.aliyun.com/areas_v3/bound/520000_full.json',
+  云南省: 'https://geo.datav.aliyun.com/areas_v3/bound/530000_full.json',
+  陕西省: 'https://geo.datav.aliyun.com/areas_v3/bound/610000_full.json',
+  甘肃省: 'https://geo.datav.aliyun.com/areas_v3/bound/620000_full.json',
+  青海省: 'https://geo.datav.aliyun.com/areas_v3/bound/630000_full.json',
+  宁夏回族自治区: 'https://geo.datav.aliyun.com/areas_v3/bound/640000_full.json',
+  新疆维吾尔自治区: 'https://geo.datav.aliyun.com/areas_v3/bound/650000_full.json',
+  西藏自治区: 'https://geo.datav.aliyun.com/areas_v3/bound/540000_full.json',
+  内蒙古自治区: 'https://geo.datav.aliyun.com/areas_v3/bound/150000_full.json',
+  台湾省: 'https://geo.datav.aliyun.com/areas_v3/bound/710000_full.json',
+  香港特别行政区: 'https://geo.datav.aliyun.com/areas_v3/bound/810000_full.json',
+  澳门特别行政区: 'https://geo.datav.aliyun.com/areas_v3/bound/820000_full.json',
 }
 
 const provinceNameMapping: Record<string, string> = {
-  北京市: '北京',
-  天津市: '天津',
-  上海市: '上海',
-  重庆市: '重庆',
-  河北省: '河北',
-  山西省: '山西',
-  辽宁省: '辽宁',
-  吉林省: '吉林',
-  黑龙江省: '黑龙江',
-  江苏省: '江苏',
-  浙江省: '浙江',
-  安徽省: '安徽',
-  福建省: '福建',
-  江西省: '江西',
-  山东省: '山东',
-  河南省: '河南',
-  湖北省: '湖北',
-  湖南省: '湖南',
-  广东省: '广东',
-  海南省: '海南',
-  四川省: '四川',
-  贵州省: '贵州',
-  云南省: '云南',
-  陕西省: '陕西',
-  甘肃省: '甘肃',
-  青海省: '青海',
-  台湾省: '台湾',
-  内蒙古自治区: '内蒙古',
-  广西壮族自治区: '广西',
-  西藏自治区: '西藏',
-  宁夏回族自治区: '宁夏',
-  新疆维吾尔自治区: '新疆',
+  北京: '北京市',
+  天津: '天津市',
+  上海: '上海市',
+  重庆: '重庆市',
+  河北: '河北省',
+  山西: '山西省',
+  辽宁: '辽宁省',
+  吉林: '吉林省',
+  黑龙江: '黑龙江省',
+  江苏: '江苏省',
+  浙江: '浙江省',
+  安徽: '安徽省',
+  福建: '福建省',
+  江西: '江西省',
+  山东: '山东省',
+  河南: '河南省',
+  湖北: '湖北省',
+  湖南: '湖南省',
+  广东: '广东省',
+  海南: '海南省',
+  四川: '四川省',
+  贵州: '贵州省',
+  云南: '云南省',
+  陕西: '陕西省',
+  甘肃: '甘肃省',
+  青海: '青海省',
+  台湾: '台湾省',
+  内蒙古: '内蒙古自治区',
+  广西: '广西壮族自治区',
+  西藏: '西藏自治区',
+  宁夏: '宁夏回族自治区',
+  新疆: '新疆维吾尔自治区',
 }
 
 const getStandardProvinceName = (mapName: string): string => {
   return provinceNameMapping[mapName] || mapName
+}
+
+// 通过标准名获取短名
+const getShortProvinceName = (standardName: string): string => {
+  for (const [short, standard] of Object.entries(provinceNameMapping)) {
+    if (standard === standardName) return short
+  }
+  return standardName
 }
 
 const loadChinaMapData = async () => {
@@ -1461,14 +1202,10 @@ const initChinaMap = async () => {
       },
       inRange: {
         color: [
-          '#ffffff',
-          '#e3f2fd',
-          '#bbdefb',
-          '#90caf9',
-          '#64b5f6',
-          '#42a5f5',
-          '#2196f3',
-          '#1976d2',
+          '#ffffff', // 白
+          '#2196f3', // 蓝
+          '#f44336', // 红
+          '#b71c1c', // 深红
         ],
       },
       calculable: true,
@@ -1854,7 +1591,7 @@ const refreshData = async () => {
   loading.value = true
   try {
     await loadAllBaseData()
-    processAllData()
+    await processAllData()
     await initAllCharts()
     ElMessage.success('数据刷新完成')
   } catch (error) {
@@ -1877,15 +1614,12 @@ const handleResize = () => {
 // 生命周期
 onMounted(async () => {
   ElMessage.success('欢迎使用购车热区地图！')
-
   try {
     await loadChinaMapData()
     await loadAllBaseData()
-    processAllData()
+    await processAllData()
     await initAllCharts()
-
     window.addEventListener('resize', handleResize)
-
     console.log('页面初始化完成')
   } catch (error) {
     console.error('页面初始化失败:', error)

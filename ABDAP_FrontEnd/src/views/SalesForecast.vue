@@ -209,21 +209,26 @@
           <el-form :model="forecastConfig" label-width="100px" class="config-form">
             <!-- 预测对象选择 -->
             <el-form-item label="预测车型">
-              <el-select
-                v-model="forecastConfig.carModelId"
-                placeholder="选择车型"
-                filterable
-                @change="handleCarModelChange"
-              >
-                <el-option label="全部车型" :value="null" />
-                <el-option
-                  v-for="model in availableCarModels"
-                  :key="model.carModelId"
-                  :label="`${model.brandName} ${model.modelName}`"
-                  :value="model.carModelId"
-                />
-              </el-select>
-            </el-form-item>
+  <el-select
+    v-model="forecastConfig.carModelId"
+    placeholder="搜索车型"
+    filterable
+    remote
+    :remote-method="searchCarModels"
+    :loading="carModelSearchLoading"
+    clearable
+    @change="handleCarModelChange"
+    style="width: 220px"
+  >
+    <el-option label="全部车型" :value="null" />
+    <el-option
+      v-for="model in carModelSearchResults"
+      :key="model.carModelId"
+      :label="`${model.brandName} ${model.modelName}`"
+      :value="model.carModelId"
+    />
+  </el-select>
+</el-form-item>
 
             <!-- 地区选择 -->
             <el-form-item label="预测地区">
@@ -972,6 +977,36 @@ const showExternalFactorsTip = ref(false)
 const showNewProductTip = ref(false)
 const showPromotionTip = ref(false)
 const showCompetitorTip = ref(false)
+
+const carModelSearchResults = ref<CarModel[]>([])
+const carModelSearchLoading = ref(false)
+let carModelSearchTimer: ReturnType<typeof setTimeout> | null = null
+
+// 车型远程搜索方法
+const searchCarModels = (query: string) => {
+  if (carModelSearchTimer) clearTimeout(carModelSearchTimer)
+  carModelSearchTimer = setTimeout(async () => {
+    if (!query) {
+      carModelSearchResults.value = []
+      return
+    }
+    carModelSearchLoading.value = true
+    try {
+      const response = await axios.get('/api/car-models/search', {
+        params: { keyword: query, limit: 20 },
+      })
+      if (response.data.status === 200 && response.data.data) {
+        carModelSearchResults.value = response.data.data
+      } else {
+        carModelSearchResults.value = []
+      }
+    } catch (error) {
+      carModelSearchResults.value = []
+    } finally {
+      carModelSearchLoading.value = false
+    }
+  }, 300) // 300ms防抖
+}
 
 const querySearchRegion = (queryString: string, cb: (results: Region[]) => void) => {
   if (!queryString) {
