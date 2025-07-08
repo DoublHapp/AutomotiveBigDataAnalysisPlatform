@@ -15,7 +15,7 @@ interface regionOption {
   value: string
 }
 
-const regionOptionsAll: regionOption[] = [
+const regionOptionsAllFake: regionOption[] = [
   { label: '全国', value: '0' },
   { label: '北京市', value: '北京' },
   { label: '上海市', value: '上海' },
@@ -23,15 +23,15 @@ const regionOptionsAll: regionOption[] = [
   { label: '浙江省', value: '浙江' },
   { label: '山东省', value: '山东' }
 ]
-const regionOptionsNoAll = regionOptionsAll.slice(1) // 不含全国
-
+const regionOptionsNoAllFake = regionOptionsAllFake.slice(1) // 不含全国
+const regionOptions = ref<regionOption[]>([])
 // 车型
 interface carModelOption {
   label: string
   value: string
 }
 
-const carModelOptions: carModelOption[] = [
+const carModelOptionsFake: carModelOption[] = [
   { label: '宝马X3', value: '1' },
   { label: '奔驰C200L', value: '2' },
   { label: '奥迪A4L', value: '3' },
@@ -39,6 +39,7 @@ const carModelOptions: carModelOption[] = [
   { label: '比亚迪汉EV', value: '5' }
 ]
 
+const carModelOptions = ref<carModelOption[]>([])
 // 动力类型
 
 interface powerOption {
@@ -65,11 +66,6 @@ const carModelArray = ref<string[]>([]);
 // 计算当前可选项和选择方式
 const carModelMultiple = computed(() => compareMode.value == 'carModel' || compareMode.value == 'none')
 const regionMultiple = computed(() => compareMode.value == 'region' || compareMode.value == 'none')
-const regionOptions = computed(() =>
-  compareMode.value !== 'carModel'
-    ? regionOptionsNoAll
-    : regionOptionsAll
-)
 
 // 计算当前选择数组还是对象
 const carModelTargets = computed<any>({
@@ -214,7 +210,7 @@ function processResponseData(salesData: repsonseData[]): chartData[] {
   console.log(salesData[0].regionId,typeof salesData[0].regionName,salesData[0].regionName === null)
   // 遍历所有销售记录
   salesData.forEach(record => {
-    const key = record.regionName ===  "全国"?`${record.carModelName}`:`${record.carModelName}--${record.regionId}`;
+    const key = record.regionName ===  "全国"?`${record.carModelName}`:`${record.carModelName}--${record.regionName}`;
     
     // 如果Map中还没有这个key，就初始化
     if (!groupedData.has(key)) {
@@ -252,9 +248,46 @@ function processResponseData(salesData: repsonseData[]): chartData[] {
   return result;
 }
 
-// 预留接口函数
+// API接口调用函数
+const fetchCarModels = async () => {
+  try {
+    const response = await axios.get('/api/car-models')
+    if (response.data.status === 200) {
+      response.data.data.forEach((model: any) => {
+        carModelOptions.value.push({
+          label: `${model.modelName}`, //要改，现在品牌和车型分开了，接口和模拟数据不匹配。
+          value: model.carModelId.toString(),
+        })
+      })
+      console.log('获取车型列表成功:', response)
+    } else {
+      console.error('获取车型列表失败:', response.data.message)
+    }
+  } catch (error) {
+    console.error('获取车型列表失败:', error)
+  }
+}
+
+const fetchRegions = async () => {
+  try {
+    const response = await axios.get('/api/regions')
+    if (response.data.status === 200) {
+      response.data.data.forEach((region: any) => {
+        regionOptions.value.push({
+          label: region.parentRegion.toString(),
+          value: region.regionId.toString(),
+        })
+      })
+      console.log('获取地区列表成功:', response)
+    } else {
+      console.error('获取地区列表失败:', response.data.message)
+    }
+  } catch (error) {
+    console.error('获取地区列表失败:', error)
+  }
+}
+
 async function fetchTrendData() {
-  // 这里实际应调用后端接口
   const params = new URLSearchParams();
   if(regionMultiple.value){
     regionArray.value.forEach(item => {
@@ -278,7 +311,6 @@ async function fetchTrendData() {
   const res = await axios.get(`/api/sale-records/multiple?${params.toString()}`)
   console.log('请求参数:', res.data)
   return processResponseData(res.data.data)
-  // return generateMockData()
 }
 
 // 渲染图表
@@ -359,7 +391,8 @@ async function fetchDataAndRender() {
 }
 
 onMounted(() => {
-  fetchDataAndRender()
+  fetchCarModels()
+  fetchRegions()
 })
 </script>
 
