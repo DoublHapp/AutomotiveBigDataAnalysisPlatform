@@ -111,7 +111,7 @@ public interface SaleRecordRepository extends JpaRepository<SaleRecord, Long> {
                      "LEFT JOIN region r ON sr.region_id = r.region_id " +
                      "LEFT JOIN car_model c ON sr.car_model_id = c.car_model_id " +
                      "WHERE sr.sale_month >= :startMonth AND sr.sale_month <= :endMonth " +
-                     "AND (:region IS NULL OR r.region_name = :region) " +
+                     "AND (:region IS NULL OR r.region_name = :region OR r.parent_region - :region) " +
                      "AND (:carModel IS NULL OR c.model_name = :carModel) " +
                      "GROUP BY month, region, carModel " +
                      "ORDER BY month, region, carModel", nativeQuery = true)
