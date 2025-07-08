@@ -106,4 +106,45 @@ public interface RankingRepository extends JpaRepository<Ranking, Long> {
                      @Param("lastEnd") String lastEnd,
                      Pageable pageable);
 
+       /**
+        * 多表联合查询，返回车型基础信息、年油费预估、口碑总评分
+        *
+        * @param startDate 开始日期（yyyy-MM-dd）
+        * @param endDate   结束日期（yyyy-MM-dd）
+        * @param region    地区（可为null，表示全部）
+        * @return Object[]: [carModelId, modelName, modelFullName, brandId, brandName,
+        *         level, launchDate, officialPrice, engineType, seatNum, driveType,
+        *         rangeKm, imageUrl, annualFuelCost, opinionScore]
+        */
+       @Query(value = "SELECT " +
+                     "ANY_VALUE(c.car_model_id), c.model_name, ANY_VALUE(c.model_full_name), ANY_VALUE(b.brand_id), ANY_VALUE(b.brand_name), "
+                     +
+                     "ANY_VALUE(c.level), ANY_VALUE(c.launch_date), MAX(c.official_price), ANY_VALUE(c.engine_type), " +
+                     "ANY_VALUE(c.seat_num), ANY_VALUE(c.drive_type), ANY_VALUE(c.range_km), ANY_VALUE(c.image_url), " +
+                     // 年油费预估（单位L/100km，年行驶1.5万km，每升7.5元）
+                     "COALESCE(ROUND(AVG(fu.avg_fuel) * 15000 / 100 * 7.5, 2), 0) AS annualFuelCost, " +
+                     // 口碑总评分
+                     "COALESCE(AVG(op.score_current), 0) AS opinionScore " +
+                     "FROM car_model c " +
+                     "LEFT JOIN brand b ON c.brand_id = b.brand_id " +
+                     "LEFT JOIN opinion op ON c.car_model_id = op.car_model_id " +
+                     "LEFT JOIN fuel_economy fu ON c.car_model_id = fu.car_model_id " +
+                     // "LEFT JOIN sale_record sr ON c.car_model_id = sr.car_model_id " +
+                     // "LEFT JOIN region re ON re.region_id = sr.region_id " +
+                     // "WHERE (:region IS NULL OR re.region_name = :region OR re.parent_region =
+                     // :region) " +
+                     "WHERE (:level IS NULL OR c.level = :level) " +
+                     "AND (:maxPrice IS NULL OR c.official_price <= :maxPrice * 10000) " +
+                     "AND (:engineType IS NULL OR c.engine_type = :engineType) " +
+                     "AND fu.avg_fuel IS NOT NULL " +
+                     "GROUP BY c.model_name " +
+                     "ORDER BY annualFuelCost ASC", nativeQuery = true)
+       List<Object[]> findFuelConsumptionRanking(
+                     // @Param("startDate") String startDate,
+                     // @Param("endDate") String endDate,
+                     // @Param("region") String region,
+                     @Param("level") String level,
+                     @Param("maxPrice") Double maxPrice,
+                     @Param("engineType") String engineType,
+                     Pageable pageable);
 }

@@ -2,6 +2,7 @@ package cn.com.undefined.abdap_backend.controller;
 
 import cn.com.undefined.abdap_backend.dto.ApiResponse;
 import cn.com.undefined.abdap_backend.dto.CarModelSalesRankingDTO;
+import cn.com.undefined.abdap_backend.dto.FuelConsumptionRankingDTO;
 import cn.com.undefined.abdap_backend.dto.RegionSalesRankingDTO;
 import cn.com.undefined.abdap_backend.entity.Ranking;
 import cn.com.undefined.abdap_backend.service.RankingService;
@@ -76,6 +77,33 @@ public class RankingController {
             }
         } else {
             result = rankingService.getRegionSalesRanking(startMonth, endMonth, region, top);
+            if (!result.isEmpty()) {
+                rankingService.saveRanking(result, rankType, LocalDate.now());
+            }
+        }
+        return ResponseUtil.success(result);
+    }
+
+    /**
+     * 油耗排行榜接口
+     * GET /api/ranking/fuel-consumption?level=all&maxPrice=2.1&engineType=all&top=10
+     */
+    @GetMapping("/fuel-consumption")
+    public ResponseEntity<ApiResponse<List<FuelConsumptionRankingDTO>>> getFuelConsumptionRanking(
+            @RequestParam(required = false, defaultValue = "all") String level,
+            @RequestParam(required = false) Double maxPrice,
+            @RequestParam(required = false, defaultValue = "all") String engineType,
+            @RequestParam(required = false, defaultValue = "10") Integer top) {
+        String rankType = String.format("油耗排行榜_%s_%s_%s_%d", level, maxPrice, engineType, top);
+        Ranking ranking = rankingService.getRankingByType(rankType);
+        List<FuelConsumptionRankingDTO> result = null;
+        if (ranking != null) {
+            List<FuelConsumptionRankingDTO> cachedResult = rankingService.parseRankingDTOList(ranking, FuelConsumptionRankingDTO.class);
+            if (cachedResult != null && !cachedResult.isEmpty()) {
+                return ResponseUtil.success(cachedResult);
+            }
+        } else {
+            result = rankingService.getFuelConsumptionRanking(level, maxPrice, engineType, top);
             if (!result.isEmpty()) {
                 rankingService.saveRanking(result, rankType, LocalDate.now());
             }

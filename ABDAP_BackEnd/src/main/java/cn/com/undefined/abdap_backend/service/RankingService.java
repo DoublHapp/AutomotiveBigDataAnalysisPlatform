@@ -2,6 +2,7 @@ package cn.com.undefined.abdap_backend.service;
 
 import cn.com.undefined.abdap_backend.dto.CarModelDTO;
 import cn.com.undefined.abdap_backend.dto.CarModelSalesRankingDTO;
+import cn.com.undefined.abdap_backend.dto.FuelConsumptionRankingDTO;
 import cn.com.undefined.abdap_backend.dto.RegionDTO;
 import cn.com.undefined.abdap_backend.dto.RegionSalesRankingDTO;
 import cn.com.undefined.abdap_backend.entity.Ranking;
@@ -10,6 +11,7 @@ import cn.com.undefined.abdap_backend.repository.SaleRecordRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -49,12 +51,12 @@ public class RankingService {
                                 endMonth.atEndOfMonth().toString(),
                                 startMonth.minusYears(1).atDay(1).toString(),
                                 endMonth.minusYears(1).atEndOfMonth().toString(),
-                                normalizeRegionParam(region),
+                                normalizeParam(region),
                                 PageRequest.of(0, top != null ? top : 10));
 
                 BigDecimal totalSaleCount = saleRecordRepository.findTotalSalesByMonthAndRegion(
                                 startMonth.atDay(1).toString(),
-                                endMonth.atEndOfMonth().toString(), normalizeRegionParam(region));
+                                endMonth.atEndOfMonth().toString(), normalizeParam(region));
                 return results.stream().map(arr -> {
                         // arr字段顺序见RankingRepository注释
                         CarModelDTO carModelDTO = new CarModelDTO(
@@ -102,8 +104,8 @@ public class RankingService {
          * 
          * @param startMonth
          * @param endMonth
-         * @param region    地区（省份或"all"表示全国）
-         * @param top       返回前N条数据
+         * @param region     地区（省份或"all"表示全国）
+         * @param top        返回前N条数据
          * @return 地区销量排名DTO列表
          */
         public List<RegionSalesRankingDTO> getRegionSalesRanking(YearMonth startMonth, YearMonth endMonth,
@@ -117,7 +119,7 @@ public class RankingService {
                                         endMonth.atEndOfMonth().toString(),
                                         startMonth.minusYears(1).atDay(1).toString(),
                                         endMonth.minusYears(1).atEndOfMonth().toString(),
-                                PageRequest.of(0, top != null ? top : 10));
+                                        PageRequest.of(0, top != null ? top : 10));
                 } else {
                         // 某省：按该省下所有市分组
                         results = repository.findRegionSalesRanking(
@@ -125,14 +127,14 @@ public class RankingService {
                                         endMonth.atEndOfMonth().toString(),
                                         startMonth.minusYears(1).atDay(1).toString(),
                                         endMonth.minusYears(1).atEndOfMonth().toString(),
-                                        normalizeRegionParam(region),
-                                PageRequest.of(0, top != null ? top : 10));
+                                        normalizeParam(region),
+                                        PageRequest.of(0, top != null ? top : 10));
                 }
 
                 // 计算总销量（用于市场份额）
                 BigDecimal totalSaleCount = saleRecordRepository.findTotalSalesByMonthAndRegion(
                                 startMonth.atDay(1).toString(),
-                                endMonth.atEndOfMonth().toString(), normalizeRegionParam(region));
+                                endMonth.atEndOfMonth().toString(), normalizeParam(region));
 
                 // 组装DTO
                 return results.stream().map(arr -> {
@@ -163,8 +165,54 @@ public class RankingService {
                 }).collect(Collectors.toList());
         }
 
-        private String normalizeRegionParam(String region) {
-                return "all".equalsIgnoreCase(region) ? null : region;
+        public List<FuelConsumptionRankingDTO> getFuelConsumptionRanking(String level,
+                        Double maxPrice, String engineType, Integer top) {
+                // 查询油耗榜单数据
+                List<Object[]> results = repository.findFuelConsumptionRanking(
+                                normalizeParam(level),
+                                maxPrice,
+                                normalizeParam(engineType),
+                                PageRequest.of(0, top != null ? top : 10));
+
+                // // 计算第一名的年油费（用于计算diffWithBest）
+                // BigDecimal bestAnnualFuelCost = results.isEmpty() || results.get(0)[13] ==
+                // null
+                // ? BigDecimal.ZERO
+                // : new BigDecimal(results.get(0)[13].toString());
+
+                // 组装DTO
+                return results.stream().map(arr -> {
+                        CarModelDTO carModelDTO = new CarModelDTO(
+                                        ((Number) arr[0]).longValue(), // carModelId
+                                        (String) arr[1], // modelName
+                                        (String) arr[2], // modelFullName
+                                        ((Number) arr[3]).longValue(), // brandId
+                                        (String) arr[4], // brandName
+                                        (String) arr[5], // level
+                                        arr[6] != null ? ((java.sql.Date) arr[6]).toLocalDate() : null, // launchDate
+                                        arr[7] != null ? new BigDecimal(arr[7].toString()) : null, // officialPrice
+                                        (String) arr[8], // engineType
+                                        arr[9] != null ? ((Number) arr[9]).intValue() : null, // seatNum
+                                        (String) arr[10], // driveType
+                                        arr[11] != null ? ((Number) arr[11]).intValue() : null, // rangeKm
+                                        (String) arr[12] // imageUrl
+                        );
+                        BigDecimal annualFuelCost = arr[13] != null ? new BigDecimal(arr[13].toString())
+                                        : BigDecimal.ZERO;
+                        BigDecimal opinionScore = arr[14] != null ? new BigDecimal(arr[14].toString()) : null;
+                        // BigDecimal diffWithBest = annualFuelCost.subtract(bestAnnualFuelCost);
+
+                        return new FuelConsumptionRankingDTO(
+                                        carModelDTO,
+                                        annualFuelCost,
+                                        opinionScore
+                        // diffWithBest
+                        );
+                }).collect(Collectors.toList());
+        }
+
+        private String normalizeParam(String param) {
+                return "all".equalsIgnoreCase(param) ? null : param;
         }
 
         /**
