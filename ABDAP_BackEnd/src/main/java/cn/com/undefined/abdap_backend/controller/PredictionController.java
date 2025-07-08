@@ -35,7 +35,7 @@ public class PredictionController {
      */
     @GetMapping("/ARIMA")
     public ResponseEntity<ApiResponse<List<SaleRecordDTO>>> predictSalesWithARIMA(
-            @RequestParam Long carModelId,
+            @RequestParam(required = false) Long carModelId,
             @RequestParam(required = false) Long regionId,
             @RequestParam(required = false) String regionName,
             @RequestParam(defaultValue = "6") int months,
@@ -47,15 +47,7 @@ public class PredictionController {
         if (regionId != null && regionName != null) {
             return ResponseUtil.badRequest("regionId和regionName不能同时存在");
         }
-        // 获取历史销售数据
-        List<SaleRecord> historicalData;
-        if (regionId != null) {
-            historicalData = saleRecordService.getSaleRecordsByCarModelIdAndRegionIdRaw(carModelId, regionId);
-        } else if (regionName != null) {
-            historicalData = saleRecordService.getSaleRecordsByCarModelIdAndRegionNameRaw(carModelId, regionName);
-        } else {
-            historicalData = saleRecordService.getSaleRecordsByCarModelIdRaw(carModelId);
-        }
+        List<SaleRecord> historicalData = getHistoricalData(carModelId, regionId, regionName);
 
         // 进行预测
         List<SaleRecordDTO> predictions;
@@ -75,7 +67,7 @@ public class PredictionController {
      */
     @GetMapping("/ARIMA/detail")
     public ResponseEntity<ApiResponse<ARIMAResultDTO>> predictSalesWithARIMAWithDetail(
-            @RequestParam Long carModelId,
+            @RequestParam(required = false) Long carModelId,
             @RequestParam(required = false) Long regionId,
             @RequestParam(required = false) String regionName,
             @RequestParam(defaultValue = "6") int months,
@@ -88,15 +80,7 @@ public class PredictionController {
             return ResponseUtil.badRequest("regionId和regionName不能同时存在");
         }
 
-        // 获取历史销售数据
-        List<SaleRecord> historicalData;
-        if (regionId != null) {
-            historicalData = saleRecordService.getSaleRecordsByCarModelIdAndRegionIdRaw(carModelId, regionId);
-        } else if (regionName != null) {
-            historicalData = saleRecordService.getSaleRecordsByCarModelIdAndRegionNameRaw(carModelId, regionName);
-        } else {
-            historicalData = saleRecordService.getSaleRecordsByCarModelIdRaw(carModelId);
-        }
+        List<SaleRecord> historicalData = getHistoricalData(carModelId, regionId, regionName);
 
         // 进行预测
         ARIMAResultDTO arimaResult;
@@ -115,7 +99,7 @@ public class PredictionController {
      */
     @GetMapping("/Prophet")
     public ResponseEntity<ApiResponse<List<SaleRecordDTO>>> predictSalesWithProphet(
-            @RequestParam Long carModelId,
+            @RequestParam(required = false) Long carModelId,
             @RequestParam(required = false) Long regionId,
             @RequestParam(required = false) String regionName,
             @RequestParam(defaultValue = "6") Integer months,
@@ -129,15 +113,7 @@ public class PredictionController {
             return ResponseUtil.badRequest("regionId和regionName不能同时存在");
         }
 
-        // 获取历史销售数据
-        List<SaleRecord> historicalData;
-        if (regionId != null) {
-            historicalData = saleRecordService.getSaleRecordsByCarModelIdAndRegionIdRaw(carModelId, regionId);
-        } else if (regionName != null) {
-            historicalData = saleRecordService.getSaleRecordsByCarModelIdAndRegionNameRaw(carModelId, regionName);
-        } else {
-            historicalData = saleRecordService.getSaleRecordsByCarModelIdRaw(carModelId);
-        }
+        List<SaleRecord> historicalData = getHistoricalData(carModelId, regionId, regionName);
 
         // 进行预测
         List<SaleRecordDTO> predictions;
@@ -159,7 +135,7 @@ public class PredictionController {
      */
     @GetMapping("/Prophet/detail")
     public ResponseEntity<ApiResponse<ProphetResultDTO>> predictSalesWithProphetWithDetail(
-            @RequestParam Long carModelId,
+            @RequestParam(required = false) Long carModelId,
             @RequestParam(required = false) Long regionId,
             @RequestParam(required = false) String regionName,
             @RequestParam(defaultValue = "6") int months,
@@ -173,15 +149,7 @@ public class PredictionController {
             return ResponseUtil.badRequest("regionId和regionName不能同时存在");
         }
 
-        // 获取历史销售数据
-        List<SaleRecord> historicalData;
-        if (regionId != null) {
-            historicalData = saleRecordService.getSaleRecordsByCarModelIdAndRegionIdRaw(carModelId, regionId);
-        } else if (regionName != null) {
-            historicalData = saleRecordService.getSaleRecordsByCarModelIdAndRegionNameRaw(carModelId, regionName);
-        } else {
-            historicalData = saleRecordService.getSaleRecordsByCarModelIdRaw(carModelId);
-        }
+        List<SaleRecord> historicalData = getHistoricalData(carModelId, regionId, regionName);
 
         // 进行预测
         ProphetResultDTO prophetResult;
@@ -194,5 +162,26 @@ public class PredictionController {
         }
 
         return ResponseUtil.success(prophetResult);
+    }
+
+    private List<SaleRecord> getHistoricalData(Long carModelId, Long regionId, String regionName) {
+        // 获取历史销售数据
+        List<SaleRecord> historicalData;
+        if (carModelId == null) {
+            if (regionId != null) {
+                historicalData = saleRecordService.getSaleRecordsByRegionIdRaw(regionId);
+            } else if (regionName != null) {
+                historicalData = saleRecordService.getSaleRecordsByRegionNameRaw(regionName);
+            } else {
+                historicalData = saleRecordService.getAllSaleRecordsRaw();
+            }
+        } else if (regionId != null) {
+            historicalData = saleRecordService.getSaleRecordsByCarModelIdAndRegionIdRaw(carModelId, regionId);
+        } else if (regionName != null) {
+            historicalData = saleRecordService.getSaleRecordsByCarModelIdAndRegionNameRaw(carModelId, regionName);
+        } else {
+            historicalData = saleRecordService.getSaleRecordsByCarModelIdRaw(carModelId);
+        }
+        return historicalData;
     }
 }
