@@ -27,4 +27,13 @@ public class RegionDTO {
      * 父级地区名称
      */
     private String parentRegion;
+
+    /**
+     * 拷贝构造函数
+     */
+    public RegionDTO(RegionDTO regionDTO) {
+        this.regionId = regionDTO.getRegionId();
+        this.regionName = regionDTO.getRegionName();
+        this.parentRegion = regionDTO.getParentRegion();
+    }
 }
