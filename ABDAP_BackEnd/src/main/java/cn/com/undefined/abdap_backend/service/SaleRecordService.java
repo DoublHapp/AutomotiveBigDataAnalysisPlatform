@@ -102,6 +102,32 @@ public class SaleRecordService {
     }
 
     /**
+     * 查询所有销售记录（返回原始数据）
+     */
+    public List<SaleRecord> getAllSaleRecordsRaw() {
+        return repository.findAll();
+    }
+    /**
+     * 根据地区ID查询销售记录（返回原始数据）
+     */
+    public List<SaleRecord> getSaleRecordsByRegionIdRaw(Long regionId) {
+        return repository.findByRegionId(regionId);
+    }
+    /**
+     * 根据地区名称（省）查询销售记录（返回原始数据）
+     */
+    public List<SaleRecord> getSaleRecordsByRegionNameRaw(String regionName) {
+        // 先根据地区名称查找地区ID
+        Region region = regionRepository.findByRegionName(regionName);
+        if (region == null) {
+            // 如果地区不存在，返回空列表
+            return new ArrayList<>();
+        }
+
+        // 根据地区ID查询销售记录（返回原始数据）
+        return repository.findByRegionId(region.getRegionId());
+    }
+    /**
      * 根据车型ID和地区ID查询销售记录（返回原始数据）
      */
     public List<SaleRecord> getSaleRecordsByCarModelIdAndRegionIdRaw(Long carModelId, Long regionId) {
