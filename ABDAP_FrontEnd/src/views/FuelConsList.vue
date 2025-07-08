@@ -245,9 +245,7 @@
           <!-- 车型信息 -->
           <div class="vehicle-info">
             <h3>{{ item.brand }} {{ item.name }}</h3>
-            <p class="vehicle-specs">
-              {{ item.type }} · {{ item.engine }} · {{ item.transmission }}
-            </p>
+            <p class="vehicle-specs">{{ item.type }} · {{ item.engine }}</p>
             <div class="price-range">{{ item.priceRange }}</div>
             <div class="fuel-type-badge">
               <el-tag :type="getFuelTypeColor(item.fuelType)" size="small">
@@ -314,7 +312,7 @@
           </div>
 
           <!-- 操作按钮 -->
-          <div class="action-buttons">
+          <div class="action-buttons" @click.stop>
             <el-button
               size="small"
               @click.stop="toggleComparison(item)"
@@ -569,6 +567,7 @@ interface CarModel {
   seatNum: number
   driveType?: string
   rangeKm?: number
+  imageUrl?: string
 }
 
 interface FuelEconomy {
@@ -618,7 +617,6 @@ interface ProcessedFuelModel {
   name: string
   type: string
   engine: string
-  transmission: string
   priceRange: string
   fuelType: string
   fuelConsumption: number
@@ -842,8 +840,8 @@ const processFuelConsRankingData = () => {
         // 查找口碑评分
         const opinion = baseData.value.opinions.find((op) => op.carModelId === carModel.carModelId)
 
-        // 计算价格区间
-        const priceRange = calculatePriceRange(carModel.officialPrice)
+        // 直接使用官方指导价（万元，保留1位小数）
+        const priceRange = `${(carModel.officialPrice / 10000).toFixed(1)}万`
 
         // 计算经济性评分
         const economyScore = calculateEconomyScore({
@@ -869,18 +867,23 @@ const processFuelConsRankingData = () => {
         // 标准化燃料类型
         const normalizedFuelType = normalizeFuelType(carModel.engineType)
 
+        // 使用真实车型图片URL
+        const image =
+          carModel.imageUrl && carModel.imageUrl.trim() !== ''
+            ? carModel.imageUrl
+            : `https://picsum.photos/300/200?random=${carModel.carModelId}`
+
         return {
           id: carModel.carModelId,
           brand: carModel.brandName,
           name: carModel.modelName,
           type: mappedType,
           engine: carModel.engineType,
-          transmission: generateTransmission(carModel.engineType),
           priceRange,
           fuelType: normalizedFuelType,
           fuelConsumption: fuelEconomy.avgFuel,
           powerConsumption: carModel.engineType === '纯电动' ? fuelEconomy.avgFuel : undefined,
-          image: generateCarImage(carModel.carModelId),
+          image,
           sampleSize: fuelEconomy.sampleCount,
           dataReliability: calculateReliability(fuelEconomy.sampleCount),
           economyScore,

@@ -163,13 +163,18 @@
           <label>车型:</label>
           <el-select
             v-model="globalFilters.carModel"
-            placeholder="选择车型"
-            @change="handleGlobalFilterChange"
+            placeholder="搜索车型"
+            filterable
+            remote
+            :remote-method="searchCarModels"
+            :loading="carModelSearchLoading"
             clearable
+            @change="handleGlobalFilterChange"
+            style="width: 220px"
           >
             <el-option label="全部车型" value="all" />
             <el-option
-              v-for="model in availableCarModels"
+              v-for="model in carModelSearchResults"
               :key="model.carModelId"
               :label="`${model.brandName} ${model.modelName}`"
               :value="model.carModelId.toString()"
@@ -191,9 +196,9 @@
         >
           <el-option
             v-for="region in regionSearchResults"
-            :key="region.regionName"
+            :key="region.regionId"
             :label="region.regionName"
-            :value="region.regionName"
+            :value="region.regionId || region.regionName"
           />
         </el-select>
       </div>
@@ -707,6 +712,28 @@ const targetFormRef = ref()
 const regionSearchResults = ref<Region[]>([])
 const regionSearchLoading = ref(false)
 
+const carModelSearchResults = ref<CarModel[]>([])
+const carModelSearchLoading = ref(false)
+
+const searchCarModels = async (query: string) => {
+  if (!query) {
+    carModelSearchResults.value = []
+    return
+  }
+  carModelSearchLoading.value = true
+  try {
+    // 假设后端支持分页和关键字搜索
+    const response = await axios.get('/api/car-models/search', {
+      params: { keyword: query, page: 1, pageSize: 20 },
+    })
+    carModelSearchResults.value = response.data.data || []
+  } catch (error) {
+    carModelSearchResults.value = []
+  } finally {
+    carModelSearchLoading.value = false
+  }
+}
+
 //  基础数据存储
 const baseData = ref<BaseData>({
   carModels: [],
@@ -777,7 +804,7 @@ const globalFilters = reactive({
   timeRange: 'year',
   customDateRange: null as [Date, Date] | null,
   carModel: 'all',
-  region: 'all',
+  region: 'all', // 这里 region 可能是 regionId（市）或 regionName（省）
 })
 
 // 图表实例
@@ -939,13 +966,36 @@ const searchRegionByName = async (query: string) => {
   }
   regionSearchLoading.value = true
   try {
-    // 本地过滤所有地区
-    regionSearchResults.value = baseData.value.regions.filter((region) =>
-      region.regionName.includes(query),
+    // 合并省级和市级地区进行搜索，并去重
+    const allRegions = [...baseData.value.topLevelRegions, ...baseData.value.nonTopLevelRegions]
+    const filtered = allRegions.filter((region) => region.regionName.includes(query))
+    // 用 Map 以 regionName 去重
+    const unique = Array.from(
+      new Map(filtered.map((region) => [region.regionName, region])).values(),
     )
+    regionSearchResults.value = unique
   } finally {
     regionSearchLoading.value = false
   }
+}
+
+const getRegionRequestParams = () => {
+  if (globalFilters.region === 'all') return {}
+  // 先在省列表中查找
+  const province = baseData.value.topLevelRegions.find(
+    (r) => r.regionName === globalFilters.region || r.regionId === globalFilters.region,
+  )
+  if (province) {
+    return { regionName: province.regionName }
+  }
+  // 再在市列表中查找
+  const city = baseData.value.nonTopLevelRegions.find(
+    (r) => r.regionId === globalFilters.region || r.regionName === globalFilters.region,
+  )
+  if (city) {
+    return { regionId: city.regionId }
+  }
+  return {}
 }
 
 // 处理销量趋势数据
