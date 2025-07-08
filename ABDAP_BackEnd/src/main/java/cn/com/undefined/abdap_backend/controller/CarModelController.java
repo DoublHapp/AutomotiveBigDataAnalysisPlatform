@@ -53,4 +53,16 @@ public class CarModelController {
         CarModelDTO carModel = carModelService.getCarModelById(id);
         return ResponseUtil.success(carModel);
     }
+
+    /**
+     * 车型关键字模糊搜索
+     * GET /api/car-models/search?keyword=xxx&limit=100
+     */
+    @GetMapping("/search")
+    public ResponseEntity<ApiResponse<List<CarModelDTO>>> searchCarModels(
+            @RequestParam String keyword,
+            @RequestParam(defaultValue = "100") int limit) {
+        List<CarModelDTO> carModels = carModelService.searchCarModels(keyword, limit);
+        return ResponseUtil.success(carModels);
+    }
 }

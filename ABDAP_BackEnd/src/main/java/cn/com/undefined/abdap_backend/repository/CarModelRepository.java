@@ -1,6 +1,7 @@
 package cn.com.undefined.abdap_backend.repository;
 
 import cn.com.undefined.abdap_backend.dto.CarModelDTO;
+import cn.com.undefined.abdap_backend.dto.CarModelDTO;
 import cn.com.undefined.abdap_backend.entity.CarModel;
 
 import java.util.List;
@@ -39,4 +40,13 @@ public interface CarModelRepository extends JpaRepository<CarModel, Long> {
                         "FROM CarModel c LEFT JOIN c.brand b " +
                         "WHERE c.carModelId = :carModelId")
         CarModelDTO findCarModelDTOById(@Param("carModelId") Long carModelId);
+
+        @Query("SELECT new cn.com.undefined.abdap_backend.dto.CarModelDTO(" +
+                        "c.carModelId, c.modelName, c.modelFullName, c.brandId, " +
+                        "b.brandName, c.level, c.launchDate, c.officialPrice, " +
+                        "c.engineType, c.seatNum, c.driveType, c.rangeKm, c.imageUrl) " +
+                        "FROM CarModel c LEFT JOIN c.brand b " +
+                        "WHERE (:keyword IS NULL OR c.modelName LIKE %:keyword%) " +
+                        "ORDER BY c.carModelId")
+        List<CarModelDTO> findTopByKeyword(@Param("keyword") String keyword, Pageable pageable);
 }

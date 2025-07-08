@@ -5,7 +5,7 @@ import { ElMessage } from 'element-plus'
 import axios from 'axios'
 
 
-// 主筛选类型
+// 筛选模式类型
 const compareMode = ref<'region' | 'carModel' | 'none'>('carModel')
 
 // 选项
@@ -15,23 +15,23 @@ interface regionOption {
   value: string
 }
 
-const regionOptionsAll: regionOption[] = [
+const regionOptionsAllFake: regionOption[] = [
   { label: '全国', value: '0' },
-  { label: '北京省', value: '1' },
-  { label: '上海省', value: '2' },
-  { label: '广东省', value: '3' },
-  { label: '浙江省', value: '4' },
-  { label: '山东省', value: '5' }
+  { label: '北京市', value: '北京' },
+  { label: '上海市', value: '上海' },
+  { label: '广东省', value: '广东' },
+  { label: '浙江省', value: '浙江' },
+  { label: '山东省', value: '山东' }
 ]
-const regionOptionsNoAll = regionOptionsAll.slice(1) // 不含全国
-
+const regionOptionsNoAllFake = regionOptionsAllFake.slice(1) // 不含全国
+const regionOptions = ref<regionOption[]>([])
 // 车型
 interface carModelOption {
   label: string
   value: string
 }
 
-const carModelOptions: carModelOption[] = [
+const carModelOptionsFake: carModelOption[] = [
   { label: '宝马X3', value: '1' },
   { label: '奔驰C200L', value: '2' },
   { label: '奥迪A4L', value: '3' },
@@ -39,24 +39,33 @@ const carModelOptions: carModelOption[] = [
   { label: '比亚迪汉EV', value: '5' }
 ]
 
+const carModelOptions = ref<carModelOption[]>([])
+// 动力类型
+
+interface powerOption {
+  label: string
+  value: string
+}
+
+const powerOptions: powerOption[] = [
+  { label: '全部', value: 'all' },
+  { label: '燃油', value: 'fuel' },
+  { label: '新能源', value: 'electric' }
+]
+
+const powerType = ref<string>('all')
+
 // 筛选条件
 const dateRangeType = ref<'month' | 'quarter' | 'year'>('month')
 const dateRange = ref<[string, string]>(['2023-01', '2023-12'])
-const regionSingle = ref<string>('1'); 
+const regionSingle = ref<string>('北京'); 
 const regionArray = ref<string[]>([]);
 const carModelSingle = ref<string>(''); 
 const carModelArray = ref<string[]>([]);
 
-const powerType = ref<string>('全部')
-
 // 计算当前可选项和选择方式
 const carModelMultiple = computed(() => compareMode.value == 'carModel' || compareMode.value == 'none')
 const regionMultiple = computed(() => compareMode.value == 'region' || compareMode.value == 'none')
-const regionOptions = computed(() =>
-  compareMode.value !== 'region'
-    ? regionOptionsAll
-    : regionOptionsNoAll
-)
 
 // 计算当前选择数组还是对象
 const carModelTargets = computed<any>({
@@ -119,7 +128,7 @@ function showStatsDetail(stats: { name: string, min: number, max: number, avg: n
   statsDetailVisible.value = true
 }
 
-// 选择时自动修正选项
+// 选择筛选模式时自动修正选项
 watch(compareMode, (mode) => {
   if (mode === 'region') {
     // 地区多选，车型单选，不包含全国
@@ -198,10 +207,10 @@ function processResponseData(salesData: repsonseData[]): chartData[] {
   // 创建一个Map来按名称分组数据
   const groupedData = new Map<string, { counts: number[]; dates: string[] }>();
 
-  console.log(salesData[0].regionId,typeof salesData[0].regionName,salesData[0].regionName === "null")
+  console.log(salesData[0].regionId,typeof salesData[0].regionName,salesData[0].regionName === null)
   // 遍历所有销售记录
   salesData.forEach(record => {
-    const key = record.regionName ===  "全国"?`${record.carModelName}`:`${record.carModelName}--${record.regionId}`;
+    const key = record.regionName ===  "全国"?`${record.carModelName}`:`${record.carModelName}--${record.regionName}`;
     
     // 如果Map中还没有这个key，就初始化
     if (!groupedData.has(key)) {
@@ -239,18 +248,56 @@ function processResponseData(salesData: repsonseData[]): chartData[] {
   return result;
 }
 
-// 预留接口函数
+// API接口调用函数
+const fetchCarModels = async () => {
+  try {
+    const response = await axios.get('/api/car-models')
+    if (response.data.status === 200) {
+      response.data.data.forEach((model: any) => {
+        carModelOptions.value.push({
+          label: `${model.modelName}`, //要改，现在品牌和车型分开了，接口和模拟数据不匹配。
+          value: model.carModelId.toString(),
+        })
+      })
+      console.log('获取车型列表成功:', response)
+    } else {
+      console.error('获取车型列表失败:', response.data.message)
+    }
+  } catch (error) {
+    console.error('获取车型列表失败:', error)
+  }
+}
+
+const fetchRegions = async () => {
+  try {
+    const response = await axios.get('/api/regions')
+    if (response.data.status === 200) {
+      response.data.data.forEach((region: any) => {
+        regionOptions.value.push({
+          label: region.parentRegion.toString(),
+          value: region.regionId.toString(),
+        })
+      })
+      console.log('获取地区列表成功:', response)
+    } else {
+      console.error('获取地区列表失败:', response.data.message)
+    }
+  } catch (error) {
+    console.error('获取地区列表失败:', error)
+  }
+}
+
 async function fetchTrendData() {
-  // 这里实际应调用后端接口
   const params = new URLSearchParams();
   if(regionMultiple.value){
     regionArray.value.forEach(item => {
-      params.append('regionIds', item.toString());
+      params.append('regionNames', item.toString());
     });
   }else{
-    params.append('regionIds', regionSingle.value.toString());
+    console.log(regionSingle.value)
+    params.append('regionNames', regionSingle.value.toString());
   }
-
+  console.log('params:',params.toString())
   if(carModelMultiple.value){
     carModelArray.value.forEach(item => {
       params.append('carModelIds', item.toString());
@@ -258,12 +305,12 @@ async function fetchTrendData() {
   }else{
     params.append('carModelIds', carModelSingle.value.toString());
   }
-  
+  console.log('params:',params.toString())
+
   console.log(`/api/sale-records/multiple?${params.toString()}`)
   const res = await axios.get(`/api/sale-records/multiple?${params.toString()}`)
   console.log('请求参数:', res.data)
   return processResponseData(res.data.data)
-  // return generateMockData()
 }
 
 // 渲染图表
@@ -344,7 +391,8 @@ async function fetchDataAndRender() {
 }
 
 onMounted(() => {
-  fetchDataAndRender()
+  fetchCarModels()
+  fetchRegions()
 })
 </script>
 
@@ -415,9 +463,12 @@ onMounted(() => {
           </el-select>
           <!-- 动力类型选择 -->
           <el-select v-model="powerType" placeholder="动力类型" style="margin-left: 16px; width: 120px">
-            <el-option label="全部" :value="null" />
-            <el-option label="燃油" value="fuel" />
-            <el-option label="新能源" value="electric" />
+            <el-option
+              v-for="option in powerOptions"
+              :key="option.label"
+              :label="option.label"
+              :value="option.value"
+            />
           </el-select>
           <el-button @click="fetchDataAndRender" style="margin-left: 30px;">更新数据</el-button>
         </div>

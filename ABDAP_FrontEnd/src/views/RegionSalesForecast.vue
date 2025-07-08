@@ -27,6 +27,12 @@ interface RegionNode {
   children?: RegionNode[]
 }
 
+interface Region{
+  id: string
+  name: string
+  parentRegion: string
+}
+
 interface RegionInfo {
   id: string
   name: string
@@ -65,13 +71,36 @@ interface OptimizationResult {
   reasoning: string
 }
 
+// 库存分析图表数据结构
+interface inventoryChartData {
+  name: string;
+  data: number[];
+  avgSales?: number; // 平均月销
+  inventory?: number; // 当下库存
+  recommendedStock?: number; // 推荐库存
+}
+
+interface repsonseData {
+  saleId: number;
+  carModelId: number;
+  carModelName: string;
+  regionId: number;
+  regionName: string;
+  saleMonth: string;
+  saleCount: number;
+  saleAmount: number;
+}
+
+let citiesData: inventoryChartData[] = []
+
 // 响应式数据
 const loading = ref(false)
 const analyzing = ref(false)
 
 // 区域选择与配置
-const selectedRegion = ref<string[]>([])
-const forecastPeriod = ref('6M')
+const selectedRegion = ref<string>("四川省")
+const selectedRegionIdx = ref<number>(0)
+const forecastPeriod = ref('6')
 const analysisDimension = ref('market')
 const chartView = ref('trend')
 
@@ -124,6 +153,16 @@ let competitionChartInstance: echarts.ECharts | null = null
 let inventoryChartInstance: echarts.ECharts | null = null
 let regionMapChartInstance: echarts.ECharts | null = null
 
+// 地区销量预测数据
+let historySales: number[]
+let historyDates: string[]
+let historyPeriods: number
+let forecastDates: string[]
+let forecastPeriods: number
+let values : number[]
+let upper : number[]
+let lower : number[]
+
 // 级联选择器配置
 const cascaderProps = {
   value: 'id',
@@ -140,13 +179,61 @@ const salesGrowthType = computed(() => {
   return 'text-danger'
 })
 
+// 创建树结构
+function addChildNode(
+  tree: RegionNode[],
+  newRegion: Region
+): boolean {
+  for (const node of tree) {
+    if (node.name === newRegion.parentRegion) {
+      if (!node.children) {
+        node.children = []
+      }
+      // 添加市级节点
+      const newChild: RegionNode = {
+        id: newRegion.id,
+        name: newRegion.name,
+      }
+      node.children.push(newChild)
+      return true
+    }
+  }
+
+  // 找不到目标节点，创建一个新的省级节点
+  const newNode: RegionNode = {
+    id: newRegion.parentRegion,
+    name: newRegion.parentRegion,
+    children: []
+  }
+  tree.push(newNode)
+
+  // 添加市级节点
+  const newChild: RegionNode = {
+    id: newRegion.id,
+    name: newRegion.name,
+  }
+  const lastNode = tree[tree.length - 1]
+  lastNode.children!.push(newChild)
+  return true // 成功添加新节点
+}
+
 // API调用函数
 const fetchRegionTree = async () => {
   try {
-    const response = await axios.get('/api/regions/tree')
-    if (response.data.status === 1) {
-      regionTree.value = response.data.data
+    const response = await axios.get('/api/regions')
+    if (response.data.status === 200) {
+      console.log('获取区域树数据:', response.data.data)
+      const res: any[] = response.data.data
+      res.forEach((region: any) => {
+        addChildNode(regionTree.value, {
+          id: region.regionId,
+          name: region.regionName,
+          parentRegion: region.parentRegion,
+        })
+      })
+      console.log('区域树数据:', regionTree.value)
     } else {
+      console.error('获取区域树失败:', response.data.message)
       regionTree.value = generateMockRegionTree()
     }
   } catch (error) {
@@ -155,22 +242,113 @@ const fetchRegionTree = async () => {
   }
 }
 
-const fetchRegionAnalysis = async (regionId: string) => {
+const fetchRegionAnalysis = async () => {
   try {
-    const params = {
-      regionId,
-      period: forecastPeriod.value,
-      dimension: analysisDimension.value,
-    }
+    const params = new URLSearchParams();
+    // 直传车型和预测周期参数
+    params.append('regionName', selectedRegion.value.toString())
+    params.append('months', forecastPeriod.value.toString())
 
-    const response = await axios.get('/api/regions/analysis', { params })
-    if (response.data.status === 1) {
+    const response = await axios.get(`/api/prediction/ARIMA/detail?${params.toString()}`)
+    if (response.data.status === 200) {
+      console.log('获取地区分析数据:', response)
       return response.data.data
     } else {
+      console.error('获取地区分析失败:', response.data.message)
       return generateMockRegionAnalysis()
     }
   } catch (error) {
-    console.error('获取区域分析失败:', error)
+    console.error('获取地区分析失败:', error)
+    return generateMockRegionAnalysis()
+  }
+}
+
+
+
+// 库存规划工具函数
+// 计算安全库存 没有日销数据，以月销数据的标准差代替
+function calcSafetyStock(salesHistory: number[], serviceFactor = 1.65) {
+  if (!salesHistory || salesHistory.length === 0) return 0
+  const avg = salesHistory.reduce((a, b) => a + b, 0) / salesHistory.length
+  const std = Math.sqrt(salesHistory.reduce((sum, v) => sum + Math.pow(v - avg, 2), 0) / salesHistory.length)
+  // 按月为单位，补货周期天数/30
+  return Math.round(serviceFactor * std * Math.sqrt(30 / 30))
+}
+
+// 计算每月建议库存
+function InventoryByHistory(historySales: number[]) {
+
+  // 计算推荐库存和需求指数
+  let avgSales = Math.round(historySales.reduce((a, b) => a + b, 0) / historySales.length)
+  const safety = calcSafetyStock(historySales)
+
+  let expectedSales = avgSales * (0.95 + Math.random() * 0.10)
+
+  return {
+    avgSales: avgSales,
+    inventory: avgSales + safety,
+    recommendedStock: Math.round(safety + expectedSales),
+  }
+
+}
+
+function processResponseData(salesData: repsonseData[]): inventoryChartData[] {
+  // 创建一个Map来按名称分组数据
+  const groupedData = new Map<string, { counts: number[]}>();
+
+  console.log(salesData[0].regionId,typeof salesData[0].regionName,salesData[0].regionName === null)
+  // 遍历所有销售记录
+  salesData.forEach(record => {
+    const key = record.regionName || '未知地区'; // 使用地区名称作为key，如果没有则使用默认值
+    
+    // 如果Map中还没有这个key，就初始化
+    if (!groupedData.has(key)) {
+      groupedData.set(key, { counts: []});
+    }
+    
+    // 获取当前分组
+    const group = groupedData.get(key)!;
+  
+    // 添加销售数量
+    group.counts.push(record.saleCount);
+  });
+
+  // 将Map转换为目标数组
+  const result: inventoryChartData[] = [];
+  groupedData.forEach((value, key) => {
+    let res = InventoryByHistory(value.counts)
+    result.push({
+      name: key,
+      data: value.counts,
+      avgSales: res.avgSales,
+      inventory: res.inventory,
+      recommendedStock: res.recommendedStock,
+    });
+  });
+
+  return result;
+}
+
+async function fetchCitiesData() {
+  try{
+    const params = new URLSearchParams();
+    const selectedRegionNode = regionTree.value[selectedRegionIdx.value]
+    if (selectedRegionNode && selectedRegionNode.children) {
+      selectedRegionNode.children.forEach((region: RegionNode) => {
+        params.append('regionIds', region.id)
+      })
+    }
+
+    const res = await axios.get(`/api/sale-records/multiple?${params.toString()}`)
+    if(res.data.status === 200){
+      console.log('获取城市数据:', res)
+      return processResponseData(res.data.data)
+    }else{
+      console.error('获取城市数据分析失败:', res.data.message)
+      return generateMockRegionAnalysis()
+    }
+  }catch(error){
+    console.error('获取地区分析失败:', error)
     return generateMockRegionAnalysis()
   }
 }
@@ -224,7 +402,7 @@ const generateMockRegionTree = (): RegionNode[] => {
 const generateMockRegionAnalysis = () => {
   // 生成区域基础信息
   currentRegion.value = {
-    id: selectedRegion.value[selectedRegion.value.length - 1],
+    id: selectedRegion.value || 'beijing-chaoyang',
     name: '北京市朝阳区',
     population: 345,
     gdpPerCapita: 168000,
@@ -322,14 +500,74 @@ const handleDimensionChange = () => {
   }
 }
 
+// 计算日期
+function generateTimeSeries(baseTime: string, period: number): string[] {
+  // 验证输入格式
+  if (!/^\d{4}\/\d{2}$/.test(baseTime)) {
+    throw new Error('基准时间格式不正确，应为 "yyyy/mm"');
+  }
+
+  const [yearStr, monthStr] = baseTime.split('/');
+  let year = parseInt(yearStr, 10);
+  let month = parseInt(monthStr, 10);
+
+  // 验证月份是否有效
+  if (month < 1 || month > 12) {
+    throw new Error('月份必须在 1-12 之间');
+  }
+
+  const result: string[] = [];
+  const direction = period > 0 ? 1 : -1;
+  const count = Math.abs(period);
+
+  for (let i = 0; i < count; i++) {
+    // 计算当前月份和年份
+    let currentMonth = month;
+    let currentYear = year;
+
+    if (direction > 0) {
+      // 正向计算
+      currentMonth += i;
+      currentYear += Math.floor((currentMonth - 1) / 12);
+      currentMonth = ((currentMonth - 1) % 12) + 1;
+    } else {
+      // 反向计算
+      currentMonth -= i;
+      // 处理跨年
+      while (currentMonth < 1) {
+        currentMonth += 12;
+        currentYear -= 1;
+      }
+    }
+
+    // 格式化月份为两位数
+    const formattedMonth = currentMonth.toString().padStart(2, '0');
+    result.push(`${currentYear}/${formattedMonth}`);
+  }
+
+  return result;
+}
+
 const startAnalysis = async () => {
+  if (!selectedRegion.value) {
+    ElMessage.warning('请先选择要分析的地区')
+    return
+  }
   analyzing.value = true
 
   try {
-    // 模拟分析过程
-    await new Promise((resolve) => setTimeout(resolve, 2000))
+    const analysisData = await fetchRegionAnalysis()
 
-    const analysisData = await fetchRegionAnalysis(selectedRegion.value[selectedRegion.value.length - 1])
+    historySales = analysisData.historicalData   
+    historyPeriods = analysisData.historicalDataCount
+    forecastPeriods = analysisData.forecastDataCount
+    values = analysisData.forecastValues
+    upper = analysisData.forecastUpperBounds
+    lower = analysisData.forecastLowerBounds
+    historyDates = generateTimeSeries('2025/06', -historyPeriods)
+    forecastDates = generateTimeSeries('2025/07', forecastPeriods)
+
+    citiesData = (await fetchCitiesData()) || []
 
     // 初始化图表
     await nextTick()
@@ -398,9 +636,13 @@ const initRegionTrendChart = async () => {
 
   regionTrendChartInstance = echarts.init(regionTrendChart.value)
 
-  const months = ['1月', '2月', '3月', '4月', '5月', '6月']
-  const historicalData = [1200, 1350, 1180, 1420, 1380, 1450]
-  const forecastData = [1520, 1680, 1750, 1890, 1950, 2100]
+  // const months = ['1月', '2月', '3月', '4月', '5月', '6月']
+  // const historicalData = [1200, 1350, 1180, 1420, 1380, 1450]
+  // const forecastData = [1520, 1680, 1750, 1890, 1950, 2100]
+
+  const forecastSales = new Array(historyPeriods).fill(null).concat(values)
+  const forecastUpper = new Array(historyPeriods).fill(null).concat(upper)
+  const forecastLower = new Array(historyPeriods).fill(null).concat(lower)
 
   const option = {
     title: {
@@ -425,26 +667,56 @@ const initRegionTrendChart = async () => {
     },
     xAxis: {
       type: 'category',
-      data: months,
+      data: historyDates.concat(forecastDates),
     },
     yAxis: {
       type: 'value',
       name: '销量(台)',
+      axisLabel: {
+        formatter: (value: number) => (value >= 1000 ? (value / 1000).toFixed(1) + 'k' : value.toString()),
+      },
+      splitLine: { lineStyle: { type: 'dashed', color: '#e0e6ed' } },
     },
     series: [
       {
         name: '历史销量',
         type: 'line',
-        data: historicalData,
+        data: historySales,
         itemStyle: { color: '#409EFF' },
-        lineStyle: { width: 3 },
+        lineStyle: { 
+          width: 2, 
+          type: 'dashed' 
+        },
+        symbol: 'circle',
+        symbolSize: 4,
       },
       {
         name: '预测销量',
         type: 'line',
-        data: forecastData,
+        data: forecastSales,
         itemStyle: { color: '#E6A23C' },
         lineStyle: { width: 3, type: 'dashed' },
+        symbol: 'diamond',
+        symbolSize: 6,
+      },
+      {
+        name: '置信区间',
+        type: 'line',
+        data: forecastUpper,
+        lineStyle: { opacity: 0 },
+        symbol: 'none',
+        stack: 'confidence-band',
+        areaStyle: { color: 'rgba(230, 162, 60, 0.3)' },
+      },
+      {
+        name: '置信区间下限',
+        type: 'line',
+        data: forecastLower,
+        lineStyle: { opacity: 0 },
+        symbol: 'none',
+        stack: 'confidence-band',
+        areaStyle: { color: 'rgba(255,255,255,0.8)' },
+        showInLegend: false,
       },
     ],
   }
@@ -541,7 +813,7 @@ const initInventoryChart = async () => {
     },
     xAxis: {
       type: 'category',
-      data: inventoryRecommendations.value.map((item) => item.region),
+      data: citiesData.map((item) => item.name),
     },
     yAxis: {
       type: 'value',
@@ -551,13 +823,13 @@ const initInventoryChart = async () => {
       {
         name: '当前库存',
         type: 'bar',
-        data: inventoryRecommendations.value.map((item) => item.currentLevel),
+        data: citiesData.map((item) => item.inventory),
         itemStyle: { color: '#409EFF' },
       },
       {
         name: '建议库存',
         type: 'bar',
-        data: inventoryRecommendations.value.map((item) => item.recommendedLevel),
+        data: citiesData.map((item) => item.recommendedStock),
         itemStyle: { color: '#67c23a' },
       },
     ],
@@ -667,23 +939,29 @@ onUnmounted(() => {
         <el-row :gutter="16">
           <el-col :span="6">
             <el-form-item label="选择区域:">
-              <el-cascader
+              <el-select
                 v-model="selectedRegion"
-                :options="regionTree"
-                placeholder="选择省份/城市"
+                placeholder="选择省份"
                 filterable
                 @change="handleRegionChange"
                 style="width: 100%"
-                :props="cascaderProps"
-              />
+              >
+                <el-option
+                  v-for="(region, idx) in regionTree"
+                  :key="region.id"
+                  :label="region.name"
+                  :value="region.id"
+                  @click="selectedRegionIdx = idx"
+                />
+              </el-select>
             </el-form-item>
           </el-col>
           <el-col :span="4">
             <el-form-item label="预测周期:">
               <el-select v-model="forecastPeriod" @change="handlePeriodChange">
-                <el-option label="3个月" value="3M" />
-                <el-option label="6个月" value="6M" />
-                <el-option label="12个月" value="12M" />
+                <el-option label="3个月" value="3" />
+                <el-option label="6个月" value="6" />
+                <el-option label="12个月" value="12" />
               </el-select>
             </el-form-item>
           </el-col>

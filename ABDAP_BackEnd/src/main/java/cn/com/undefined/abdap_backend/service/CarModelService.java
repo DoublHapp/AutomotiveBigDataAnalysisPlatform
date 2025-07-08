@@ -37,4 +37,11 @@ public class CarModelService {
     public CarModelDTO getCarModelById(Long id) {
         return carModelRepository.findCarModelDTOById(id);
     }
+
+    /**
+     * 车型关键字模糊搜索
+     */
+    public List<CarModelDTO> searchCarModels(String keyword, int limit) {
+        return carModelRepository.findTopByKeyword(keyword, PageRequest.of(0, limit));
+    }
 }
