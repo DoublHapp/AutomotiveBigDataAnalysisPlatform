@@ -38,7 +38,8 @@ public class ComplexController {
         List<Object[]> rawList = saleRecordRepository.findMonthlySummary(
                 startMonth.format(DateTimeFormatter.ofPattern("yyyy-MM")),
                 endMonth.format(DateTimeFormatter.ofPattern("yyyy-MM")),
-                region, carModel);
+                region.equals("all") ? null : region,
+                carModel.equals("all") ? null : carModel);
 
         return rawList.stream().map(arr -> new MonthlySaleSummaryDTO(
                 arr[0].toString(), // month
