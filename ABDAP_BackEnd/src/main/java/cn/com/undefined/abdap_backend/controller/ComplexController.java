@@ -36,8 +36,8 @@ public class ComplexController {
 
         // 聚合查询
         List<Object[]> rawList = saleRecordRepository.findMonthlySummary(
-                startMonth.format(DateTimeFormatter.ofPattern("yyyy-MM")),
-                endMonth.format(DateTimeFormatter.ofPattern("yyyy-MM")),
+                startMonth.atDay(1).toString(),
+                endMonth.atEndOfMonth().toString(),
                 region.equals("all") ? null : region,
                 carModel.equals("all") ? null : carModel);
 
