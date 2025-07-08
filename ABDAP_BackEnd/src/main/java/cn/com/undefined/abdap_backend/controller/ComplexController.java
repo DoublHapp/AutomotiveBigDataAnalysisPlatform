@@ -2,18 +2,20 @@ package cn.com.undefined.abdap_backend.controller;
 
 import java.math.BigDecimal;
 import java.time.YearMonth;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import cn.com.undefined.abdap_backend.dto.ApiResponse;
 import cn.com.undefined.abdap_backend.repository.SaleRecordRepository;
+import cn.com.undefined.abdap_backend.util.ResponseUtil;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
@@ -28,7 +30,7 @@ public class ComplexController {
     private SaleRecordRepository saleRecordRepository;
 
     @GetMapping("/monthly-summary")
-    public List<MonthlySaleSummaryDTO> getMonthlySummary(
+    public ResponseEntity<ApiResponse<List<MonthlySaleSummaryDTO>>> getMonthlySummary(
             @RequestParam @DateTimeFormat(pattern = "yyyy-MM") YearMonth startMonth,
             @RequestParam @DateTimeFormat(pattern = "yyyy-MM") YearMonth endMonth,
             @RequestParam(required = false) String region,
@@ -41,13 +43,13 @@ public class ComplexController {
                 region.equals("all") ? null : region,
                 carModel.equals("all") ? null : carModel);
 
-        return rawList.stream().map(arr -> new MonthlySaleSummaryDTO(
+        return ResponseUtil.success(rawList.stream().map(arr -> new MonthlySaleSummaryDTO(
                 arr[0].toString(), // month
                 arr[1].toString(), // region
                 arr[2].toString(), // carModel
                 ((Number) arr[3]).intValue(), // saleCount
                 (BigDecimal) arr[4] // saleAmount
-        )).toList();
+        )).toList());
     }
 
     // DTO定义
