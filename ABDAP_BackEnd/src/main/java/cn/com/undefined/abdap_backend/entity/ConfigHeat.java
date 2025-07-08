@@ -25,13 +25,4 @@ public class ConfigHeat {
     
     @Column(name = "select_count")
     private Integer selectCount;
-    
-    /**
-     * 关联的配置项（多对一关系）
-     * 通过config_id外键建立关联
-     */
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "config_id", insertable = false, updatable = false)
-    private Config config;
-    
 }

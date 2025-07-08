@@ -16,17 +16,17 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 @AllArgsConstructor
 public class Opinion {
-    
+
     @Id
     @Column(name = "opinion_id")
     private Long opinionId;
-    
+
     @Column(name = "car_model_id", nullable = false)
     private Long carModelId;
-    
+
     @Column(name = "score", precision = 3, scale = 1)
     private BigDecimal score;
-      /**
+    /**
      * 关联的车型（一对一关系）
      * 通过car_model_id外键建立关联
      * 每个车型只有一个综合的口碑评价记录

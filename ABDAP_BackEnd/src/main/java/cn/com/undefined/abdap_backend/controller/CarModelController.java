@@ -18,10 +18,10 @@ import java.util.List;
 @RequestMapping("/api/car-models")
 @CrossOrigin(origins = "*")
 public class CarModelController {
-    
+
     @Autowired
     private CarModelService carModelService;
-    
+
     /**
      * 获取车型列表
      * GET /api/carModels
@@ -31,7 +31,19 @@ public class CarModelController {
         List<CarModelDTO> carModels = carModelService.getAllCarModels();
         return ResponseUtil.success(carModels);
     }
-    
+
+    /**
+     * 获取分页车型列表
+     * GET /api/car-models/page?page=0&size=10
+     */
+    @GetMapping("/page")
+    public ResponseEntity<ApiResponse<List<CarModelDTO>>> getCarModelsByPage(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        List<CarModelDTO> carModels = carModelService.getCarModelsByPage(page, size);
+        return ResponseUtil.success(carModels);
+    }
+
     /**
      * 获取特定车型详情
      * GET /api/carModels/{id}
@@ -40,5 +52,17 @@ public class CarModelController {
     public ResponseEntity<ApiResponse<CarModelDTO>> getCarModel(@PathVariable Long id) {
         CarModelDTO carModel = carModelService.getCarModelById(id);
         return ResponseUtil.success(carModel);
+    }
+
+    /**
+     * 车型关键字模糊搜索
+     * GET /api/car-models/search?keyword=xxx&limit=100
+     */
+    @GetMapping("/search")
+    public ResponseEntity<ApiResponse<List<CarModelDTO>>> searchCarModels(
+            @RequestParam String keyword,
+            @RequestParam(defaultValue = "100") int limit) {
+        List<CarModelDTO> carModels = carModelService.searchCarModels(keyword, limit);
+        return ResponseUtil.success(carModels);
     }
 }
