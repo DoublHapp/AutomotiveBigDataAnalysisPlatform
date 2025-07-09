@@ -120,7 +120,7 @@ const loading = ref(false)
 const analyzing = ref(false)
 
 // 车型选择与分析
-const selectedModel = ref<string>('1')
+const selectedModel = ref<string>('')
 const forecastPeriod = ref('12')
 const forecastGranularity = ref('monthly')
 
@@ -292,9 +292,10 @@ function fillSeasonalInventoryByForecastPeriods() {
 }
 
 // 在补货周期或历史销量变化时调用
-watch([() => replenishmentCycle.value, () => historySales], () => {
+function onReplenishmentCycleChange() {
   fillSeasonalInventoryByForecastPeriods()
-})
+  updateInventoryChart()
+}
 
 // 监听补货周期变化是否合理
 watch(replenishmentCycle, (val) => {
@@ -354,19 +355,66 @@ function calcLifecycleStage(launchDate: string, expectedLifecycle: number=84) {
   return
 }
 
+// 防抖函数
+function debounce<T extends (...args: any[]) => any>(
+  func: T,
+  wait: number = 300,
+  immediate: boolean = false
+): (...args: Parameters<T>) => void {
+  let timer: ReturnType<typeof setTimeout> | null = null
+
+  return function (this: unknown, ...args: Parameters<T>) {
+    if (timer) clearTimeout(timer)
+
+    if (immediate && !timer) {
+      func.apply(this, args)
+    }
+
+    timer = setTimeout(() => {
+      if (!immediate) {
+        func.apply(this, args)
+      }
+      timer = null
+    }, wait)
+  }
+}
+
+// 异步防抖
+function debounceAsync<T extends (...args: any[]) => Promise<any>>(
+  fn: T,
+  delay = 300
+): (...args: Parameters<T>) => Promise<ReturnType<T>> {
+  let timer: ReturnType<typeof setTimeout> | null = null
+  let resolveList: ((value: any) => void)[] = []
+
+  return function (...args: Parameters<T>): Promise<ReturnType<T>> {
+    return new Promise<ReturnType<T>>((resolve) => {
+      if (timer) clearTimeout(timer)
+      resolveList.push(resolve)
+
+      timer = setTimeout(async () => {
+        const result = await fn(...args)
+        resolveList.forEach((r) => r(result))
+        resolveList = []
+      }, delay)
+    })
+  }
+}
+
 // API调用函数
-const fetchCarModels = async () => {
+const fetchCarModels = async (query: string) => {
   try {
-    const response = await axios.get('/api/car-models/page?=page=1&size=20')
+    const response = await axios.get('/api/car-models/search', { params: { keyword: query, limit: 20 } })
     if (response.data.status === 200) {
+      carModelOptions.value = [] // 清空之前的选项
       response.data.data.forEach((model: any) => {
         carModelOptions.value.push({
-          label: `${model.modelName}`, //要改，现在品牌和车型分开了，接口和模拟数据不匹配。
+          label: model.modelFullName, //要改，现在品牌和车型分开了，接口和模拟数据不匹配。
           value: model.carModelId.toString(),
           launchDate: model.launchDate,
         })
       })
-      console.log('获取车型列表成功:', response)
+      console.log('可选车型列表:', carModelOptions.value)
     } else {
       console.error('获取车型列表失败:', response.data.message)
     }
@@ -374,6 +422,30 @@ const fetchCarModels = async () => {
     console.error('获取车型列表失败:', error)
   }
 }
+
+// 搜索防抖
+const debounceFetchCarModels = debounceAsync(fetchCarModels, 500)
+
+
+// const fetchCarModels = async (query: string) => {
+//   try {
+//     const response = await axios.get('/api/car-models/page?=page=1&size=20')
+//     if (response.data.status === 200) {
+//       response.data.data.forEach((model: any) => {
+//         carModelOptions.value.push({
+//           label: `${model.modelName}`, //要改，现在品牌和车型分开了，接口和模拟数据不匹配。
+//           value: model.carModelId.toString(),
+//           launchDate: model.launchDate,
+//         })
+//       })
+//       console.log('获取车型列表成功:', response)
+//     } else {
+//       console.error('获取车型列表失败:', response.data.message)
+//     }
+//   } catch (error) {
+//     console.error('获取车型列表失败:', error)
+//   }
+// }
 
 const fetchModelAnalysis = async (modelId: string) => {
   try {
@@ -510,7 +582,7 @@ const startModelAnalysis = async () => {
 const refreshData = async () => {
   loading.value = true
   try {
-    await fetchCarModels()
+    // await fetchCarModels()
     if (selectedModel.value) {
       await startModelAnalysis()
     }
@@ -1091,7 +1163,7 @@ onMounted(async () => {
   ElMessage.success('欢迎使用车型销售预测系统！')
 
   try {
-    await fetchCarModels()
+    // await fetchCarModels()
     window.addEventListener('resize', handleResize)
   } catch (error) {
     console.error('页面初始化失败:', error)
@@ -1163,6 +1235,8 @@ onUnmounted(() => {
                   v-model="selectedModel"
                   placeholder="选择要分析的车型"
                   filterable
+                  remote
+                  :remote-method="debounceFetchCarModels"
                   @change="handleModelChange"
                   style="width: 100%"
                 >
@@ -1349,36 +1423,6 @@ onUnmounted(() => {
                 </el-row>
               </div>
             </div>
-
-            <!-- 竞品定价对比 -->
-            <div class="competitor-pricing">
-              <h5>竞品定价对比</h5>
-              <el-table :data="competitorPricing" size="small">
-                <el-table-column prop="modelName" label="车型" width="120" />
-                <el-table-column prop="currentPrice" label="当前价格" width="100">
-                  <template #default="{ row }"> ¥{{ row.currentPrice.toLocaleString() }} </template>
-                </el-table-column>
-                <el-table-column prop="pricePosition" label="价格定位" width="100">
-                  <template #default="{ row }">
-                    <el-tag :type="row.pricePosition.type" size="small">
-                      {{ row.pricePosition.text }}
-                    </el-tag>
-                  </template>
-                </el-table-column>
-                <el-table-column prop="marketResponse" label="市场反应" min-width="150">
-                  <template #default="{ row }">
-                    <el-progress
-                      :percentage="row.marketResponse"
-                      :stroke-width="6"
-                      :show-text="false"
-                    />
-                    <span style="margin-left: 8px; font-size: 12px">
-                      {{ row.marketResponse }}%
-                    </span>
-                  </template>
-                </el-table-column>
-              </el-table>
-            </div>
           </div>
         </el-card>
       </el-col>
@@ -1402,6 +1446,7 @@ onUnmounted(() => {
                 :controls="false"
                 placeholder="补货周期"
                 style="width: 120px"
+                @change="onReplenishmentCycleChange"
               />
             </el-form-item>
             <!-- 库存预测图表 -->

@@ -12,6 +12,7 @@ import cn.com.undefined.abdap_backend.entity.Ranking;
 import cn.com.undefined.abdap_backend.repository.RankingRepository;
 import cn.com.undefined.abdap_backend.repository.SaleRecordRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -226,8 +227,7 @@ public class RankingService {
                         BigDecimal seatNumScore = arr[16] != null ? new BigDecimal(arr[16].toString())
                                         : BigDecimal.ZERO;
                         BigDecimal brandScore = arr[17] != null ? new BigDecimal(arr[17].toString()) : BigDecimal.ZERO;
-                        BigDecimal totalScore = budgetScore.add(levelScore).add(engineScore)
-                                        .add(seatNumScore).add(brandScore);
+                        BigDecimal totalScore = arr[18] != null ? new BigDecimal(arr[18].toString()) : BigDecimal.ZERO;
 
                         return new CarModelMatchScoreDTO(carModelDTO, totalScore, budgetScore, levelScore,
                                         engineScore, seatNumScore, brandScore);
@@ -485,6 +485,10 @@ public class RankingService {
                         // 处理序列化异常
                         e.printStackTrace();
                         System.err.println("\n\n\nError saving ranking data: " + e.getMessage() + "\n\n\n");
+                } catch(DataIntegrityViolationException e){
+                        // 处理数据完整性异常（如唯一约束冲突）
+                        e.printStackTrace();
+                        System.err.println("\n\n\nData integrity violation: " + e.getMessage() + "\n\n\n");
                 }
         }
 

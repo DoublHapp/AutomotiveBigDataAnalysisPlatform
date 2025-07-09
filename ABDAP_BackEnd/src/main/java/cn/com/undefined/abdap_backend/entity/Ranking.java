@@ -11,7 +11,10 @@ import java.time.LocalDate;
  * 对应数据库ranking表
  */
 @Entity
-@Table(name = "ranking")
+@Table(
+    name = "ranking",
+    uniqueConstraints = @UniqueConstraint(columnNames = {"rank_type"})
+)
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

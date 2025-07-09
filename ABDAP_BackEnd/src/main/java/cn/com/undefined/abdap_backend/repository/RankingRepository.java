@@ -161,32 +161,44 @@ public interface RankingRepository extends JpaRepository<Ranking, Long> {
         * @return Object[]: [carModelId, modelName, modelFullName, brandId, brandName,
         *         level, launchDate, officialPrice, engineType, seatNum, driveType,
         *         rangeKm, imageUrl,
-        *         budgetScore, levelScore, engineTypeScore, seatNumScore, brandScore]
+        *         budgetScore, levelScore, engineTypeScore, seatNumScore, brandScore,
+        *         totalScore]
         */
-       @Query(value = "SELECT " +
-                     "c.car_model_id, c.model_name, c.model_full_name, b.brand_id, b.brand_name, "
+       @Query(value = "SELECT t.*, " +
+                     "  (t.budgetScore + t.levelScore + t.engineTypeScore + t.seatNumScore + t.brandScore) AS totalScore "
                      +
-                     "c.level, c.launch_date, c.official_price, c.engine_type, " +
-                     "c.seat_num, c.drive_type, c.range_km, c.image_url, " +
+                     "FROM (" +
+                     "  SELECT " +
+                     "    ANY_VALUE(c.car_model_id), c.model_name, ANY_VALUE(c.model_full_name), ANY_VALUE(b.brand_id), ANY_VALUE(b.brand_name), "
+                     +
+                     "    ANY_VALUE(c.level), ANY_VALUE(c.launch_date), MAX(c.official_price) AS official_price, ANY_VALUE(c.engine_type), "
+                     +
+                     "    ANY_VALUE(c.seat_num), ANY_VALUE(c.drive_type), ANY_VALUE(c.range_km), ANY_VALUE(c.image_url), "
+                     +
                      // 匹配度打分各项
                      // 预算匹配分（30分，区间内满分，超出区间线性递减）
-                     "CASE " +
-                     "  WHEN :minPrice IS NOT NULL AND c.official_price < :minPrice THEN GREATEST(0, 30 - ((:minPrice - c.official_price) / (:minPrice)) * 30) "
+                     "    CASE " +
+                     "      WHEN :minPrice IS NOT NULL AND MAX(c.official_price) < :minPrice THEN GREATEST(0, 30 - ((:minPrice - MAX(c.official_price)) / (:minPrice)) * 30) "
                      +
-                     "  WHEN :maxPrice IS NOT NULL AND c.official_price > :maxPrice THEN GREATEST(0, 30 - ((c.official_price - :maxPrice) / (:maxPrice)) * 30) "
+                     "      WHEN :maxPrice IS NOT NULL AND MAX(c.official_price) > :maxPrice THEN GREATEST(0, 30 - ((MAX(c.official_price) - :maxPrice) / (:maxPrice)) * 30) "
                      +
-                     "  ELSE 30 END AS budgetScore, " +
+                     "      ELSE 30 END AS budgetScore, " +
                      // 车型类别匹配分（25分）
-                     "CASE WHEN :level IS NULL OR c.level = :level THEN 25 ELSE 0 END AS levelScore, " +
+                     "    CASE WHEN :level IS NULL OR ANY_VALUE(c.level) = :level THEN 25 ELSE 0 END AS levelScore, " +
                      // 能源类型匹配分（20分）
-                     "CASE WHEN :engineType IS NULL OR c.engine_type = :engineType THEN 20 ELSE 0 END AS engineTypeScore, "
+                     "    CASE WHEN :engineType IS NULL OR ANY_VALUE(c.engine_type) = :engineType THEN 20 ELSE 0 END AS engineTypeScore, "
                      +
                      // 座位数匹配分（15分，大于等于用户需求得满分，否则0）
-                     "CASE WHEN :seatNum IS NULL OR c.seat_num >= :seatNum THEN 15 ELSE 0 END AS seatNumScore, " +
+                     "    CASE WHEN :seatNum IS NULL OR ANY_VALUE(c.seat_num) >= :seatNum THEN 15 ELSE 0 END AS seatNumScore, "
+                     +
                      // 主机厂匹配分（10分）
-                     "CASE WHEN :factory IS NULL OR b.factory = :factory THEN 10 ELSE 0 END AS brandScore " +
-                     "FROM car_model c " +
-                     "LEFT JOIN brand b ON c.brand_id = b.brand_id ", nativeQuery = true)
+                     "    CASE WHEN :factory IS NULL OR ANY_VALUE(b.factory) = :factory THEN 10 ELSE 0 END AS brandScore "
+                     +
+                     "  FROM car_model c " +
+                     "  LEFT JOIN brand b ON c.brand_id = b.brand_id " +
+                     "  GROUP BY c.model_name " +
+                     ") t " +
+                     "ORDER BY totalScore DESC", nativeQuery = true)
        List<Object[]> findCarModelMatchScoreRanking(
                      @Param("level") String level,
                      @Param("minPrice") Double minPrice,
