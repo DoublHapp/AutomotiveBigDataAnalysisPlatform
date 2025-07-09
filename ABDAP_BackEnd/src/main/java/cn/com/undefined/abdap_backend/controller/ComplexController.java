@@ -29,6 +29,16 @@ public class ComplexController {
     @Autowired
     private SaleRecordRepository saleRecordRepository;
 
+    /**
+     * 获取月度销售汇总
+     * GET
+     * /api/complex/monthly-summary?startMonth=2023-01&endMonth=2023-12&region=all&carModel=Toyota
+     * @param startMonth
+     * @param endMonth
+     * @param region
+     * @param carModel
+     * @return
+     */
     @GetMapping("/monthly-summary")
     public ResponseEntity<ApiResponse<List<MonthlySaleSummaryDTO>>> getMonthlySummary(
             @RequestParam @DateTimeFormat(pattern = "yyyy-MM") YearMonth startMonth,
@@ -52,6 +62,44 @@ public class ComplexController {
         )).toList());
     }
 
+    /**
+     * 获取市场份额汇总
+     * GET
+     * /api/complex/market-share-summary?startMonth=2023-01&endMonth=2023-12&region=all&carModel=Toyota
+     * 
+     * @param startMonth 起始月份
+     * @param endMonth   结束月份
+     * @param region     地区（可选）
+     * @param carModel   车型
+     * @return 市场份额汇总信息
+     */
+    @GetMapping("/market-share-summary")
+    public ResponseEntity<ApiResponse<MarketShareSummaryDTO>> getMarketShareSummary(
+            @RequestParam @DateTimeFormat(pattern = "yyyy-MM") YearMonth startMonth,
+            @RequestParam @DateTimeFormat(pattern = "yyyy-MM") YearMonth endMonth,
+            @RequestParam(defaultValue = "all") String region,
+            @RequestParam String carModel) {
+
+        List<Object[]> result = saleRecordRepository.findMarketShareSummary(
+                startMonth.atDay(1).toString(),
+                endMonth.atEndOfMonth().toString(),
+                "all".equalsIgnoreCase(region) ? null : region,
+                carModel);
+
+        MarketShareSummaryDTO dto = null;
+        if (result != null && !result.isEmpty()) {
+            Object[] arr = result.get(0);
+            dto = new MarketShareSummaryDTO(
+                    arr[0] != null ? new BigDecimal(arr[0].toString()) : BigDecimal.ZERO,
+                    arr[1] != null ? ((Number) arr[1]).intValue() : 0,
+                    arr[2] != null ? new BigDecimal(arr[2].toString()) : BigDecimal.ZERO);
+        } else {
+            return ResponseUtil.badRequest("没有找到相关的市场份额数据");
+        }
+
+        return ResponseUtil.success(dto);
+    }
+
     // DTO定义
     @Data
     @AllArgsConstructor
@@ -61,5 +109,24 @@ public class ComplexController {
         private String carModel;
         private Integer saleCount;
         private BigDecimal saleAmount;
+    }
+
+    @Data
+    @AllArgsConstructor
+    public static class MarketShareSummaryDTO {
+        /**
+         * 市场份额占比（如0.1234表示12.34%）
+         */
+        private BigDecimal marketShare;
+
+        /**
+         * 指定地区的总销售量
+         */
+        private Integer totalSaleCount;
+
+        /**
+         * 指定地区的总销售额
+         */
+        private BigDecimal totalSaleAmount;
     }
 }
