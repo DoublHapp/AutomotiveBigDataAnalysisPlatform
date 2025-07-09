@@ -2,6 +2,7 @@ package cn.com.undefined.abdap_backend.controller;
 
 import cn.com.undefined.abdap_backend.dto.ApiResponse;
 import cn.com.undefined.abdap_backend.dto.CarModelDTO;
+import cn.com.undefined.abdap_backend.dto.CarModelDetailDTO;
 import cn.com.undefined.abdap_backend.service.CarModelService;
 import cn.com.undefined.abdap_backend.util.ResponseUtil;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -95,5 +96,18 @@ public class CarModelController {
             @RequestParam(defaultValue = "all") String keyword) {
         List<String> factorys = carModelService.getFactorysByKeyword(keyword);
         return ResponseUtil.success(factorys);
+    }
+
+    /**
+     * 获取车型详情
+     * GET /api/car-models/detail/{carModelId}
+     * @param carModelId
+     * @return
+     */
+    @GetMapping("detail/{carModelId}")
+    public ResponseEntity<ApiResponse<CarModelDetailDTO>> getCarModelDetailDTOById(
+            @PathVariable Long carModelId) {
+        CarModelDetailDTO detail = carModelService.getCarModelDetailDTOById(carModelId);
+        return ResponseUtil.success(detail);
     }
 }

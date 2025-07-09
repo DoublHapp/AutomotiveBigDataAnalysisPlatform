@@ -1,6 +1,7 @@
 package cn.com.undefined.abdap_backend.repository;
 
 import cn.com.undefined.abdap_backend.dto.CarModelDTO;
+import cn.com.undefined.abdap_backend.dto.CarModelDetailDTO;
 import cn.com.undefined.abdap_backend.entity.CarModel;
 
 import java.util.List;
@@ -57,4 +58,22 @@ public interface CarModelRepository extends JpaRepository<CarModel, Long> {
                         "WHERE (:keyword IS NULL OR c.modelName LIKE %:keyword%) " +
                         "ORDER BY c.carModelId")
         List<CarModelDTO> findTopByKeyword(@Param("keyword") String keyword, Pageable pageable);
+
+        @Query("SELECT new cn.com.undefined.abdap_backend.dto.CarModelDetailDTO(" +
+                        "c.carModelId, c.modelName, c.modelFullName, c.brandId, b.brandName, c.level, c.launchDate, c.officialPrice, "
+                        +
+                        "c.engineType, c.seatNum, c.driveType, c.rangeKm, c.imageUrl, " +
+                        "AVG(op.powerScore), AVG(op.controlScore), AVG(op.comfortScore), AVG(op.appearanceScore), " +
+                        "AVG(op.configScore), AVG(op.totalScore), " +
+                        "SUM(COALESCE(sr.saleCount, 0))" +
+                        ") " +
+                        "FROM CarModel c " +
+                        "LEFT JOIN c.brand b " +
+                        "LEFT JOIN Opinion op ON op.carModelId = c.carModelId " +
+                        "LEFT JOIN SaleRecord sr ON sr.carModelId = c.carModelId " +
+                        "WHERE c.carModelId = :carModelId " +
+                        "GROUP BY c.carModelId, c.modelName, c.modelFullName, c.brandId, b.brandName, c.level, c.launchDate, c.officialPrice, "
+                        +
+                        "c.engineType, c.seatNum, c.driveType, c.rangeKm, c.imageUrl")
+        CarModelDetailDTO findCarModelDetailDTOById(@Param("carModelId") Long carModelId);
 }

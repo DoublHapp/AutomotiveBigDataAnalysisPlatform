@@ -22,7 +22,7 @@ public class Ranking {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long rankingId;
     
-    @Column(name = "rank_type", length = 32)
+    @Column(name = "rank_type", length = 256)
     private String rankType;
     
     @Column(name = "rank_time")
