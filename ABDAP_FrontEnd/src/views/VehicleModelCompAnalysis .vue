@@ -40,11 +40,11 @@ interface CarModel {
 
   // 对比参数
   price: number
-  performance: number
-  economy: number
-  space: number
-  safety: number
-  technology: number
+  power: number
+  control: number
+  comfort: number
+  appearance: number
+  config: number
 
   // 销量数据
   sales: number
@@ -62,11 +62,11 @@ interface SearchResult {
 
 interface WeightConfig {
   price: number
-  performance: number
-  economy: number
-  space: number
-  safety: number
-  technology: number
+  power: number
+  control: number
+  comfort: number
+  appearance: number
+  config: number
 }
 
 interface ComparisonTableRow {
@@ -99,11 +99,11 @@ const userScenario = ref('family')
 // 权重配置
 const customWeights = ref<WeightConfig>({
   price: 0.25,
-  performance: 0.15,
-  economy: 0.2,
-  space: 0.15,
-  safety: 0.15,
-  technology: 0.1,
+  power: 0.15,
+  control: 0.2,
+  comfort: 0.15,
+  appearance: 0.15,
+  config: 0.1,
 })
 
 // 对比结果数据
@@ -129,11 +129,11 @@ const totalWeight = computed(() => {
   const weights = customWeights.value
   return Math.round(
     (weights.price +
-      weights.performance +
-      weights.economy +
-      weights.space +
-      weights.safety +
-      weights.technology) *
+      weights.power +
+      weights.control +
+      weights.comfort +
+      weights.appearance +
+      weights.config) *
       100,
   )
 })
@@ -159,11 +159,11 @@ const comparisonTableData = computed(() => {
 
   const basicDimensions = [
     { dimension: 'price', label: '价格成本', unit: '万元' },
-    { dimension: 'performance', label: '动力性能', unit: '分' },
-    { dimension: 'economy', label: '经济性', unit: '分' },
-    { dimension: 'space', label: '空间舒适', unit: '分' },
-    { dimension: 'safety', label: '安全可靠', unit: '分' },
-    { dimension: 'technology', label: '科技配置', unit: '分' },
+    { dimension: 'power', label: '动力性能', unit: '分' },
+    { dimension: 'control', label: '操控性', unit: '分' },
+    { dimension: 'comfort', label: '舒适度', unit: '分' },
+    { dimension: 'appearance', label: '外观', unit: '分' },
+    { dimension: 'config', label: '科技配置', unit: '分' },
   ]
 
   const detailedDimensions = [
@@ -180,20 +180,20 @@ const comparisonTableData = computed(() => {
 // 场景权重配置
 const scenarioWeights: Record<string, WeightConfig> = {
   family: {
-    safety: 0.3,
-    space: 0.3,
-    economy: 0.25,
+    appearance: 0.3,
+    comfort: 0.3,
+    control: 0.25,
     price: 0.15,
-    performance: 0.0,
-    technology: 0.0,
+    power: 0.0,
+    config: 0.0,
   },
-  commute: { economy: 0.4, price: 0.3, space: 0.2, performance: 0.1, safety: 0.0, technology: 0.0 },
+  commute: { control: 0.4, price: 0.3, comfort: 0.2, power: 0.1, appearance: 0.0, config: 0.0 },
   business: {
-    technology: 0.25,
-    performance: 0.25,
-    safety: 0.25,
-    space: 0.15,
-    economy: 0.05,
+    config: 0.25,
+    power: 0.25,
+    appearance: 0.25,
+    comfort: 0.15,
+    control: 0.05,
     price: 0.05,
   },
 }
@@ -205,11 +205,11 @@ const calculateModelScore = (model: CarModel): number => {
 
   return (
     normalizedPrice * weights.price +
-    model.performance * weights.performance +
-    model.economy * weights.economy +
-    model.space * weights.space +
-    model.safety * weights.safety +
-    model.technology * weights.technology
+    model.power * weights.power +
+    model.control * weights.control +
+    model.comfort * weights.comfort +
+    model.appearance * weights.appearance +
+    model.config * weights.config
   )
 }
 
@@ -223,7 +223,7 @@ const getScenarioLabel = (scenario: string): string => {
     commute: '城市通勤',
     business: '商务出行',
   }
-  return labels[scenario] || scenario
+  return labels[scenario as keyof typeof labels] || scenario
 }
 
 const getRankingTagType = (scenario: string) => {
@@ -232,7 +232,7 @@ const getRankingTagType = (scenario: string) => {
     commute: 'warning',
     business: 'primary',
   }
-  return types[scenario] || 'info'
+  return types[scenario as keyof typeof types] || 'info'
 }
 
 const getRecommendationTagType = () => {
@@ -240,15 +240,18 @@ const getRecommendationTagType = () => {
 }
 
 const getDimensionIcon = (dimension: string) => {
-  const icons = {
+  const icons: Record<
+    'price' | 'power' | 'control' | 'comfort' | 'appearance' | 'config',
+    any
+  > = {
     price: Money,
-    performance: Lightning,
-    economy: MagicStick,
-    space: OfficeBuilding,
-    safety: Lock,
-    technology: Monitor,
+    power: Lightning,
+    control: MagicStick,
+    comfort: OfficeBuilding,
+    appearance: Lock,
+    config: Monitor,
   }
-  return icons[dimension] || Star
+  return icons[dimension as keyof typeof icons] || Star
 }
 
 const getBestValueClass = (row: ComparisonTableRow, modelId: number) => {
@@ -276,7 +279,8 @@ const getParameterRawValue = (row: ComparisonTableRow, modelId: number): number 
   const model = selectedModels.value.find((m) => m.id === modelId)
   if (!model) return 0
 
-  return model[row.dimension] || 0
+  const value = model[row.dimension as keyof typeof  model]
+  return typeof value === 'number' ? value : 0
 }
 
 const getModelScore = (modelId: number): number => {
@@ -289,11 +293,11 @@ const getModelPros = (modelId: number): string[] => {
   if (!model) return []
 
   const pros = []
-  if (model.performance >= 80) pros.push('动力性能出色')
-  if (model.economy >= 85) pros.push('燃油经济性优秀')
-  if (model.space >= 80) pros.push('空间宽敞舒适')
-  if (model.safety >= 90) pros.push('安全配置丰富')
-  if (model.technology >= 85) pros.push('科技配置先进')
+  if (model.power >= 80) pros.push('动力性能出色')
+  if (model.control >= 85) pros.push('可操控性强')
+  if (model.comfort >= 80) pros.push('空间宽敞舒适')
+  if (model.appearance >= 90) pros.push('型格兼备，外观出众')
+  if (model.config >= 85) pros.push('科技配置丰富先进')
   if (model.price <= 300000) pros.push('价格具有竞争力')
 
   return pros.slice(0, 3)
@@ -304,11 +308,11 @@ const getModelCons = (modelId: number): string[] => {
   if (!model) return []
 
   const cons = []
-  if (model.performance < 60) cons.push('动力表现一般')
-  if (model.economy < 60) cons.push('油耗偏高')
-  if (model.space < 60) cons.push('空间相对局促')
-  if (model.safety < 70) cons.push('安全配置有待提升')
-  if (model.technology < 60) cons.push('科技配置较少')
+  if (model.power < 60) cons.push('动力表现一般')
+  if (model.control < 60) cons.push('操控性一般')
+  if (model.comfort < 60) cons.push('空间相对局促，舒适性不足')
+  if (model.appearance < 70) cons.push('外观缺乏特色')
+  if (model.config < 60) cons.push('科技配置较少')
   if (model.price > 500000) cons.push('价格偏高')
 
   return cons.slice(0, 2)
@@ -319,10 +323,11 @@ const getTargetAudience = (modelId: number): string => {
   if (!model) return ''
 
   if (model.price > 500000) return '追求品质的高端用户'
-  if (model.space >= 85 && model.safety >= 85) return '注重安全的家庭用户'
-  if (model.performance >= 85) return '追求驾驶乐趣的年轻用户'
-  if (model.economy >= 85) return '注重经济实用的理性用户'
-  if (model.technology >= 85) return '喜欢科技配置的时尚用户'
+  if (model.comfort >= 85 ) return '注重舒适度的家庭用户'
+  if (model.appearance >= 85) return '喜欢个性化的时尚用户'
+  if (model.power >= 85) return '注重强大动力的性能用户'
+  if (model.control >= 85) return '追求驾驶乐趣的年轻用户'
+  if (model.config >= 85) return '喜欢科技配置的时尚用户'
 
   return '追求均衡表现的主流用户'
 }
@@ -336,8 +341,8 @@ const getBestChoiceReason = (): string => {
   if (!best) return ''
 
   const scenario = userScenario.value
-  if (scenario === 'family') return '在安全性和空间表现方面最为出色，非常适合家庭使用'
-  if (scenario === 'commute') return '在经济性和实用性方面表现突出，是通勤出行的理想选择'
+  if (scenario === 'family') return '在外观性和舒适度表现方面最为出色，非常适合家庭使用'
+  if (scenario === 'commute') return '在经济性和舒适度方面表现突出，是通勤出行的理想选择'
   if (scenario === 'business') return '在品质和科技配置方面领先，彰显商务品味'
 
   return '综合表现最为均衡，性价比突出'
@@ -359,6 +364,53 @@ const getPremiumChoiceReason = (): string => {
   return '品质卓越，配置丰富'
 }
 
+// 防抖函数
+function debounce<T extends (...args: any[]) => any>(
+  func: T,
+  wait: number = 300,
+  immediate: boolean = false
+): (...args: Parameters<T>) => void {
+  let timer: ReturnType<typeof setTimeout> | null = null
+
+  return function (this: unknown, ...args: Parameters<T>) {
+    if (timer) clearTimeout(timer)
+
+    if (immediate && !timer) {
+      func.apply(this, args)
+    }
+
+    timer = setTimeout(() => {
+      if (!immediate) {
+        func.apply(this, args)
+      }
+      timer = null
+    }, wait)
+  }
+}
+
+// 异步防抖
+function debounceAsync<T extends (...args: any[]) => Promise<any>>(
+  fn: T,
+  delay = 300
+): (...args: Parameters<T>) => Promise<ReturnType<T>> {
+  let timer: ReturnType<typeof setTimeout> | null = null
+  let resolveList: ((value: any) => void)[] = []
+
+  return function (...args: Parameters<T>): Promise<ReturnType<T>> {
+    return new Promise<ReturnType<T>>((resolve) => {
+      if (timer) clearTimeout(timer)
+      resolveList.push(resolve)
+
+      timer = setTimeout(async () => {
+        const result = await fn(...args)
+        resolveList.forEach((r) => r(result))
+        resolveList = []
+      }, delay)
+    })
+  }
+}
+
+
 // API 调用函数
 const searchModels = async (query: string) => {
   if (!query) {
@@ -368,38 +420,60 @@ const searchModels = async (query: string) => {
 
   searching.value = true
   try {
-    const response = await axios.get('/api/cars/search', { params: { q: query, limit: 10 } })
-    if (response.data.status === 1) {
-      searchResults.value = response.data.data
+    const response = await axios.get('/api/car-models/search', { params: { keyword: query, limit: 10 } })
+    if (response.data.status === 200 && response.data.data) {
+      // searchResults.value = generateMockSearchResults(query)
+      searchResults.value = response.data.data.map((item: any) => ({
+        id: item.id,
+        name: item.modelName,
+        brand: item.brandName,
+        priceRange: item.officialPrice,
+      }))
     } else {
       searchResults.value = generateMockSearchResults(query)
+      throw new Error(`API返回错误状态: ${response.data.status}`)
     }
   } catch (error) {
     console.error('搜索车型失败:', error)
+    ElMessage.error('搜索车型数据失败')
     searchResults.value = generateMockSearchResults(query)
   } finally {
     searching.value = false
   }
 }
 
+// 搜索防抖
+const debounceSearchModels = debounceAsync(searchModels, 500)
+
 const fetchHotCarList = async () => {
   try {
-    const response = await axios.get('/api/cars/hot', { params: { limit: 20 } })
-    if (response.data.status === 1) {
-      hotCarList.value = response.data.data
+    // 现在使用生成数据，时间定为2024-12到2025-05；真实数据库应当是2025-05到2025-05
+    const response = await axios.get('/api/ranking/sales', { params: { startMonth: "2024-12", endMonth: "2025-05", region: "all", top: 10 } })
+    if (response.data.status === 200 && response.data.data) {
+      hotCarList.value = response.data.data.map((item: any) => ({
+        id: item.carModelId,
+        name: item.modelName, // 接通真是数据库再决定带不带版本名
+        brand: item.brandName,
+        priceRange: item.officialPrice,
+        image: item.imageUrl || `https://picsum.photos/300/200?random=${item.id}`,
+        sales: item.salesCount,
+        rating: item.opinionScore,
+      }))
     } else {
       hotCarList.value = generateMockHotCarList()
+      throw new Error(`API返回错误状态: ${response.data.status}`)
     }
   } catch (error) {
     console.error('获取热门车型失败:', error)
+        ElMessage.error('搜索热门车型数据失败')
     hotCarList.value = generateMockHotCarList()
   }
 }
 
 const fetchModelDetails = async (modelId: number): Promise<CarModel | null> => {
   try {
-    const response = await axios.get(`/api/cars/${modelId}`)
-    if (response.data.status === 1) {
+    const response = await axios.get(`/api/car-models/detail/${modelId}`)
+    if (response.data.status === 200 && response.data.data) {
       return response.data.data
     } else {
       return generateMockCarModel(modelId)
@@ -409,6 +483,19 @@ const fetchModelDetails = async (modelId: number): Promise<CarModel | null> => {
     return generateMockCarModel(modelId)
   }
 }
+// const fetchModelDetails = async (modelId: number): Promise<CarModel | null> => {
+//   try {
+//     const response = await axios.get(`/api/car-models/search/${modelId}`)
+//     if (response.data.status === 200 && response.data.data) {
+//       return response.data.data
+//     } else {
+//       return generateMockCarModel(modelId)
+//     }
+//   } catch (error) {
+//     console.error('获取车型详情失败:', error)
+//     return generateMockCarModel(modelId)
+//   }
+// }
 
 // 模拟数据生成
 const generateMockSearchResults = (query: string): SearchResult[] => {
@@ -462,11 +549,11 @@ const generateMockCarModel = (modelId: number): CarModel => {
 
     // 模拟对比参数
     price: Math.floor(Math.random() * 400000) + 200000,
-    performance: Math.floor(Math.random() * 30) + 70,
-    economy: Math.floor(Math.random() * 30) + 70,
-    space: Math.floor(Math.random() * 30) + 70,
-    safety: Math.floor(Math.random() * 30) + 70,
-    technology: Math.floor(Math.random() * 30) + 70,
+    power: Math.floor(Math.random() * 30) + 70,
+    control: Math.floor(Math.random() * 30) + 70,
+    comfort: Math.floor(Math.random() * 30) + 70,
+    appearance: Math.floor(Math.random() * 30) + 70,
+    config: Math.floor(Math.random() * 30) + 70,
 
     sales: Math.floor(Math.random() * 8000) + 2000,
     rating: Math.random() * 2 + 3,
@@ -539,11 +626,11 @@ const handleScenarioChange = () => {
 const resetWeights = () => {
   customWeights.value = {
     price: 0.25,
-    performance: 0.15,
-    economy: 0.2,
-    space: 0.15,
-    safety: 0.15,
-    technology: 0.1,
+    power: 0.15,
+    control: 0.2,
+    comfort: 0.15,
+    appearance: 0.15,
+    config: 0.1,
   }
   ElMessage.info('权重已重置为默认值')
 }
@@ -625,7 +712,7 @@ const initRadarChart = async () => {
 
   radarChartInstance = echarts.init(radarChart.value)
 
-  const dimensions = ['价格成本', '动力性能', '经济性', '空间舒适', '安全可靠', '科技配置']
+  const dimensions = ['价格成本', '动力性能', '操控性', '空间舒适', '外观', '科技配置']
   const maxValues =
     radarViewType.value === 'score'
       ? [100, 100, 100, 100, 100, 100]
@@ -637,19 +724,19 @@ const initRadarChart = async () => {
       radarViewType.value === 'score'
         ? [
             Math.max(0, 100 - model.price / 6000), // 价格转换为评分
-            model.performance,
-            model.economy,
-            model.space,
-            model.safety,
-            model.technology,
+            model.power,
+            model.control,
+            model.comfort,
+            model.appearance,
+            model.config,
           ]
         : [
             model.price,
-            model.performance,
-            model.economy,
-            model.space,
-            model.safety,
-            model.technology,
+            model.power,
+            model.control,
+            model.comfort,
+            model.appearance,
+            model.config,
           ]
 
     return {
@@ -709,21 +796,22 @@ const initBarChart = async () => {
       unit: '万元',
       transform: (v: number) => Math.round(v / 10000),
     },
-    performance: {
+    power: {
       label: '性能对比',
-      field: 'performance',
+      field: 'power',
       unit: '分',
       transform: (v: number) => v,
     },
-    economy: { label: '经济性对比', field: 'economy', unit: '分', transform: (v: number) => v },
-    space: { label: '空间对比', field: 'space', unit: '分', transform: (v: number) => v },
-    safety: { label: '安全性对比', field: 'safety', unit: '分', transform: (v: number) => v },
-    technology: { label: '科技配置', field: 'technology', unit: '分', transform: (v: number) => v },
+    control: { label: '操控性对比', field: 'control', unit: '分', transform: (v: number) => v },
+    comfort: { label: '舒适度对比', field: 'comfort', unit: '分', transform: (v: number) => v },
+    appearance: { label: '外观对比', field: 'appearance', unit: '分', transform: (v: number) => v },
+    config: { label: '配置对比', field: 'config', unit: '分', transform: (v: number) => v },
   }
 
-  const dimension = dimensionMap[barChartDimension.value]
+  // 有大量的类型索引问题，直接用类型断言 as keyof typeof 解决了，有安全隐患
+  const dimension = dimensionMap[barChartDimension.value as keyof typeof dimensionMap]
   const xAxisData = selectedModels.value.map((m) => `${m.brand}\n${m.name}`)
-  const seriesData = selectedModels.value.map((m) => dimension.transform(m[dimension.field]))
+  const seriesData = selectedModels.value.map((m) => dimension.transform(m[dimension.field as keyof typeof m] as keyof typeof dimension.transform))
 
   const option = {
     title: {
@@ -1004,7 +1092,7 @@ onUnmounted(() => {
                 placeholder="搜索车型名称或品牌"
                 filterable
                 remote
-                :remote-method="searchModels"
+                :remote-method="debounceSearchModels"
                 :loading="searching"
                 style="width: 100%"
                 @change="handleAddModel"
@@ -1096,20 +1184,20 @@ onUnmounted(() => {
                 <el-icon><Lightning /></el-icon>
                 <span>动力性能</span>
                 <span class="weight-value"
-                  >{{ (customWeights.performance * 100).toFixed(0) }}%</span
+                  >{{ (customWeights.power * 100).toFixed(0) }}%</span
                 >
               </div>
-              <el-slider v-model="customWeights.performance" :min="0" :max="1" :step="0.05" />
+              <el-slider v-model="customWeights.power" :min="0" :max="1" :step="0.05" />
             </div>
           </el-col>
           <el-col :span="8">
             <div class="weight-item">
               <div class="weight-label">
                 <el-icon><MagicStick/></el-icon>
-                <span>经济性</span>
-                <span class="weight-value">{{ (customWeights.economy * 100).toFixed(0) }}%</span>
+                <span>操控性</span>
+                <span class="weight-value">{{ (customWeights.control * 100).toFixed(0) }}%</span>
               </div>
-              <el-slider v-model="customWeights.economy" :min="0" :max="1" :step="0.05" />
+              <el-slider v-model="customWeights.control" :min="0" :max="1" :step="0.05" />
             </div>
           </el-col>
         </el-row>
@@ -1119,19 +1207,19 @@ onUnmounted(() => {
               <div class="weight-label">
                 <el-icon><OfficeBuilding /></el-icon>
                 <span>空间舒适</span>
-                <span class="weight-value">{{ (customWeights.space * 100).toFixed(0) }}%</span>
+                <span class="weight-value">{{ (customWeights.comfort * 100).toFixed(0) }}%</span>
               </div>
-              <el-slider v-model="customWeights.space" :min="0" :max="1" :step="0.05" />
+              <el-slider v-model="customWeights.comfort" :min="0" :max="1" :step="0.05" />
             </div>
           </el-col>
           <el-col :span="8">
             <div class="weight-item">
               <div class="weight-label">
                 <el-icon><Lock /></el-icon>
-                <span>安全可靠</span>
-                <span class="weight-value">{{ (customWeights.safety * 100).toFixed(0) }}%</span>
+                <span>外观</span>
+                <span class="weight-value">{{ (customWeights.appearance * 100).toFixed(0) }}%</span>
               </div>
-              <el-slider v-model="customWeights.safety" :min="0" :max="1" :step="0.05" />
+              <el-slider v-model="customWeights.appearance" :min="0" :max="1" :step="0.05" />
             </div>
           </el-col>
           <el-col :span="8">
@@ -1139,9 +1227,9 @@ onUnmounted(() => {
               <div class="weight-label">
                 <el-icon><Monitor /></el-icon>
                 <span>科技配置</span>
-                <span class="weight-value">{{ (customWeights.technology * 100).toFixed(0) }}%</span>
+                <span class="weight-value">{{ (customWeights.config * 100).toFixed(0) }}%</span>
               </div>
-              <el-slider v-model="customWeights.technology" :min="0" :max="1" :step="0.05" />
+              <el-slider v-model="customWeights.config" :min="0" :max="1" :step="0.05" />
             </div>
           </el-col>
         </el-row>
@@ -1222,11 +1310,11 @@ onUnmounted(() => {
                 <span>参数柱状图对比</span>
                 <el-select v-model="barChartDimension" size="small" style="width: 120px">
                   <el-option label="价格对比" value="price" />
-                  <el-option label="性能对比" value="performance" />
-                  <el-option label="经济性对比" value="economy" />
-                  <el-option label="空间对比" value="space" />
-                  <el-option label="安全性对比" value="safety" />
-                  <el-option label="科技配置" value="technology" />
+                  <el-option label="性能对比" value="power" />
+                  <el-option label="操控性对比" value="control" />
+                  <el-option label="舒适度对比" value="comfort" />
+                  <el-option label="外观对比" value="appearance" />
+                  <el-option label="配置对比" value="config" />
                 </el-select>
               </div>
             </template>
@@ -1389,7 +1477,7 @@ onUnmounted(() => {
                 </h4>
                 <div class="choice-brief">
                   <span class="choice-name"
-                    >{{ getBudgetChoice().brand }} {{ getBudgetChoice().name }}</span
+                    >{{ getBudgetChoice()?.brand }} {{ getBudgetChoice()?.name }}</span
                   >
                   <span class="choice-highlight">{{ getBudgetChoiceReason() }}</span>
                 </div>
@@ -1402,7 +1490,7 @@ onUnmounted(() => {
                 </h4>
                 <div class="choice-brief">
                   <span class="choice-name"
-                    >{{ getPremiumChoice().brand }} {{ getPremiumChoice().name }}</span
+                    >{{ getPremiumChoice()?.brand }} {{ getPremiumChoice()?.name }}</span
                   >
                   <span class="choice-highlight">{{ getPremiumChoiceReason() }}</span>
                 </div>
