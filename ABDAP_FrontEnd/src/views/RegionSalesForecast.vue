@@ -240,10 +240,8 @@ const fetchRegionAnalysis = async () => {
     params.append('regionName', selectedRegion.value.toString())
     params.append('months', forecastPeriod.value.toString())
 
-    console.log('请求地区分析url:', `/api/prediction/ARIMA/detail?regionId=110&months=6`)
     const response = await axios.get(`/api/prediction/ARIMA/detail?${params.toString()}`)
     if (response.data.status === 200 && response.data.data) {
-      console.log('获取地区分析数据:', response)
       return response.data.data
     } else {
       throw new Error(`API返回错误状态: ${response.data.status}`)
@@ -256,7 +254,7 @@ const fetchRegionAnalysis = async () => {
 
 const fetchRegionRank = async () => {
     try {
-    const response = await axios.get(`/api/ranking/market-share}`,{ params:{
+    const response = await axios.get(`/api/ranking/market-share`,{ params:{
       startMonth: "2025-05",
       endMonth: "2025-05",
       region: selectedRegion.value,
@@ -349,7 +347,6 @@ async function fetchCitiesData() {
 
     const res = await axios.get(`/api/sale-records/multiple?${params.toString()}`)
     if(res.data.status === 200){
-      console.log('获取城市数据:', res)
       return processResponseData(res.data.data)
     }else{
       console.error('获取城市数据分析失败:', res.data.message)
@@ -447,8 +444,9 @@ const generateMockRegionAnalysis = () => {
     },
   ]
 
+  console.log('生成库存推荐数据:')
   // 生成库存推荐数据
-  inventoryRecommendations.value = [
+  inventoryRecommendations.value = inventoryRecommendations.value.concat([
     {
       region: '朝阳区',
       currentLevel: 1200,
@@ -479,6 +477,7 @@ const generateMockRegionAnalysis = () => {
       adjustmentPercent: 15.6,
     },
   ]
+  )
 
   hasResults.value = true
 }
@@ -654,7 +653,6 @@ const exportReport = () => {
 
 // 图表初始化函数
 const initAllCharts = async () => {
-  console.log("1111111111111111111")
   await Promise.all([
     initRegionTrendChart(),
     initCompetitionChart(),
@@ -663,9 +661,7 @@ const initAllCharts = async () => {
 }
 
 const initRegionTrendChart = async () => {
-  console.log(regionTrendChart.value, "区域趋势图元素")
   if (!regionTrendChart.value) {
-    console.log("1111111111111111111")
     return
   }
   
@@ -676,7 +672,6 @@ const initRegionTrendChart = async () => {
   }
 
   regionTrendChartInstance = echarts.init(regionTrendChart.value)
-  console.log("区域趋势图初始化完成111111111111111111111111111111111")
   // const months = ['1月', '2月', '3月', '4月', '5月', '6月']
   // const historicalData = [1200, 1350, 1180, 1420, 1380, 1450]
   // const forecastData = [1520, 1680, 1750, 1890, 1950, 2100]
@@ -784,7 +779,66 @@ const initCompetitionChart = async () => {
     },
     tooltip: {
       trigger: 'axis',
-      axisPointer: { type: 'shadow' },
+      axisPointer: { 
+        type: 'shadow',
+        shadowStyle: {
+          color: 'rgba(150, 150, 150, 0.1)'
+        }
+      },
+      formatter: (params: any) => {
+        const item = params[0].data as RegionalCompetitor;
+        const growthColor = item.growth >= 0 ? '#28a745' : '#dc3545';
+        const marketShareColor = 
+          item.marketShare > 7 ? '#67c23a' : 
+          item.marketShare > 4 ? '#e6a23c' : '#f56c6c';
+        
+        return `
+          <div style="
+            padding: 8px;
+            background: white;
+            border-radius: 4px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border: 1px solid #eee;
+          ">
+            <div style="
+              font-size: 14px;
+              font-weight: bold;
+              color: #333;
+              margin-bottom: 8px;
+              padding-bottom: 4px;
+              border-bottom: 1px dashed #eee;
+            ">
+              ${item.modelName}
+            </div>
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr>
+                <td style="padding: 4px 0; width: 80px; color: #666;">市场份额</td>
+                <td style="padding: 4px 0;">
+                  <span style="
+                    display: inline-block;
+                    width: 8px;
+                    height: 8px;
+                    border-radius: 50%;
+                    background: ${marketShareColor};
+                    margin-right: 6px;
+                  "></span>
+                  <span style="font-weight: bold;">${item.marketShare.toFixed(1)}%</span>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding: 4px 0; color: #666;">同比增长</td>
+                <td style="padding: 4px 0; font-weight: bold; color: ${growthColor}">
+                  ${item.growth >= 0 ? '+' : ''}${item.growth.toFixed(1)}%
+                </td>
+              </tr>
+              <tr>
+                <td style="padding: 4px 0; color: #666;">销售数量</td>
+                <td style="padding: 4px 0; font-weight: bold;">${item.saleCount}</td>
+              </tr>
+            </table>
+          </div>
+        `;
+      }
     },
     grid: {
       left: '3%',
@@ -808,7 +862,7 @@ const initCompetitionChart = async () => {
         data: regionalCompetition.value.map((item) => ({
           value: item.marketShare,
           itemStyle: {
-            color: item.marketShare > 20 ? '#67c23a' : item.marketShare > 10 ? '#e6a23c' : '#f56c6c',
+            color: item.marketShare > 7 ? '#67c23a' : item.marketShare > 4 ? '#e6a23c' : '#f56c6c',
           },
         })),
         barWidth: '60%',
@@ -876,6 +930,11 @@ const initInventoryChart = async () => {
   }
 
   inventoryChartInstance.setOption(option)
+}
+
+// 跳转函数
+const toRegionMap = () => {
+  router.push({ name: 'CarPurchasesHeatMap' })
 }
 
 // 弹窗相关函数
@@ -1028,7 +1087,7 @@ onUnmounted(() => {
           <el-col :span="6">
             <el-button
               type="success"
-              @click="showRegionMap = true"
+              @click="toRegionMap"
               :disabled="!hasResults"
               style="width: 100%"
             >
@@ -1055,12 +1114,6 @@ onUnmounted(() => {
                       @click="chartView = 'trend'"
                     >
                       趋势预测
-                    </el-button>
-                    <el-button
-                      :type="chartView === 'comparison' ? 'primary' : ''"
-                      @click="chartView = 'comparison'"
-                    >
-                      区域对比
                     </el-button>
                   </el-button-group>
                 </div>
@@ -1111,39 +1164,13 @@ onUnmounted(() => {
         <el-col :xs="24" :lg="12">
           <el-card shadow="never" class="competition-card">
             <template #header>
-              <span>区域竞争格局</span>
+              <span>市场热门车型</span>
             </template>
 
             <div class="competition-analysis">
               <!-- 竞争格局图表 -->
               <div class="competition-chart">
                 <div ref="competitionChart" class="chart-container" style="height: 300px;"></div>
-              </div>
-
-              <!-- 主要竞争对手 -->
-              <div class="competitors-list">
-                <h6>主要竞争对手</h6>
-                <div
-                  v-for="competitor in regionalCompetition"
-                  :key="competitor.modelName"
-                  class="competitor-item"
-                >
-                  <div class="competitor-header">
-                    <span class="competitor-name">{{ competitor.modelName }}</span>
-                  </div>
-                  <div class="competitor-metrics">
-                    <div class="metric">
-                      <span>市场份额:</span>
-                      <strong>{{ competitor.marketShare.toFixed(1) }}%</strong>
-                    </div>
-                    <div class="metric">
-                      <span>增长率:</span>
-                      <strong :class="competitor.growth >= 0 ? 'text-success' : 'text-danger'">
-                        {{ competitor.growth >= 0 ? '+' : '' }}{{ competitor.growth.toFixed(1) }}%
-                      </strong>
-                    </div>
-                  </div>
-                </div>
               </div>
             </div>
           </el-card>
