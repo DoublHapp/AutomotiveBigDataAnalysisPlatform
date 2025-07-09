@@ -302,7 +302,8 @@ function processResponseData(salesData: repsonseData[]): chartData[] {
 // API接口调用函数
 const fetchCarModels = async () => {
   try {
-    const response = await axios.get('/api/car-models/page?page=1&size=20')
+    const response = await axios.get('/api/car-models/page?page=0&size=20')
+    console.log('获取车型列表:', response)
     if (response.data.status === 200) {
       response.data.data.forEach((model: any) => {
         carModelOptions.value.push({
