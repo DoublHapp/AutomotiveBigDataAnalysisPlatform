@@ -2,6 +2,7 @@ package cn.com.undefined.abdap_backend.controller;
 
 import cn.com.undefined.abdap_backend.dto.ApiResponse;
 import cn.com.undefined.abdap_backend.dto.CarModelDTO;
+import cn.com.undefined.abdap_backend.dto.CarModelDetailDTO;
 import cn.com.undefined.abdap_backend.service.CarModelService;
 import cn.com.undefined.abdap_backend.util.ResponseUtil;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -64,5 +65,49 @@ public class CarModelController {
             @RequestParam(defaultValue = "100") int limit) {
         List<CarModelDTO> carModels = carModelService.searchCarModels(keyword, limit);
         return ResponseUtil.success(carModels);
+    }
+
+    /**
+     * 获取所有车型级别
+     * GET /api/car-models/levels
+     */
+    @GetMapping("/levels")
+    public ResponseEntity<ApiResponse<List<String>>> getAllLevels() {
+        List<String> levels = carModelService.getAllLevels();
+        return ResponseUtil.success(levels);
+    }
+
+    /**
+     * 获取所有车型发动机类型
+     * GET /api/car-models/engine-types
+     */
+    @GetMapping("/engine-types")
+    public ResponseEntity<ApiResponse<List<String>>> getAllEngineTypes() {
+        List<String> engineTypes = carModelService.getAllEngineTypes();
+        return ResponseUtil.success(engineTypes);
+    }
+
+    /**
+     * 模糊匹配厂商列表
+     * GET /api/car-models/factorys?keyword=xxx
+     */
+    @GetMapping("/factorys")
+    public ResponseEntity<ApiResponse<List<String>>> getFactorysByKeyword(
+            @RequestParam(defaultValue = "all") String keyword) {
+        List<String> factorys = carModelService.getFactorysByKeyword(keyword);
+        return ResponseUtil.success(factorys);
+    }
+
+    /**
+     * 获取车型详情
+     * GET /api/car-models/detail/{carModelId}
+     * @param carModelId
+     * @return
+     */
+    @GetMapping("detail/{carModelId}")
+    public ResponseEntity<ApiResponse<CarModelDetailDTO>> getCarModelDetailDTOById(
+            @PathVariable Long carModelId) {
+        CarModelDetailDTO detail = carModelService.getCarModelDetailDTOById(carModelId);
+        return ResponseUtil.success(detail);
     }
 }
