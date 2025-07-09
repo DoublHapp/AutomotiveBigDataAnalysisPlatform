@@ -226,8 +226,7 @@ public class RankingService {
                         BigDecimal seatNumScore = arr[16] != null ? new BigDecimal(arr[16].toString())
                                         : BigDecimal.ZERO;
                         BigDecimal brandScore = arr[17] != null ? new BigDecimal(arr[17].toString()) : BigDecimal.ZERO;
-                        BigDecimal totalScore = budgetScore.add(levelScore).add(engineScore)
-                                        .add(seatNumScore).add(brandScore);
+                        BigDecimal totalScore = arr[18] != null ? new BigDecimal(arr[18].toString()) : BigDecimal.ZERO;
 
                         return new CarModelMatchScoreDTO(carModelDTO, totalScore, budgetScore, levelScore,
                                         engineScore, seatNumScore, brandScore);
