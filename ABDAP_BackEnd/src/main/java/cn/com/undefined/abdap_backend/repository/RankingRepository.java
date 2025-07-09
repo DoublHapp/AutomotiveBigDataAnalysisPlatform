@@ -195,4 +195,182 @@ public interface RankingRepository extends JpaRepository<Ranking, Long> {
                      @Param("seatNum") Integer seatNum,
                      @Param("factory") String factory,
                      Pageable pageable);
+
+       /**
+        * 多表联合查询，返回车型基础信息、指定时间范围销量、上一年同期销量、口碑评分
+        * 按口碑评分降序排序
+        * 
+        * @param startDate 开始日期（yyyy-MM-dd）
+        * @param endDate   结束日期（yyyy-MM-dd）
+        * @param lastStart 上一年同期开始日期（yyyy-MM-dd）
+        * @param lastEnd   上一年同期结束日期（yyyy-MM-dd）
+        * @param region    地区（可为null，表示全部）
+        * @return Object[]: [carModelId, modelName, modelFullName, brandId, brandName,
+        *         level, launchDate, officialPrice, engineType, seatNum, driveType,
+        *         rangeKm, imageUrl, 当前销量, 上年同期销量, 口碑评分]
+        */
+       @Query(value = "SELECT " +
+                     "ANY_VALUE(c.car_model_id), c.model_name, ANY_VALUE(c.model_full_name), ANY_VALUE(b.brand_id), ANY_VALUE(b.brand_name), ANY_VALUE(c.level), ANY_VALUE(c.launch_date), "
+                     +
+                     "MAX(c.official_price), ANY_VALUE(c.engine_type), ANY_VALUE(c.seat_num), ANY_VALUE(c.drive_type), ANY_VALUE(c.range_km), ANY_VALUE(c.image_url), "
+                     +
+                     // 当前时间范围销量
+                     "COALESCE(SUM(CASE WHEN sr.sale_month >= :startDate AND sr.sale_month <= :endDate THEN sr.sale_count ELSE 0 END), 0) AS currentSaleCount, "
+                     +
+                     // 上一年同期销量
+                     "COALESCE(SUM(CASE WHEN sr.sale_month >= :lastStart AND sr.sale_month <= :lastEnd THEN sr.sale_count ELSE 0 END), 0) AS lastYearSaleCount, "
+                     +
+                     // 口碑评分
+                     "COALESCE(AVG(op.score_current), 0) AS opinionScore " +
+                     "FROM car_model c " +
+                     "LEFT JOIN brand b ON c.brand_id = b.brand_id " +
+                     "LEFT JOIN sale_record sr ON c.car_model_id = sr.car_model_id " +
+                     "LEFT JOIN opinion op ON c.car_model_id = op.car_model_id " +
+                     "LEFT JOIN region re ON re.region_id = sr.region_id " +
+                     "WHERE (:region IS NULL OR re.region_name = :region OR re.parent_region = :region) " +
+                     "GROUP BY c.model_name " +
+                     // "GROUP BY c.model_name, b.brand_id, b.brand_name, c.level, c.launch_date, "
+                     // +
+                     // "c.official_price, c.engine_type, c.seat_num, c.drive_type, c.range_km,
+                     // c.image_url " +
+                     "ORDER BY opinionScore DESC", nativeQuery = true)
+       List<Object[]> findCarModelOpinionScoreRanking(
+                     @Param("startDate") String startDate,
+                     @Param("endDate") String endDate,
+                     @Param("lastStart") String lastStart,
+                     @Param("lastEnd") String lastEnd,
+                     @Param("region") String region,
+                     Pageable pageable);
+
+       /**
+        * 多表联合查询，返回车型基础信息、指定时间范围销量、上一年同期销量
+        * 按市场份额降序排序（当前销量与市场份额成正比关系，因此实际按currentSaleCount排行）
+        * 
+        * @param startDate 开始日期（yyyy-MM-dd）
+        * @param endDate   结束日期（yyyy-MM-dd）
+        * @param lastStart 上一年同期开始日期（yyyy-MM-dd）
+        * @param lastEnd   上一年同期结束日期（yyyy-MM-dd）
+        * @param region    地区（可为null，表示全部）
+        * @return Object[]: [carModelId, modelName, modelFullName, brandId, brandName,
+        *         level, launchDate, officialPrice, engineType, seatNum, driveType,
+        *         rangeKm, imageUrl, 当前销量, 上年同期销量]
+        */
+       @Query(value = "SELECT " +
+                     "ANY_VALUE(c.car_model_id), c.model_name, ANY_VALUE(c.model_full_name), ANY_VALUE(b.brand_id), ANY_VALUE(b.brand_name), ANY_VALUE(c.level), ANY_VALUE(c.launch_date), "
+                     +
+                     "MAX(c.official_price), ANY_VALUE(c.engine_type), ANY_VALUE(c.seat_num), ANY_VALUE(c.drive_type), ANY_VALUE(c.range_km), ANY_VALUE(c.image_url), "
+                     +
+                     // 当前时间范围销量
+                     "COALESCE(SUM(CASE WHEN sr.sale_month >= :startDate AND sr.sale_month <= :endDate THEN sr.sale_count ELSE 0 END), 0) AS currentSaleCount, "
+                     +
+                     // 上一年同期销量
+                     "COALESCE(SUM(CASE WHEN sr.sale_month >= :lastStart AND sr.sale_month <= :lastEnd THEN sr.sale_count ELSE 0 END), 0) AS lastYearSaleCount "
+                     +
+                     "FROM car_model c " +
+                     "LEFT JOIN brand b ON c.brand_id = b.brand_id " +
+                     "LEFT JOIN sale_record sr ON c.car_model_id = sr.car_model_id " +
+                     "LEFT JOIN region re ON re.region_id = sr.region_id " +
+                     "WHERE (:region IS NULL OR re.region_name = :region OR re.parent_region = :region) " +
+                     "GROUP BY c.model_name " +
+                     "ORDER BY currentSaleCount DESC", nativeQuery = true)
+       List<Object[]> findCarModelMarketShareRanking(
+                     @Param("startDate") String startDate,
+                     @Param("endDate") String endDate,
+                     @Param("lastStart") String lastStart,
+                     @Param("lastEnd") String lastEnd,
+                     @Param("region") String region,
+                     Pageable pageable);
+
+       /**
+        * 多表联合查询，返回车型基础信息、指定时间范围销量、上一年同期销量
+        * 按销量增长率降序排序
+        *
+        * @param startDate 开始日期（yyyy-MM-dd）
+        * @param endDate   结束日期（yyyy-MM-dd）
+        * @param lastStart 上一年同期开始日期（yyyy-MM-dd）
+        * @param lastEnd   上一年同期结束日期（yyyy-MM-dd）
+        * @param region    地区（可为null，表示全部）
+        * @return Object[]: [carModelId, modelName, modelFullName, brandId, brandName,
+        *         level, launchDate, officialPrice, engineType, seatNum, driveType,
+        *         rangeKm, imageUrl, 当前销量, 上年同期销量, 增长率]
+        */
+       @Query(value = "SELECT t.*, " +
+                     "  (t.currentSaleCount * t.opinionScore / IFNULL(t.official_price, 0)) AS valueScore " +
+                     "FROM (" +
+                     "  SELECT " +
+                     "    ANY_VALUE(c.car_model_id) AS car_model_id, c.model_name, ANY_VALUE(c.model_full_name) AS model_full_name, "
+                     +
+                     "    ANY_VALUE(b.brand_id) AS brand_id, ANY_VALUE(b.brand_name) AS brand_name, ANY_VALUE(c.level) AS level, "
+                     +
+                     "    ANY_VALUE(c.launch_date) AS launch_date, MAX(c.official_price) AS official_price, " +
+                     "    ANY_VALUE(c.engine_type) AS engine_type, ANY_VALUE(c.seat_num) AS seat_num, " +
+                     "    ANY_VALUE(c.drive_type) AS drive_type, ANY_VALUE(c.range_km) AS range_km, " +
+                     "    ANY_VALUE(c.image_url) AS image_url, " +
+                     "    COALESCE(SUM(CASE WHEN sr.sale_month >= :startDate AND sr.sale_month <= :endDate THEN sr.sale_count ELSE 0 END), 0) AS currentSaleCount, "
+                     +
+                     "    COALESCE(SUM(CASE WHEN sr.sale_month >= :lastStart AND sr.sale_month <= :lastEnd THEN sr.sale_count ELSE 0 END), 0) AS lastYearSaleCount, "
+                     +
+                     "    COALESCE(AVG(op.score_current), 0) AS opinionScore " +
+                     "  FROM car_model c " +
+                     "  LEFT JOIN brand b ON c.brand_id = b.brand_id " +
+                     "  LEFT JOIN sale_record sr ON c.car_model_id = sr.car_model_id " +
+                     "  LEFT JOIN opinion op ON c.car_model_id = op.car_model_id " +
+                     "  LEFT JOIN region re ON re.region_id = sr.region_id " +
+                     "  WHERE (:region IS NULL OR re.region_name = :region OR re.parent_region = :region) " +
+                     "  GROUP BY c.model_name " +
+                     ") t " +
+                     "ORDER BY valueScore DESC", nativeQuery = true)
+       List<Object[]> findCarModelGrowthRateRanking(
+                     @Param("startDate") String startDate,
+                     @Param("endDate") String endDate,
+                     @Param("lastStart") String lastStart,
+                     @Param("lastEnd") String lastEnd,
+                     @Param("region") String region,
+                     Pageable pageable);
+
+       /**
+        * 多表联合查询，返回车型基础信息、销量、销量增长率、市场份额、口碑总评分
+        * 按性价比（价格/销量/口碑等）排序
+        *
+        * @param startDate 开始日期（yyyy-MM-dd）
+        * @param endDate   结束日期（yyyy-MM-dd）
+        * @param lastStart 上一年同期开始日期（yyyy-MM-dd）
+        * @param lastEnd   上一年同期结束日期（yyyy-MM-dd）
+        * @param region    地区（可为null，表示全部）
+        * @return Object[]: [carModelId, modelName, modelFullName, brandId, brandName,
+        *         level, launchDate, officialPrice, engineType, seatNum, driveType,
+        *         rangeKm, imageUrl, 当前销量, 上年同期销量, 口碑总评分]
+        */
+       @Query(value = "SELECT " +
+                     "ANY_VALUE(c.car_model_id), c.model_name, ANY_VALUE(c.model_full_name), ANY_VALUE(b.brand_id), ANY_VALUE(b.brand_name), "
+                     +
+                     "ANY_VALUE(c.level), ANY_VALUE(c.launch_date), MAX(c.official_price), ANY_VALUE(c.engine_type), " +
+                     "ANY_VALUE(c.seat_num), ANY_VALUE(c.drive_type), ANY_VALUE(c.range_km), ANY_VALUE(c.image_url), " +
+                     // 当前时间范围销量
+                     "COALESCE(SUM(CASE WHEN sr.sale_month >= :startDate AND sr.sale_month <= :endDate THEN sr.sale_count ELSE 0 END), 0) AS currentSaleCount, "
+                     +
+                     // 上一年同期销量
+                     "COALESCE(SUM(CASE WHEN sr.sale_month >= :lastStart AND sr.sale_month <= :lastEnd THEN sr.sale_count ELSE 0 END), 0) AS lastYearSaleCount, "
+                     +
+                     // 口碑总评分
+                     "COALESCE(AVG(op.score_current), 0) AS opinionScore, " +
+                     // 性价比分数（销量*口碑/价格，价格加1防止除0）
+                     "(COALESCE(SUM(CASE WHEN sr.sale_month >= :startDate AND sr.sale_month <= :endDate THEN sr.sale_count ELSE 0 END), 0) "
+                     +
+                     " * COALESCE(AVG(op.score_current), 0) / (MAX(c.official_price) + 1)) AS valueScore " +
+                     "FROM car_model c " +
+                     "LEFT JOIN brand b ON c.brand_id = b.brand_id " +
+                     "LEFT JOIN sale_record sr ON c.car_model_id = sr.car_model_id " +
+                     "LEFT JOIN opinion op ON c.car_model_id = op.car_model_id " +
+                     "LEFT JOIN region re ON re.region_id = sr.region_id " +
+                     "WHERE (:region IS NULL OR re.region_name = :region OR re.parent_region = :region) " +
+                     "GROUP BY c.model_name " +
+                     "ORDER BY valueScore DESC", nativeQuery = true)
+       List<Object[]> findCarModelValueRanking(
+                     @Param("startDate") String startDate,
+                     @Param("endDate") String endDate,
+                     @Param("lastStart") String lastStart,
+                     @Param("lastEnd") String lastEnd,
+                     @Param("region") String region,
+                     Pageable pageable);
 }
