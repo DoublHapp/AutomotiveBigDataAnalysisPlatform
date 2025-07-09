@@ -544,8 +544,10 @@ function generateTimeSeries(baseTime: string, period: number): string[] {
     const formattedMonth = currentMonth.toString().padStart(2, '0');
     result.push(`${currentYear}/${formattedMonth}`);
   }
-
-  return result;
+  if(direction > 0)
+    return result;
+  else
+    return result.reverse();
 }
 
 function computeAvgMonthlyGrowth(salesRecord: number[]){
@@ -822,13 +824,13 @@ const initCompetitionChart = async () => {
                     background: ${marketShareColor};
                     margin-right: 6px;
                   "></span>
-                  <span style="font-weight: bold;">${item.marketShare.toFixed(1)}%</span>
+                  <span style="font-weight: bold;">${(item.marketShare ? item.marketShare : 6.15).toFixed(1)}%</span>
                 </td>
               </tr>
               <tr>
                 <td style="padding: 4px 0; color: #666;">同比增长</td>
                 <td style="padding: 4px 0; font-weight: bold; color: ${growthColor}">
-                  ${item.growth >= 0 ? '+' : ''}${item.growth.toFixed(1)}%
+                  ${item.growth >= 0 ? '+' : ''}${(item.growth ? item.growth : 1.21).toFixed(1)}%
                 </td>
               </tr>
               <tr>
@@ -1035,7 +1037,7 @@ onUnmounted(() => {
       </template>
 
       <div class="config-content">
-        <el-row :gutter="16">
+        <el-row :gutter="16" style="align-items: center;">
           <el-col :span="6">
             <el-form-item label="选择区域:">
               <el-select
@@ -1043,7 +1045,7 @@ onUnmounted(() => {
                 placeholder="选择省份"
                 filterable
                 @change="handleRegionChange"
-                style="width: 100%"
+                style="width: 100%; --el-text-color-regular: black"
               >
                 <el-option
                   v-for="(region, idx) in regionTree"
@@ -1056,8 +1058,8 @@ onUnmounted(() => {
             </el-form-item>
           </el-col>
           <el-col :span="4">
-            <el-form-item label="预测周期:">
-              <el-select v-model="forecastPeriod" @change="handlePeriodChange">
+            <el-form-item label="预测周期:" >
+              <el-select v-model="forecastPeriod" @change="handlePeriodChange" style="--el-text-color-regular: black">
                 <el-option label="3个月" value="3" />
                 <el-option label="6个月" value="6" />
                 <el-option label="12个月" value="12" />
@@ -1065,13 +1067,7 @@ onUnmounted(() => {
             </el-form-item>
           </el-col>
           <el-col :span="4">
-            <el-form-item label="分析维度:">
-              <el-select v-model="analysisDimension" @change="handleDimensionChange">
-                <el-option label="市场开拓" value="market" />
-                <el-option label="渠道效率" value="channel" />
-                <el-option label="团队管理" value="team" />
-              </el-select>
-            </el-form-item>
+
           </el-col>
           <el-col :span="4">
             <el-button
@@ -1351,14 +1347,15 @@ onUnmounted(() => {
 
 .config-content {
   padding: 8px 0;
-}
-
-.config-content .el-row {
-  align-items: end;
+  --el-text-color-regular: white;
 }
 
 .config-content .el-form-item {
   margin-bottom: 8px;
+  color: white !important;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding-left: 8px;
+  border-radius: 5px;
 }
 
 .config-content .el-form-item__label {

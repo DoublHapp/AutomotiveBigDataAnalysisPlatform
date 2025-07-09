@@ -602,7 +602,7 @@ onMounted(() => {
           @click="fetchDataAndRender" 
           style="margin-left: 30px;">
           更新数据
-        </el-button>
+          </el-button>
         </div>
       </div>
     </el-card>
@@ -618,7 +618,7 @@ onMounted(() => {
       </el-col>
       <el-col :lg="5" :md="8" :sm="24" class="summary-col">
         <el-card class="stats-card" shadow="never">
-          <template #header>
+          <template #header class>
             <span>关键数据</span>
           </template>
           <div class="stats-summary">
@@ -664,11 +664,26 @@ onMounted(() => {
   gap: 48px;
 }
 
+.filter-options .el-button{
+  color: white;
+  background: linear-gradient(135deg, #67c23a 0%, #85ce61 100%);
+}
 .filter-options {
   display: flex;
   justify-content: flex-start;
   gap: 20px;
   margin-top: 10px;
+}
+
+.summary-col :deep(.el-card__header){
+  color: white;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 8px 8px 0px 0;
+}
+.chart-col :deep(.el-card__header){
+  color: white;
+  background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+  border-radius: 8px 8px 0px 0;
 }
 
 .stats-item.clickable {
