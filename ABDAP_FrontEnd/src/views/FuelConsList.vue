@@ -439,7 +439,7 @@
             <el-table-column label="年成本" width="120">
               <template #default="scope"> ¥{{ calculateYearlyCost(scope.row) }} </template>
             </el-table-column>
-            <el-table-column prop="economyScore" label="经济性评分" width="120" />
+            <!-- <el-table-column prop="economyScore" label="经济性评分" width="120" /> -->
             <el-table-column prop="priceRange" label="价格区间" />
           </el-table>
         </div>

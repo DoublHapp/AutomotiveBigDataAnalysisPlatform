@@ -1776,16 +1776,10 @@ const startDetailedComparison = () => {
     return
   }
 
+  const modelIds = comparisonList.value.map((car) => car.id).join(',')
   router.push({
     name: 'VehicleModelCompAnalysis',
-    query: {
-      models: JSON.stringify(
-        comparisonList.value.map((car) => ({
-          id: car.id,
-          name: `${car.brand} ${car.name}`,
-        })),
-      ),
-    },
+    query: { models: modelIds },
   })
 }
 
