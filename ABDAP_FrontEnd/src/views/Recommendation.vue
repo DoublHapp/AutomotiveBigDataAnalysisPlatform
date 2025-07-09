@@ -23,38 +23,12 @@
       </div>
     </el-card>
 
-    <!-- 数据加载状态 -->
-    <el-card v-if="loading && !baseDataLoaded" shadow="never" class="loading-card">
-      <div class="loading-content">
-        <el-icon class="loading-icon"><Loading /></el-icon>
-        <h3>正在加载基础数据...</h3>
-        <p>{{ currentLoadingStep }}</p>
-        <el-progress :percentage="loadingProgress" :show-text="false" />
-        <div class="loading-stats">
-          <div class="stat-item">
-            <span class="stat-label">车型数据</span>
-            <span class="stat-value">{{ baseData.carModels.length }} 款</span>
-          </div>
-          <div class="stat-item">
-            <span class="stat-label">销售记录</span>
-            <span class="stat-value">{{ baseData.saleRecords.length }} 条</span>
-          </div>
-          <div class="stat-item">
-            <span class="stat-label">口碑评价</span>
-            <span class="stat-value">{{ baseData.opinions.length }} 条</span>
-          </div>
-        </div>
-      </div>
-    </el-card>
-
     <!-- 筛选条件卡片 -->
     <el-card v-if="baseDataLoaded" shadow="never" class="filter-card">
       <template #header>
         <div class="filter-header">
           <span>购车需求筛选</span>
           <div class="filter-stats">
-            <el-tag type="primary">符合条件: {{ getCandidateCount }} 款</el-tag>
-            <el-tag type="info">总车型: {{ baseData.carModels.length }} 款</el-tag>
             <el-button
               size="small"
               type="primary"
@@ -87,10 +61,11 @@
             >
               <span class="option-label">{{ option.label }}</span>
               <span class="option-desc" v-if="option.desc">{{ option.desc }}</span>
-              <span class="option-count">({{ getBudgetMatchCount(option.value) }}款)</span>
-            </div>
+
           </div>
         </div>
+      </div>
+    </div>
 
         <!-- 车型类别 -->
         <div class="filter-section">
@@ -99,18 +74,18 @@
             <span>车型类别</span>
             <span class="required">*</span>
           </div>
-          <div class="filter-options body-type-options">
+          <div class="filter-options level-options">
             <div
-              v-for="option in bodyTypeOptions"
+              v-for="option in levelOptions"
               :key="option.value"
               class="filter-option"
-              :class="{ active: questionnaireData.bodyTypes.includes(option.value) }"
-              @click="toggleBodyType(option.value)"
+              :class="{ active: questionnaireData.level.includes(option.value) }"
+              @click="selectLevelType(option.value)"
             >
               <el-icon><component :is="option.icon" /></el-icon>
               <span class="option-label">{{ option.label }}</span>
               <span class="option-desc">{{ option.desc }}</span>
-              <span class="option-count">({{ getBodyTypeMatchCount(option.value) }}款)</span>
+
             </div>
           </div>
         </div>
@@ -122,18 +97,18 @@
             <span>能源类型</span>
             <span class="required">*</span>
           </div>
-          <div class="filter-options energy-options">
+          <div class="filter-options engine-type-options">
             <div
-              v-for="option in energyTypeOptions"
+              v-for="option in engineTypeOptions"
               :key="option.value"
               class="filter-option"
-              :class="{ active: questionnaireData.energyType === option.value }"
-              @click="selectEnergyType(option.value)"
+              :class="{ active: questionnaireData.engineType === option.value }"
+              @click="selectEngineType(option.value)"
             >
               <el-icon><component :is="option.icon" /></el-icon>
               <span class="option-label">{{ option.label }}</span>
               <span class="option-desc">{{ option.desc }}</span>
-              <span class="option-count">({{ getEnergyTypeMatchCount(option.value) }}款)</span>
+
             </div>
           </div>
         </div>
@@ -145,80 +120,13 @@
             <span>乘坐人数</span>
             <span class="required">*</span>
           </div>
-          <div class="filter-options passenger-options">
+          <div class="filter-options seat-num-options">
             <div
               v-for="option in passengerOptions"
               :key="option.value"
               class="filter-option"
-              :class="{ active: questionnaireData.passengers === option.value }"
-              @click="selectPassengers(option.value)"
-            >
-              <span class="option-label">{{ option.label }}</span>
-              <span class="option-desc">{{ option.desc }}</span>
-              <span class="option-count">({{ getPassengerMatchCount(option.value) }}款)</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- 品牌偏好 -->
-        <div class="filter-section">
-          <div class="section-label">
-            <el-icon><Star /></el-icon>
-            <span>品牌偏好</span>
-            <span class="optional">选填</span>
-          </div>
-          <div class="filter-options brand-options">
-            <div
-              v-for="option in availableBrandOptions"
-              :key="option.value"
-              class="filter-option brand-option"
-              :class="{ active: questionnaireData.brandPreference.includes(option.value) }"
-              @click="toggleBrandPreference(option.value)"
-            >
-              <div class="brand-info">
-                <span class="brand-name">{{ option.label }}</span>
-                <span class="brand-count">{{ option.count }}款车型</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- 主要用途 -->
-        <!-- <div class="filter-section">
-          <div class="section-label">
-            <el-icon><Guide /></el-icon>
-            <span>主要用途</span>
-            <span class="optional">选填</span>
-          </div>
-          <div class="filter-options usage-options">
-            <div
-              v-for="option in usageOptions"
-              :key="option.value"
-              class="filter-option"
-              :class="{ active: questionnaireData.primaryUsage === option.value }"
-              @click="selectPrimaryUsage(option.value)"
-            >
-              <el-icon><component :is="option.icon" /></el-icon>
-              <span class="option-label">{{ option.label }}</span>
-              <span class="option-desc">{{ option.desc }}</span>
-            </div>
-          </div>
-        </div> -->
-
-        <!-- 日均里程 -->
-        <div class="filter-section">
-          <div class="section-label">
-            <el-icon><TrendCharts /></el-icon>
-            <span>日均里程</span>
-            <span class="optional">选填</span>
-          </div>
-          <div class="filter-options mileage-options">
-            <div
-              v-for="option in mileageOptions"
-              :key="option.value"
-              class="filter-option"
-              :class="{ active: questionnaireData.dailyMileage === option.value }"
-              @click="selectDailyMileage(option.value)"
+              :class="{ active: questionnaireData.seatNum === option.value }"
+              @click="selectSeatNum(option.value)"
             >
               <span class="option-label">{{ option.label }}</span>
               <span class="option-desc">{{ option.desc }}</span>
@@ -226,40 +134,32 @@
           </div>
         </div>
 
-        <!-- 实时预览统计 -->
-        <div class="filter-preview">
-          <h4>🎯 筛选预览</h4>
-          <div class="preview-stats">
-            <div class="stat-item">
-              <span class="stat-label">符合条件</span>
-              <span class="stat-value">{{ getCandidateCount }} 款</span>
-            </div>
-            <div class="stat-item">
-              <span class="stat-label">价格区间</span>
-              <span class="stat-value">{{ getPriceRange }}</span>
-            </div>
-            <div class="stat-item">
-              <span class="stat-label">热门品牌</span>
-              <span class="stat-value">{{ getPopularBrands }}</span>
-            </div>
-            <div class="stat-item">
-              <span class="stat-label">平均售价</span>
-              <span class="stat-value">{{ getAveragePrice }}万</span>
-            </div>
-          </div>
-        </div>
+        <!-- 主机厂偏好 -->
+<div class="filter-section">
+  <div class="section-label">
+    <el-icon><OfficeBuilding /></el-icon>
+    <span>主机厂偏好</span>
+  </div>
+  <el-select
+    v-model="questionnaireData.factory"
+    filterable
+    remote
+    reserve-keyword
+    placeholder="请输入主机厂名称"
+    :remote-method="fetchFactoryOptions"
+    :loading="factoryLoading"
+    style="width: 220px"
+    clearable
+  >
+    <el-option
+      v-for="opt in factoryOptions"
+      :key="opt.value"
+      :value="opt.value"
+    />
+  </el-select>
+</div>
 
-        <!-- 智能提示 -->
-        <div class="smart-hints" v-if="getSmartHints().length > 0">
-          <h4>💡 智能提示</h4>
-          <ul class="hints-list">
-            <li v-for="hint in getSmartHints()" :key="hint.id" :class="hint.type">
-              <el-icon><component :is="hint.icon" /></el-icon>
-              {{ hint.text }}
-            </li>
-          </ul>
-        </div>
-      </div>
+
     </el-card>
 
     <!-- 推荐结果展示区 -->
@@ -269,11 +169,11 @@
         <template #header>
           <div class="summary-header">
             <el-icon><Trophy /></el-icon>
-            <span>AI推荐结果</span>
+            <span>推荐结果</span>
             <div class="summary-tags">
               <!-- <el-tag :type="getScenarioTagType()">{{ getUserScenarioLabel() }}</el-tag> -->
-              <el-tag type="success">基于{{ businessMetrics.totalSalesRecords }}条真实销量</el-tag>
-              <el-tag type="info">{{ businessMetrics.totalOpinions }}条用户口碑</el-tag>
+              <!-- <el-tag type="success">基于{{ businessMetrics.totalSalesRecords }}条真实销量</el-tag>
+              <el-tag type="info">{{ businessMetrics.totalOpinions }}条用户口碑</el-tag> -->
             </div>
           </div>
         </template>
@@ -308,7 +208,7 @@
             <span>最佳推荐</span>
             <div class="confidence-info">
               <el-tag v-if="recommendationResult.primaryRecommendation.isHot" type="danger">
-                🔥 销量冠军
+                🔥 HOT
               </el-tag>
             </div>
           </div>
@@ -327,9 +227,6 @@
                 <el-tag type="success" size="large">
                   <el-icon><Trophy /></el-icon>
                   最佳匹配
-                </el-tag>
-                <el-tag v-if="getPrimaryRecommendationSalesRank() <= 3" type="warning">
-                  TOP{{ getPrimaryRecommendationSalesRank() }} 热销
                 </el-tag>
               </div>
             </div>
@@ -354,34 +251,6 @@
                 >
               </div>
 
-              <!-- 销量和口碑数据 -->
-              <div class="model-performance">
-                <div class="performance-item">
-                  <span class="label">月均销量</span>
-                  <span class="value">{{ getPrimarySalesData().avgMonthlySales }} 台</span>
-                </div>
-                <div class="performance-item">
-                  <span class="label">用户评分</span>
-                  <div class="rating-wrapper">
-                    <el-rate
-                      :model-value="getPrimaryOpinionScore()"
-                      disabled
-                      size="small"
-                      show-score
-                      text-color="#ff9900"
-                    />
-                  </div>
-                </div>
-                <div class="performance-item">
-                  <span class="label">市场热度</span>
-                  <el-progress
-                    :percentage="getPrimaryMarketHeat()"
-                    :color="getHeatColor(getPrimaryMarketHeat())"
-                    :show-text="false"
-                  />
-                  <span class="value">{{ getPrimaryMarketHeat() }}%</span>
-                </div>
-              </div>
 
               <!-- 匹配度雷达图 -->
               <div class="match-radar">
@@ -465,20 +334,20 @@
               >
                 <el-option label="匹配度" value="matchScore" />
               </el-select>
-              <el-button
+              <!-- <el-button
                 size="small"
                 type="text"
                 @click="showAllAlternatives = !showAllAlternatives"
               >
                 {{ showAllAlternatives ? '收起' : '查看全部' }}
-              </el-button>
+              </el-button> -->
             </div>
           </div>
         </template>
 
         <div class="alternatives-content">
           <div class="alternatives-tabs">
-            <el-tabs v-model="activeAlternativeTab" type="card">
+            <!-- <el-tabs v-model="activeAlternativeTab" type="card">
               <el-tab-pane label="性价比推荐" name="budget">
                 <div class="alternative-group">
                   <div
@@ -508,6 +377,7 @@
                           <el-progress :percentage="model.matchScore" :show-text="false" />
                           <span class="metric-value">{{ model.matchScore }}%</span>
                         </div>
+                        
                         <div class="metric">
                           <span class="metric-label">月销量</span>
                           <span class="metric-value"
@@ -568,21 +438,7 @@
                           <el-progress :percentage="model.matchScore" :show-text="false" />
                           <span class="metric-value">{{ model.matchScore }}%</span>
                         </div>
-                        <div class="metric">
-                          <span class="metric-label">月销量</span>
-                          <span class="metric-value"
-                            >{{ getModelSalesData(model.id).avgMonthlySales }}台</span
-                          >
-                        </div>
-                        <div class="metric">
-                          <span class="metric-label">用户评分</span>
-                          <el-rate
-                            :model-value="getModelOpinionScore(model.id)"
-                            disabled
-                            size="small"
-                            :show-text="false"
-                          />
-                        </div>
+
                       </div>
                     </div>
                     <div class="alternative-actions">
@@ -630,21 +486,6 @@
                           <el-progress :percentage="model.matchScore" :show-text="false" />
                           <span class="metric-value">{{ model.matchScore }}%</span>
                         </div>
-                        <div class="metric">
-                          <span class="metric-label">月销量</span>
-                          <span class="metric-value"
-                            >{{ getModelSalesData(model.id).avgMonthlySales }}台</span
-                          >
-                        </div>
-                        <div class="metric">
-                          <span class="metric-label">用户评分</span>
-                          <el-rate
-                            :model-value="getModelOpinionScore(model.id)"
-                            disabled
-                            size="small"
-                            :show-text="false"
-                          />
-                        </div>
                       </div>
                     </div>
                     <div class="alternative-actions">
@@ -660,7 +501,51 @@
                   </div>
                 </div>
               </el-tab-pane>
-            </el-tabs>
+            </el-tabs> -->
+
+             <div class="alternative-group">
+    <div
+      v-for="model in getSortedAlternatives(recommendationResult.alternatives.budget.concat(recommendationResult.alternatives.luxury, recommendationResult.alternatives.practical))"
+      :key="model.id"
+      class="alternative-item"
+    >
+      <img
+        :src="model.image"
+        :alt="model.name"
+        class="alternative-image"
+        @error="handleImageError"
+      />
+      <div class="alternative-info">
+        <h4>{{ model.brand }} {{ model.name }}</h4>
+        <p class="alternative-price">{{ model.priceRange }}</p>
+        <div class="alternative-specs">
+          <el-tag size="mini">{{ model.engine }}</el-tag>
+          <el-tag size="mini" type="info">{{ model.seatNum }}座</el-tag>
+        </div>
+        <div class="alternative-highlight">
+          <el-tag size="small" type="success">{{ model.highlight }}</el-tag>
+        </div>
+        <div class="alternative-metrics">
+          <div class="metric">
+            <span class="metric-label">匹配度</span>
+            <el-progress :percentage="model.matchScore" :show-text="false" />
+            <span class="metric-value">{{ model.matchScore }}%</span>
+          </div>
+        </div>
+      </div>
+      <div class="alternative-actions">
+        <!-- <el-button size="small" @click="viewModelDetails(model)">
+          <el-icon><Monitor /></el-icon>
+          详情
+        </el-button> -->
+        <el-button size="small" type="primary" @click="addToComparison(model)">
+          <el-icon><DataBoard /></el-icon>
+          对比
+        </el-button>
+      </div>
+    </div>
+  </div>
+
           </div>
         </div>
       </el-card>
@@ -706,10 +591,6 @@
                     <span>匹配度</span>
                     <span>{{ model.matchScore }}%</span>
                   </div>
-                  <div class="metric-item">
-                    <span>月销量</span>
-                    <span>{{ getModelSalesData(model.id).avgMonthlySales }}台</span>
-                  </div>
                 </div>
               </div>
               <el-button
@@ -736,7 +617,7 @@
         <div class="advice-content">
           <div class="advice-sections">
             <!-- 购车时机建议 -->
-            <div class="advice-section">
+            <!-- <div class="advice-section">
               <h4>💰 购车时机建议</h4>
               <div class="timing-advice">
                 <div class="advice-item">
@@ -759,7 +640,7 @@
                   </div>
                 </div>
               </div>
-            </div>
+            </div> -->
 
             <!-- 购车渠道建议 -->
             <div class="advice-section">
@@ -791,55 +672,7 @@
               </div>
             </div>
 
-            <!-- 区域建议 -->
-            <div class="advice-section">
-              <h4>🗺️ 区域购买建议</h4>
-              <div class="region-advice">
-                <div class="region-recommendations">
-                  <div
-                    v-for="region in getTopRegionRecommendations()"
-                    :key="region.regionId"
-                    class="region-item"
-                  >
-                    <div class="region-header">
-                      <h5>{{ region.regionName }}</h5>
-                      <el-tag
-                        :type="
-                          region.advantage === 'price'
-                            ? 'success'
-                            : region.advantage === 'stock'
-                              ? 'warning'
-                              : 'info'
-                        "
-                        size="small"
-                      >
-                        {{ region.advantageText }}
-                      </el-tag>
-                    </div>
-                    <div class="region-details">
-                      <div class="detail-item">
-                        <span class="label">平均售价</span>
-                        <span class="value">{{ region.avgPrice }}万</span>
-                      </div>
-                      <div class="detail-item">
-                        <span class="label">库存状况</span>
-                        <span class="value" :class="region.stockStatus">{{
-                          region.stockText
-                        }}</span>
-                      </div>
-                      <div class="detail-item">
-                        <span class="label">销量热度</span>
-                        <el-progress
-                          :percentage="region.salesHeat"
-                          :show-text="false"
-                          :color="getHeatColor(region.salesHeat)"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+
 
             <!-- 购车清单 -->
             <div class="advice-section">
@@ -875,14 +708,14 @@
             <el-icon><Refresh /></el-icon>
             重新推荐
           </el-button>
-          <el-button
+          <!-- <el-button
             size="large"
             @click="contactDealer"
             v-if="recommendationResult.primaryRecommendation"
           >
             <el-icon><Phone /></el-icon>
             联系经销商
-          </el-button>
+          </el-button> -->
         </div>
       </el-card>
     </div>
@@ -892,21 +725,19 @@
       <el-card shadow="never" class="loading-card">
         <div class="loading-content">
           <el-icon class="loading-icon"><MagicStick /></el-icon>
-          <h3>AI正在分析您的需求...</h3>
+          <h3>正在分析您的需求...</h3>
           <p>{{ currentAnalysisStep }}</p>
           <el-progress :percentage="analysisProgress" :show-text="false" />
           <div class="analysis-details">
             <div class="detail-item">
               <span class="label">分析车型数量</span>
-              <span class="value">{{ getCandidateCount }} 款</span>
             </div>
             <div class="detail-item">
               <span class="label">销量数据样本</span>
-              <span class="value">{{ businessMetrics.totalSalesRecords }} 条</span>
+
             </div>
             <div class="detail-item">
               <span class="label">用户评价样本</span>
-              <span class="value">{{ businessMetrics.totalOpinions }} 条</span>
             </div>
           </div>
         </div>
@@ -970,9 +801,11 @@ const router = useRouter()
 //  基础数据层 - 直接从API获取
 // =============================================
 
+// 定义 CarModel 类型
 interface CarModel {
   carModelId: number
   modelName: string
+  modelFullName: string
   brandId: number
   brandName: string
   level: string
@@ -982,7 +815,13 @@ interface CarModel {
   seatNum: number
   driveType: string
   rangeKm: number
-  imageUrl?: string
+  imageUrl: string
+  totalScore: number
+  budgetScore: number
+  levelScore: number
+  engineTypeScore: number
+  seatNumScore: number
+  brandScore: number
 }
 
 interface SaleRecord {
@@ -1007,17 +846,16 @@ interface Opinion {
 interface Region {
   regionId: number
   regionName: string
-  parentRegionId?: number | null
   parentRegionName?: string | null
 }
 
 interface BaseData {
-  carModels: CarModel[]
-  saleRecords: SaleRecord[]
-  regions: Region[]
-  topLevelRegions: Region[]
-  nonTopLevelRegions: Region[]
-  opinions: Opinion[]
+  carModels?: CarModel[]
+  saleRecords?: SaleRecord[]
+  regions?: Region[]
+  topLevelRegions?: Region[]
+  nonTopLevelRegions?: Region[]
+  opinions?: Opinion[]
 }
 
 //  计算数据层 - 基于基础数据计算
@@ -1030,18 +868,18 @@ interface ProcessedCarModel {
   engine: string
   transmission: string
   image: string
-  highlight: string
   matchScore: number
   level: string
   seatNum: number
-  avgMonthlySales: number
-  totalSales: number
-  avgPrice: number
-  userRating: number
-  marketHeat: number
-  salesRank: number
-  isHot: boolean
-  isNew: boolean
+  totalScore?: number
+  budgetScore?: number
+  levelScore?: number
+  engineTypeScore?: number
+  seatNumScore?: number
+  brandScore?: number
+  isHot?: boolean
+  isNew?: boolean
+  highlight?: string
 }
 
 interface PrimaryRecommendation extends ProcessedCarModel {
@@ -1119,16 +957,24 @@ const businessMetrics = ref<BusinessMetrics>({
   marketTrend: 'stable',
 })
 
-// 筛选条件
+// =============================================
+//  响应式问卷数据
+// =============================================
+
 const questionnaireData = ref({
   budget: '',
-  bodyTypes: [] as string[],
-  energyType: '',
-  passengers: '',
-  brandPreference: [] as string[],
-  // primaryUsage: '',
-  dailyMileage: '',
+  level: '',           // 车型类别
+  engineType: '',      // 动力类型
+  seatNum: '',         // 乘坐人数
+  factory: '',         // 主机厂
 })
+
+const levelOptions = ref<string[]>([])
+const engineTypeOptions = ref<string[]>([])
+const factoryOptions = ref<{ value: string; label: string }[]>([])
+const factoryLoading = ref(false)
+
+
 
 // 推荐结果
 const recommendationResult = ref<RecommendationResult | null>(null)
@@ -1157,13 +1003,13 @@ const budgetOptions = [
   { value: 'unlimited', label: '预算不限', desc: '最优选择' },
 ]
 
-const bodyTypeOptions = [
-  { value: 'sedan', label: '轿车', desc: '经典优雅', icon: Van },
-  { value: 'suv', label: 'SUV', desc: '空间宽敞', icon: Van },
-  { value: 'mpv', label: 'MPV', desc: '商务实用', icon: Van },
-  { value: 'hatchback', label: '两厢车', desc: '时尚灵活', icon: Van },
-  { value: 'coupe', label: '跑车', desc: '运动激情', icon: Van },
-]
+// const bodyTypeOptions = [
+//   { value: 'sedan', label: '轿车', desc: '经典优雅', icon: Van },
+//   { value: 'suv', label: 'SUV', desc: '空间宽敞', icon: Van },
+//   { value: 'mpv', label: 'MPV', desc: '商务实用', icon: Van },
+//   { value: 'hatchback', label: '两厢车', desc: '时尚灵活', icon: Van },
+//   { value: 'coupe', label: '跑车', desc: '运动激情', icon: Van },
+// ]
 
 const energyTypeOptions = [
   { value: 'gasoline', label: '汽油', desc: '成熟可靠', icon: Service },
@@ -1186,12 +1032,12 @@ const passengerOptions = [
 //   { value: 'travel', label: '长途旅行', desc: '自驾游', icon: Location },
 // ]
 
-const mileageOptions = [
-  { value: 'low', label: '30km以下', desc: '市内短途' },
-  { value: 'medium', label: '30-80km', desc: '中等距离' },
-  { value: 'high', label: '80km以上', desc: '长距离通勤' },
-  { value: 'varies', label: '里程不定', desc: '使用灵活' },
-]
+// const mileageOptions = [
+//   { value: 'low', label: '30km以下', desc: '市内短途' },
+//   { value: 'medium', label: '30-80km', desc: '中等距离' },
+//   { value: 'high', label: '80km以上', desc: '长距离通勤' },
+//   { value: 'varies', label: '里程不定', desc: '使用灵活' },
+// ]
 
 // =============================================
 //  API调用函数
@@ -1214,39 +1060,69 @@ const fetchCarModels = async (): Promise<CarModel[]> => {
   }
 }
 
-const fetchSaleRecords = async (): Promise<SaleRecord[]> => {
-  try {
-    console.log('正在获取销售记录...')
-    const response = await axios.get('/api/sale-records')
-    if (response.data.status === 200 && response.data.data) {
-      console.log('获取销售记录成功:', response.data.data.length, '条记录')
-      return response.data.data
-    } else {
-      throw new Error(`API返回错误状态: ${response.data.status}`)
-    }
-  } catch (error) {
-    console.error('获取销售记录失败:', error)
-    ElMessage.error('销售数据加载失败')
-    throw error
+const fetchLevelOptions = async () => {
+  const res = await axios.get('/api/car-models/levels')
+  if (res.data.status === 200 && res.data.data) {
+    levelOptions.value = res.data.data.map((level: string) => ({
+      value: level,
+      label: level,
+    }))
   }
 }
 
-const fetchOpinions = async (): Promise<Opinion[]> => {
-  try {
-    console.log('正在获取口碑数据...')
-    const response = await axios.get('/api/opinions')
-    if (response.data.status === 200 && response.data.data) {
-      console.log('获取口碑数据成功:', response.data.data.length, '条评价')
-      return response.data.data
-    } else {
-      throw new Error(`API返回错误状态: ${response.data.status}`)
-    }
-  } catch (error) {
-    console.error('获取口碑数据失败:', error)
-    ElMessage.error('口碑数据加载失败')
-    throw error
+const fetchEngineTypeOptions = async () => {
+  const res = await axios.get('/api/car-models/engine-types')
+  if (res.data.status === 200 && res.data.data) {
+    engineTypeOptions.value = res.data.data.map((type: string) => ({
+      value: type,
+      label: type,
+    }))
   }
 }
+
+const fetchFactoryOptions = async (keyword: string) => {
+  factoryLoading.value = true
+  try {
+    const res = await axios.get('/api/car-models/factorys', { params: { keyword } })
+    if (res.data.status === 200 && res.data.data) {
+      factoryOptions.value = res.data.data.map((factory: string) => ({
+        value: factory,
+        label: factory,
+      }))
+    }
+  } finally {
+    factoryLoading.value = false
+  }
+}
+
+
+// 新增推荐榜单API请求函数
+const fetchCarModelMatchScoreRanking = async (
+  level: string = 'all',
+  minPrice?: number,
+  maxPrice?: number,
+  engineType: string = 'all',
+  seatNum?: number,
+  factory: string = 'all',
+  top: number = 4
+) => {
+  try {
+    const params: any = { level, engineType, factory, top }
+    if (typeof minPrice === 'number' && !isNaN(minPrice)) params.minPrice = minPrice
+    if (typeof maxPrice === 'number' && !isNaN(maxPrice)) params.maxPrice = maxPrice
+    if (typeof seatNum === 'number' && !isNaN(seatNum)) params.seatNum = seatNum
+    const response = await axios.get('/api/ranking/match-score', { params })
+    if (response.data.status === 200 && response.data.data) {
+      return response.data.data
+    } else {
+      throw new Error(response.data.message || 'API返回错误')
+    }
+  } catch (error) {
+    ElMessage.error('获取推荐榜单数据失败')
+    return []
+  }
+}
+
 
 const fetchRegions = async (): Promise<Region[]> => {
   try {
@@ -1307,9 +1183,6 @@ const loadAllBaseData = async () => {
     loadingProgress.value = 10
     const carModels = await fetchCarModels()
 
-    currentLoadingStep.value = '正在获取销售记录...'
-    loadingProgress.value = 30
-    const saleRecords = await fetchSaleRecords()
 
     currentLoadingStep.value = '正在获取地区信息...'
     loadingProgress.value = 50
@@ -1319,20 +1192,15 @@ const loadAllBaseData = async () => {
       fetchNonTopLevelRegions(),
     ])
 
-    currentLoadingStep.value = '正在获取口碑数据...'
-    loadingProgress.value = 70
-    const opinions = await fetchOpinions()
 
     currentLoadingStep.value = '正在处理数据...'
     loadingProgress.value = 90
 
     baseData.value = {
       carModels,
-      saleRecords,
       regions,
       topLevelRegions,
       nonTopLevelRegions,
-      opinions,
     }
 
     calculateBusinessMetrics()
@@ -1354,244 +1222,65 @@ const loadAllBaseData = async () => {
 const calculateBusinessMetrics = () => {
   console.log('计算业务指标...')
 
-  businessMetrics.value.totalSalesRecords = baseData.value.saleRecords.length
-  businessMetrics.value.totalOpinions = baseData.value.opinions.length
   businessMetrics.value.totalCarModels = baseData.value.carModels.length
 
-  // 计算平均市场价格
-  if (baseData.value.carModels.length > 0) {
-    const totalPrice = baseData.value.carModels.reduce((sum, car) => sum + car.officialPrice, 0)
-    businessMetrics.value.avgMarketPrice = totalPrice / baseData.value.carModels.length / 10000
-  }
+  // // 计算平均市场价格
+  // if (baseData.value.carModels.length > 0) {
+  //   const totalPrice = baseData.value.carModels.reduce((sum, car) => sum + car.officialPrice, 0)
+  //   businessMetrics.value.avgMarketPrice = totalPrice / baseData.value.carModels.length / 10000
+  // }
 
-  // 统计热门品牌
-  const brandSalesMap = new Map<string, number>()
-  baseData.value.saleRecords.forEach((record) => {
-    const carModel = baseData.value.carModels.find((car) => car.carModelId === record.carModelId)
-    if (carModel) {
-      const currentSales = brandSalesMap.get(carModel.brandName) || 0
-      brandSalesMap.set(carModel.brandName, currentSales + record.saleCount)
-    }
-  })
+  // // 统计热门品牌
+  // const brandSalesMap = new Map<string, number>()
+  // baseData.value.saleRecords.forEach((record) => {
+  //   const carModel = baseData.value.carModels.find((car) => car.carModelId === record.carModelId)
+  //   if (carModel) {
+  //     const currentSales = brandSalesMap.get(carModel.brandName) || 0
+  //     brandSalesMap.set(carModel.brandName, currentSales + record.saleCount)
+  //   }
+  // })
 
-  businessMetrics.value.topBrands = Array.from(brandSalesMap.entries())
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 5)
-    .map(([brand]) => brand)
+  // businessMetrics.value.topBrands = Array.from(brandSalesMap.entries())
+  //   .sort((a, b) => b[1] - a[1])
+  //   .slice(0, 5)
+  //   .map(([brand]) => brand)
 
-  // 计算市场趋势
-  const recentRecords = baseData.value.saleRecords.filter((record) => {
-    const recordDate = new Date(record.saleMonth)
-    const threeMonthsAgo = new Date()
-    threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3)
-    return recordDate >= threeMonthsAgo
-  })
+  // // 计算市场趋势
+  // const recentRecords = baseData.value.saleRecords.filter((record) => {
+  //   const recordDate = new Date(record.saleMonth)
+  //   const threeMonthsAgo = new Date()
+  //   threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3)
+  //   return recordDate >= threeMonthsAgo
+  // })
 
-  if (recentRecords.length > 0) {
-    const currentMonthSales = recentRecords
-      .filter((record) => new Date(record.saleMonth).getMonth() === new Date().getMonth())
-      .reduce((sum, record) => sum + record.saleCount, 0)
+  // if (recentRecords.length > 0) {
+  //   const currentMonthSales = recentRecords
+  //     .filter((record) => new Date(record.saleMonth).getMonth() === new Date().getMonth())
+  //     .reduce((sum, record) => sum + record.saleCount, 0)
 
-    const lastMonthSales = recentRecords
-      .filter((record) => new Date(record.saleMonth).getMonth() === new Date().getMonth() - 1)
-      .reduce((sum, record) => sum + record.saleCount, 0)
+  //   const lastMonthSales = recentRecords
+  //     .filter((record) => new Date(record.saleMonth).getMonth() === new Date().getMonth() - 1)
+  //     .reduce((sum, record) => sum + record.saleCount, 0)
 
-    if (lastMonthSales > 0) {
-      const growthRate = ((currentMonthSales - lastMonthSales) / lastMonthSales) * 100
-      if (growthRate > 5) {
-        businessMetrics.value.marketTrend = 'up'
-      } else if (growthRate < -5) {
-        businessMetrics.value.marketTrend = 'down'
-      } else {
-        businessMetrics.value.marketTrend = 'stable'
-      }
-    }
-  }
+  //   if (lastMonthSales > 0) {
+  //     const growthRate = ((currentMonthSales - lastMonthSales) / lastMonthSales) * 100
+  //     if (growthRate > 5) {
+  //       businessMetrics.value.marketTrend = 'up'
+  //     } else if (growthRate < -5) {
+  //       businessMetrics.value.marketTrend = 'down'
+  //     } else {
+  //       businessMetrics.value.marketTrend = 'stable'
+  //     }
+  //   }
+  // }
 
   console.log('业务指标计算完成:', businessMetrics.value)
 }
 
-// =============================================
-// 智能推荐算法核心函数
-// =============================================
 
-const processCarModelsForRecommendation = (): ProcessedCarModel[] => {
-  console.log('处理车型数据用于推荐...')
 
-  return baseData.value.carModels.map((carModel) => {
-    // 计算销量数据
-    const carSalesRecords = baseData.value.saleRecords.filter(
-      (record) => record.carModelId === carModel.carModelId,
-    )
 
-    const totalSales = carSalesRecords.reduce((sum, record) => sum + record.saleCount, 0)
-    const avgMonthlySales =
-      carSalesRecords.length > 0 ? Math.floor(totalSales / Math.max(carSalesRecords.length, 1)) : 0
-
-    // 获取用户评分
-    const opinion = baseData.value.opinions.find((op) => op.carModelId === carModel.carModelId)
-    const userRating = opinion ? opinion.score : 3.5
-
-    // 官方指导价
-    const price = carModel.officialPrice / 10000
-    const priceRange = `${price.toFixed(1)}万`
-
-    // 计算市场热度（基于销量排名）
-    const allSales = baseData.value.carModels
-      .map((car) => {
-        const sales = baseData.value.saleRecords
-          .filter((record) => record.carModelId === car.carModelId)
-          .reduce((sum, record) => sum + record.saleCount, 0)
-        return { carModelId: car.carModelId, sales }
-      })
-      .sort((a, b) => b.sales - a.sales)
-
-    const salesRank = allSales.findIndex((item) => item.carModelId === carModel.carModelId) + 1
-    const marketHeat = Math.max(0, 100 - (salesRank - 1) * 2)
-
-    // 判断是否为热销车型
-    const isHot = salesRank <= 10
-
-    // 判断是否为新车型
-    const launchDate = new Date(carModel.launchDate)
-    const oneYearAgo = new Date()
-    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1)
-    const isNew = launchDate >= oneYearAgo
-
-    // 映射车型类别
-    let type = '轿车'
-    if (carModel.level?.includes('SUV') || carModel.modelName.toUpperCase().includes('SUV')) {
-      type = 'SUV'
-    } else if (carModel.modelName.includes('MPV')) {
-      type = 'MPV'
-    }
-
-    // 生成车型图片URL
-    const image =
-      carModel.imageUrl && carModel.imageUrl.trim() !== ''
-        ? carModel.imageUrl
-        : `https://picsum.photos/400/300?random=${carModel.carModelId}`
-
-    // 生成亮点标签
-    let highlight = '品质之选'
-    if (isHot) highlight = '热销车型'
-    else if (isNew) highlight = '新车上市'
-    else if (userRating >= 4.5) highlight = '口碑优选'
-    else if (price < 15) highlight = '性价比高'
-    else if (price > 40) highlight = '豪华配置'
-
-    return {
-      id: carModel.carModelId,
-      brand: carModel.brandName,
-      name: carModel.modelName,
-      priceRange,
-      type,
-      engine: carModel.engineType,
-      transmission: carModel.driveType,
-      image,
-      highlight,
-      matchScore: 0,
-      level: carModel.level,
-      seatNum: carModel.seatNum,
-      avgMonthlySales,
-      totalSales,
-      avgPrice: price,
-      userRating,
-      marketHeat,
-      salesRank,
-      isHot,
-      isNew,
-    }
-  })
-}
-
-const calculateMatchScore = (carModel: ProcessedCarModel): number => {
-  let score = 0
-  let maxScore = 0
-
-  // 预算匹配 (权重: 30%)
-  if (questionnaireData.value.budget && questionnaireData.value.budget !== 'unlimited') {
-    maxScore += 30
-    const budgetRanges = {
-      under10: [0, 10],
-      '10-20': [10, 20],
-      '20-30': [20, 30],
-      '30-50': [30, 50],
-      over50: [50, 200],
-    }
-    const [minBudget, maxBudget] = budgetRanges[
-      questionnaireData.value.budget as keyof typeof budgetRanges
-    ] || [0, 200]
-
-    if (carModel.avgPrice >= minBudget && carModel.avgPrice <= maxBudget) {
-      score += 30
-    } else {
-      const deviation = Math.min(
-        Math.abs(carModel.avgPrice - minBudget),
-        Math.abs(carModel.avgPrice - maxBudget),
-      )
-      score += Math.max(0, 30 - deviation * 3)
-    }
-  }
-
-  // 车型类别匹配 (权重: 25%)
-  if (questionnaireData.value.bodyTypes.length > 0) {
-    maxScore += 25
-    const typeMapping = {
-      sedan: '轿车',
-      suv: 'SUV',
-      mpv: 'MPV',
-      hatchback: '两厢车',
-      coupe: '跑车',
-    }
-
-    const matchedTypes = questionnaireData.value.bodyTypes.some(
-      (bodyType) =>
-        typeMapping[bodyType] === carModel.type ||
-        (bodyType === 'suv' && carModel.type === 'SUV') ||
-        (bodyType === 'sedan' && carModel.type === '轿车'),
-    )
-
-    if (matchedTypes) score += 25
-  }
-
-  // 能源类型匹配 (权重: 20%)
-  if (questionnaireData.value.energyType && questionnaireData.value.energyType !== 'any') {
-    maxScore += 20
-    const energyMapping = {
-      gasoline: ['汽油', '燃油'],
-      electric: ['纯电动', '电动'],
-      hybrid: ['混合动力', '混动', '插电式混合动力'],
-    }
-
-    const targetEngineTypes = energyMapping[questionnaireData.value.energyType] || []
-    const matched = targetEngineTypes.some((type) => carModel.engine.includes(type))
-
-    if (matched) score += 20
-  }
-
-  // 座位数匹配 (权重: 15%)
-  if (questionnaireData.value.passengers && questionnaireData.value.passengers !== 'any') {
-    maxScore += 15
-    const requiredSeats = parseInt(questionnaireData.value.passengers)
-    if (carModel.seatNum >= requiredSeats) {
-      score += 15
-    } else {
-      score += Math.max(0, 15 - (requiredSeats - carModel.seatNum) * 5)
-    }
-  }
-
-  // 品牌偏好匹配 (权重: 10%)
-  if (questionnaireData.value.brandPreference.length > 0) {
-    maxScore += 10
-    if (questionnaireData.value.brandPreference.includes(carModel.brand)) {
-      score += 10
-    }
-  }
-
-  return maxScore > 0 ? Math.round((score / maxScore) * 100) : 75
-}
-
+// 推荐生成函数，直接用后端返回的数据
 const generateRecommendation = async () => {
   if (!isStep1Valid()) {
     ElMessage.warning('请先完成必填项目')
@@ -1601,127 +1290,120 @@ const generateRecommendation = async () => {
   try {
     analyzing.value = true
     analysisProgress.value = 0
-    currentAnalysisStep.value = '正在处理车型数据...'
+    currentAnalysisStep.value = '正在请求推荐榜单...'
 
-    // 处理车型数据
-    analysisProgress.value = 20
-    const candidateCarModels = processCarModelsForRecommendation()
+    // 组装参数
+    let level = questionnaireData.value.level || 'all'
+  let minPrice: number | undefined, maxPrice: number | undefined
+  if (questionnaireData.value.budget && questionnaireData.value.budget !== 'unlimited') {
+    const budgetRanges = {
+      under10: [0, 10],
+      '10-20': [10, 20],
+      '20-30': [20, 30],
+      '30-50': [30, 50],
+      over50: [50, 200],
+      unlimited: [0, 200],
+    }
+    const [min, max] = budgetRanges[questionnaireData.value.budget]
+    minPrice = min
+    maxPrice = max
+  }
+  let engineType = questionnaireData.value.engineType || 'all'
+  let seatNum = questionnaireData.value.seatNum ? parseInt(questionnaireData.value.seatNum) : undefined
+  let factory = questionnaireData.value.factory || 'all'
 
-    currentAnalysisStep.value = '正在计算匹配度...'
-    analysisProgress.value = 40
+    // 直接请求后端推荐榜单
+    const data = await fetchCarModelMatchScoreRanking(
+      level,
+      minPrice,
+      maxPrice,
+      engineType,
+      seatNum,
+      factory,
+      10
+    )
 
-    // 计算匹配度
-    candidateCarModels.forEach((car) => {
-      car.matchScore = calculateMatchScore(car)
-    })
+    // 适配后端返回结构
+    const processedList = data.map((item: any, idx: number) => ({
+      id: item.carModelId,
+      brand: item.brandName,
+      name: item.modelName,
+      priceRange: item.officialPrice
+        ? `${(item.officialPrice ).toFixed(1)}万`
+        : '--',
+      type: item.level || '',
+      engine: item.engineType,
+      transmission: item.driveType,
+      image: item.imageUrl || `https://picsum.photos/400/300?random=${item.carModelId}`,
+      highlight: idx === 0 ? '最佳推荐' : idx < 3 ? '优选' : '',
+      matchScore: item.totalScore ? Math.round(item.totalScore) : 0,
+      level: item.level,
+      seatNum: item.seatNum,
+      avgMonthlySales: 0,
+      totalSales: 0,
+      avgPrice: item.officialPrice ? item.officialPrice / 10000 : 0,
+      userRating: 4.0,
+      marketHeat: 60,
+      salesRank: idx + 1,
+      isHot: idx < 3,
+      isNew: false,
+      // 可扩展更多字段
+      totalScore: item.totalScore,
+      budgetScore: item.budgetScore,
+      levelScore: item.levelScore,
+      engineTypeScore: item.engineTypeScore,
+      seatNumScore: item.seatNumScore,
+      brandScore: item.brandScore,
+    }))
 
-    currentAnalysisStep.value = '正在生成推荐结果...'
-    analysisProgress.value = 60
-
-    // 排序获取候选车型
-    candidateCarModels.sort((a, b) => {
-      if (b.matchScore !== a.matchScore) return b.matchScore - a.matchScore
-      if (b.userRating !== a.userRating) return b.userRating - a.userRating
-      return b.totalSales - a.totalSales
-    })
-
-    currentAnalysisStep.value = '正在生成主推荐...'
-    analysisProgress.value = 80
-
-    // 生成主推荐
-    const topCandidate = candidateCarModels[0]
+    // 主推荐
+    const topCandidate = processedList[0]
     const primaryRecommendation: PrimaryRecommendation = {
       ...topCandidate,
-
+      confidence: topCandidate.matchScore,
       reasons: [
-        {
-          id: '1',
-          text: `预算匹配度高，价格区间${topCandidate.priceRange}符合您的需求`,
-          category: '预算匹配',
-          type: 'success',
-        },
-        {
-          id: '2',
-          text: `用户评分${topCandidate.userRating.toFixed(1)}分，口碑表现优秀`,
-          category: '用户口碑',
-          type: 'success',
-        },
-        {
-          id: '3',
-          text: `月均销量${topCandidate.avgMonthlySales}台，市场认可度高`,
-          category: '市场表现',
-          type: 'success',
-        },
+        { id: '1', text: `综合得分${topCandidate.matchScore}分，匹配度高`, category: '综合评分', type: 'success' },
+        { id: '2', text: `官方指导价${topCandidate.priceRange}，价格合理`, category: '预算', type: 'success' },
+        { id: '3', text: `座位数${topCandidate.seatNum}，空间充足`, category: '空间', type: 'success' },
       ],
       advantages: [
         {
-          label: '价格优势',
-          description: '性价比突出',
-          icon: Money,
-          score: Math.min(
-            95,
-            100 - (topCandidate.avgPrice / businessMetrics.value.avgMarketPrice - 1) * 50,
-          ),
-          data: {
-            label: '相比同级',
-            value:
-              topCandidate.avgPrice < businessMetrics.value.avgMarketPrice ? '更优惠' : '品质更高',
-          },
-        },
-        {
-          label: '市场热度',
-          description: '销量表现优秀',
-          icon: TrendCharts,
-          score: topCandidate.marketHeat,
-          data: {
-            label: '销量排名',
-            value: `第${topCandidate.salesRank}名`,
-          },
-        },
-        {
-          label: '用户口碑',
-          description: '用户满意度高',
+          label: '综合得分',
+          description: '多维度综合评分',
           icon: Star,
-          score: topCandidate.userRating * 20,
-          data: {
-            label: '用户评分',
-            value: `${topCandidate.userRating.toFixed(1)}分`,
-          },
+          score: topCandidate.matchScore,
+          data: { label: '总分', value: `${topCandidate.matchScore}分` },
+        },
+        {
+          label: '预算匹配',
+          description: '价格区间合理',
+          icon: Money,
+          score: topCandidate.budgetScore || 0,
+          data: { label: '预算分', value: `${topCandidate.budgetScore || 0}分` },
+        },
+        {
+          label: '空间表现',
+          description: '座位数情况',
+          icon: OfficeBuilding,
+          score: topCandidate.seatNumScore || 0,
+          data: { label: '座位分', value: `${topCandidate.seatNumScore || 0}分` },
         },
       ],
     }
 
-    // 生成备选推荐
-    const remainingCars = candidateCarModels.slice(1)
-
-    const budgetCars = remainingCars
-      .filter((car) => car.avgPrice < businessMetrics.value.avgMarketPrice)
-      .sort((a, b) => {
-        const aRatio = a.matchScore / Math.max(a.avgPrice, 1)
-        const bRatio = b.matchScore / Math.max(b.avgPrice, 1)
-        return bRatio - aRatio
-      })
-      .slice(0, 3)
-
-    const luxuryCars = remainingCars
-      .filter((car) => car.avgPrice > businessMetrics.value.avgMarketPrice)
-      .sort((a, b) => {
-        const aScore = a.matchScore + (a.level?.includes('C级') ? 10 : 0) + a.userRating * 5
-        const bScore = b.matchScore + (b.level?.includes('C级') ? 10 : 0) + b.userRating * 5
-        return bScore - aScore
-      })
-      .slice(0, 3)
-
-    const practicalCars = remainingCars
-      .sort((a, b) => {
-        const aScore = a.matchScore * 0.4 + a.marketHeat * 0.3 + a.userRating * 10 * 0.3
-        const bScore = b.matchScore * 0.4 + b.marketHeat * 0.3 + b.userRating * 10 * 0.3
-        return bScore - aScore
-      })
-      .slice(0, 3)
+    // 备选推荐分组
+    const budgetCars = processedList
+      .filter((car: { budgetScore: number }) => car.budgetScore >= 20)
+      .slice(1, 4)
+    const luxuryCars = processedList
+      .filter((car: { levelScore: number }) => car.levelScore >= 20)
+      .slice(1, 4)
+    const practicalCars = processedList
+      .filter((car: { engineTypeScore: number }) => car.engineTypeScore >= 15)
+      .slice(1, 4)
 
     const result: RecommendationResult = {
-      recommendations: candidateCarModels.slice(0, 10),
+      recommendations: processedList,
       primaryRecommendation,
       alternatives: {
         budget: budgetCars,
@@ -1729,10 +1411,10 @@ const generateRecommendation = async () => {
         practical: practicalCars,
       },
       matchScore: Math.round(
-        candidateCarModels.reduce((sum, car) => sum + car.matchScore, 0) /
-          candidateCarModels.length,
+        processedList.reduce((sum, car) => sum + car.matchScore, 0) /
+          Math.max(processedList.length, 1)
       ),
-      totalCandidates: candidateCarModels.length,
+      totalCandidates: processedList.length,
       analysisTime: Math.random() * 2 + 1,
     }
 
@@ -1742,7 +1424,7 @@ const generateRecommendation = async () => {
     analysisProgress.value = 100
     await new Promise((resolve) => setTimeout(resolve, 500))
 
-    ElMessage.success(`推荐生成成功！为您找到了${candidateCarModels.length}款适合的车型`)
+    ElMessage.success(`推荐生成成功！为您找到了${processedList.length}款适合的车型`)
 
     // 初始化雷达图
     await nextTick()
@@ -1756,78 +1438,6 @@ const generateRecommendation = async () => {
 }
 
 // =============================================
-// 计算属性
-// =============================================
-
-const availableBrandOptions = computed(() => {
-  const brandCount = new Map<string, number>()
-  baseData.value.carModels.forEach((car) => {
-    brandCount.set(car.brandName, (brandCount.get(car.brandName) || 0) + 1)
-  })
-
-  return Array.from(brandCount.entries())
-    .map(([brand, count]) => ({
-      value: brand,
-      label: brand,
-      count,
-    }))
-    .sort((a, b) => b.count - a.count)
-})
-
-const getCandidateCount = computed(() => {
-  if (!baseDataLoaded.value) return 0
-
-  return baseData.value.carModels.filter((car) => {
-    // 预算筛选
-    if (questionnaireData.value.budget && questionnaireData.value.budget !== 'unlimited') {
-      const price = car.officialPrice / 10000
-      const budgetRanges = {
-        under10: [0, 10],
-        '10-20': [10, 20],
-        '20-30': [20, 30],
-        '30-50': [30, 50],
-        over50: [50, 200],
-      }
-      const [minBudget, maxBudget] = budgetRanges[questionnaireData.value.budget] || [0, 200]
-      if (price < minBudget || price > maxBudget) return false
-    }
-
-    // 座位数筛选
-    if (questionnaireData.value.passengers && questionnaireData.value.passengers !== 'any') {
-      const requiredSeats = parseInt(questionnaireData.value.passengers)
-      if (car.seatNum < requiredSeats) return false
-    }
-
-    // 品牌筛选
-    if (questionnaireData.value.brandPreference.length > 0) {
-      if (!questionnaireData.value.brandPreference.includes(car.brandName)) return false
-    }
-
-    return true
-  }).length
-})
-
-const getPriceRange = computed(() => {
-  const candidateCars = baseData.value.carModels
-
-  if (candidateCars.length === 0) return '暂无数据'
-
-  const prices = candidateCars.map((car) => car.officialPrice / 10000)
-  const minPrice = Math.min(...prices)
-  const maxPrice = Math.max(...prices)
-
-  return `${minPrice.toFixed(1)}-${maxPrice.toFixed(1)}万`
-})
-
-const getPopularBrands = computed(() => {
-  return businessMetrics.value.topBrands.slice(0, 3).join('、') || '暂无数据'
-})
-
-const getAveragePrice = computed(() => {
-  return businessMetrics.value.avgMarketPrice.toFixed(1)
-})
-
-// =============================================
 // 筛选操作函数
 // =============================================
 
@@ -1835,103 +1445,19 @@ const selectBudget = (budget: string) => {
   questionnaireData.value.budget = budget
 }
 
-const toggleBodyType = (bodyType: string) => {
-  const index = questionnaireData.value.bodyTypes.indexOf(bodyType)
-  if (index > -1) {
-    questionnaireData.value.bodyTypes.splice(index, 1)
-  } else {
-    questionnaireData.value.bodyTypes.push(bodyType)
-  }
+const selectLevelType = (level: string) => {
+  questionnaireData.value.level = level
 }
 
-const selectEnergyType = (energyType: string) => {
-  questionnaireData.value.energyType = energyType
+const selectEngineType = (engineType: string) => {
+  questionnaireData.value.engineType = engineType
 }
 
-const selectPassengers = (passengers: string) => {
-  questionnaireData.value.passengers = passengers
+const selectSeatNum = (seatNum: string) => {
+  questionnaireData.value.seatNum = seatNum
 }
 
-const toggleBrandPreference = (brand: string) => {
-  const index = questionnaireData.value.brandPreference.indexOf(brand)
-  if (index > -1) {
-    questionnaireData.value.brandPreference.splice(index, 1)
-  } else {
-    questionnaireData.value.brandPreference.push(brand)
-  }
-}
 
-// const selectPrimaryUsage = (usage: string) => {
-//   questionnaireData.value.primaryUsage = usage
-// }
-
-const selectDailyMileage = (mileage: string) => {
-  questionnaireData.value.dailyMileage = mileage
-}
-
-// =============================================
-// 匹配计数函数
-// =============================================
-
-const getBudgetMatchCount = (budget: string): number => {
-  if (!baseDataLoaded.value || budget === 'unlimited') return baseData.value.carModels.length
-
-  const budgetRanges = {
-    under10: [0, 10],
-    '10-20': [10, 20],
-    '20-30': [20, 30],
-    '30-50': [30, 50],
-    over50: [50, 200],
-  }
-  const [minBudget, maxBudget] = budgetRanges[budget] || [0, 200]
-
-  return baseData.value.carModels.filter((car) => {
-    const price = car.officialPrice / 10000
-    return price >= minBudget && price <= maxBudget
-  }).length
-}
-
-const getBodyTypeMatchCount = (bodyType: string): number => {
-  if (!baseDataLoaded.value) return 0
-
-  const typeMapping = {
-    sedan: '轿车',
-    suv: 'SUV',
-    mpv: 'MPV',
-    hatchback: '两厢车',
-    coupe: '跑车',
-  }
-
-  const targetType = typeMapping[bodyType]
-  return baseData.value.carModels.filter((car) => {
-    return (
-      car.level?.includes(targetType) ||
-      car.modelName.toUpperCase().includes(targetType?.toUpperCase())
-    )
-  }).length
-}
-
-const getEnergyTypeMatchCount = (energyType: string): number => {
-  if (!baseDataLoaded.value || energyType === 'any') return baseData.value.carModels.length
-
-  const energyMapping = {
-    gasoline: ['汽油', '燃油'],
-    electric: ['纯电动', '电动'],
-    hybrid: ['混合动力', '混动', '插电式混合动力'],
-  }
-
-  const targetEngineTypes = energyMapping[energyType] || []
-  return baseData.value.carModels.filter((car) => {
-    return targetEngineTypes.some((type) => car.engineType.includes(type))
-  }).length
-}
-
-const getPassengerMatchCount = (passengers: string): number => {
-  if (!baseDataLoaded.value || passengers === 'any') return baseData.value.carModels.length
-
-  const requiredSeats = parseInt(passengers)
-  return baseData.value.carModels.filter((car) => car.seatNum >= requiredSeats).length
-}
 
 // =============================================
 // 验证函数
@@ -1940,9 +1466,9 @@ const getPassengerMatchCount = (passengers: string): number => {
 const isStep1Valid = (): boolean => {
   return !!(
     questionnaireData.value.budget &&
-    questionnaireData.value.bodyTypes.length > 0 &&
-    questionnaireData.value.energyType &&
-    questionnaireData.value.passengers
+    questionnaireData.value.level.length > 0 &&
+    questionnaireData.value.engineType &&
+    questionnaireData.value.seatNum
   )
 }
 
@@ -1950,88 +1476,50 @@ const isStep1Valid = (): boolean => {
 // 智能提示函数
 // =============================================
 
-const getSmartHints = () => {
-  const hints: Array<{ id: string; text: string; type: string; icon: any }> = []
-
-  if (questionnaireData.value.budget && getCandidateCount.value < 5) {
-    hints.push({
-      id: 'budget',
-      text: '当前筛选条件下车型较少，建议适当放宽预算范围',
-      type: 'warning',
-      icon: Money,
-    })
-  }
-
-  if (questionnaireData.value.brandPreference.length > 3) {
-    hints.push({
-      id: 'brand',
-      text: '选择的品牌较多，建议重点关注2-3个品牌以获得更精准推荐',
-      type: 'info',
-      icon: Star,
-    })
-  }
-
-  return hints
-}
 
 // =============================================
 // 数据获取函数
 // =============================================
 
-const getModelSalesData = (carModelId: number) => {
-  const salesRecords = baseData.value.saleRecords.filter(
-    (record) => record.carModelId === carModelId,
-  )
-  const totalSales = salesRecords.reduce((sum, record) => sum + record.saleCount, 0)
-  const avgMonthlySales = salesRecords.length > 0 ? Math.floor(totalSales / salesRecords.length) : 0
+// const getModelSalesData = (carModelId: number) => {
+//   const salesRecords = baseData.value.saleRecords.filter(
+//     (record) => record.carModelId === carModelId,
+//   )
+//   const totalSales = salesRecords.reduce((sum, record) => sum + record.saleCount, 0)
+//   const avgMonthlySales = salesRecords.length > 0 ? Math.floor(totalSales / salesRecords.length) : 0
 
-  return { totalSales, avgMonthlySales }
-}
+//   return { totalSales, avgMonthlySales }
+// }
 
-const getModelOpinionScore = (carModelId: number): number => {
-  const opinion = baseData.value.opinions.find((op) => op.carModelId === carModelId)
-  return opinion ? opinion.score : 3.5
-}
+// const getModelOpinionScore = (carModelId: number): number => {
+//   const opinion = baseData.value.opinions.find((op) => op.carModelId === carModelId)
+//   return opinion ? opinion.score : 3.5
+// }
 
-const getPrimarySalesData = () => {
-  if (!recommendationResult.value) return { totalSales: 0, avgMonthlySales: 0 }
-  return getModelSalesData(recommendationResult.value.primaryRecommendation.id)
-}
+// const getPrimarySalesData = () => {
+//   if (!recommendationResult.value) return { totalSales: 0, avgMonthlySales: 0 }
+//   return getModelSalesData(recommendationResult.value.primaryRecommendation.id)
+// }
 
-const getPrimaryOpinionScore = (): number => {
-  if (!recommendationResult.value) return 3.5
-  return getModelOpinionScore(recommendationResult.value.primaryRecommendation.id)
-}
+// const getPrimaryOpinionScore = (): number => {
+//   if (!recommendationResult.value) return 3.5
+//   return getModelOpinionScore(recommendationResult.value.primaryRecommendation.id)
+// }
 
-const getPrimaryMarketHeat = (): number => {
-  if (!recommendationResult.value) return 50
-  return recommendationResult.value.primaryRecommendation.marketHeat
-}
+// const getPrimaryMarketHeat = (): number => {
+//   if (!recommendationResult.value) return 50
+//   return recommendationResult.value.primaryRecommendation.marketHeat
+// }
 
-const getPrimaryRecommendationSalesRank = (): number => {
-  if (!recommendationResult.value) return 999
-  return recommendationResult.value.primaryRecommendation.salesRank
-}
+// const getPrimaryRecommendationSalesRank = (): number => {
+//   if (!recommendationResult.value) return 999
+//   return recommendationResult.value.primaryRecommendation.salesRank
+// }
 
 // =============================================
 //  UI辅助函数
 // =============================================
 
-// const getScenarioTagType = () => {
-//   if (questionnaireData.value.primaryUsage === 'business') return 'warning'
-//   if (questionnaireData.value.primaryUsage === 'family') return 'success'
-//   return 'info'
-// }
-
-// const getUserScenarioLabel = () => {
-//   const usageLabels = {
-//     daily: '日常通勤',
-//     family: '家用出行',
-//     business: '商务用车',
-//     travel: '长途旅行',
-//   }
-//   return usageLabels[questionnaireData.value.primaryUsage] || '智能推荐'
-// }
 
 const getAnalysisTime = () => {
   return recommendationResult.value?.analysisTime.toFixed(1) || '0.0'
@@ -2054,33 +1542,33 @@ const getSortedAlternatives = (alternatives: ProcessedCarModel[]) => {
 // 购买建议函数
 // =============================================
 
-const getPurchaseTimingAdvice = (): string => {
-  const trend = businessMetrics.value.marketTrend
-  if (trend === 'up') {
-    return '当前市场销量呈上升趋势，购车需求旺盛，建议提前预订以避免等车周期延长。'
-  } else if (trend === 'down') {
-    return '当前市场销量有所下降，经销商可能有更多优惠政策，是购车的好时机。'
-  }
-  return '当前市场相对稳定，价格波动较小，任何时候购车都是不错的选择。'
-}
+// const getPurchaseTimingAdvice = (): string => {
+//   const trend = businessMetrics.value.marketTrend
+//   if (trend === 'up') {
+//     return '当前市场销量呈上升趋势，购车需求旺盛，建议提前预订以避免等车周期延长。'
+//   } else if (trend === 'down') {
+//     return '当前市场销量有所下降，经销商可能有更多优惠政策，是购车的好时机。'
+//   }
+//   return '当前市场相对稳定，价格波动较小，任何时候购车都是不错的选择。'
+// }
 
-const getMarketTrendClass = () => {
-  const trend = businessMetrics.value.marketTrend
-  if (trend === 'up') return 'trend-up'
-  if (trend === 'down') return 'trend-down'
-  return 'trend-stable'
-}
+// const getMarketTrendClass = () => {
+//   const trend = businessMetrics.value.marketTrend
+//   if (trend === 'up') return 'trend-up'
+//   if (trend === 'down') return 'trend-down'
+//   return 'trend-stable'
+// }
 
-const getMarketTrendText = () => {
-  const trend = businessMetrics.value.marketTrend
-  if (trend === 'up') return '↗ 上升趋势'
-  if (trend === 'down') return '↘ 下降趋势'
-  return '→ 平稳发展'
-}
+// const getMarketTrendText = () => {
+//   const trend = businessMetrics.value.marketTrend
+//   if (trend === 'up') return '↗ 上升趋势'
+//   if (trend === 'down') return '↘ 下降趋势'
+//   return '→ 平稳发展'
+// }
 
-const getAverageDiscount = () => {
-  return '3-8%'
-}
+// const getAverageDiscount = () => {
+//   return '3-8%'
+// }
 
 const getRecommendedChannels = () => {
   return [
@@ -2111,41 +1599,8 @@ const getRecommendedChannels = () => {
   ]
 }
 
-const getTopRegionRecommendations = () => {
-  const regionSalesMap = new Map<number, { sales: number; amount: number }>()
 
-  baseData.value.saleRecords.forEach((record) => {
-    const existing = regionSalesMap.get(record.regionId) || { sales: 0, amount: 0 }
-    existing.sales += record.saleCount
-    existing.amount += record.saleAmount
-    regionSalesMap.set(record.regionId, existing)
-  })
 
-  const topRegions = Array.from(regionSalesMap.entries())
-    .map(([regionId, data]) => {
-      const region = baseData.value.regions.find((r) => r.regionId === regionId)
-      return {
-        regionId,
-        regionName: region?.regionName || '未知地区',
-        sales: data.sales,
-        amount: data.amount,
-        avgPrice: data.amount / Math.max(data.sales, 1) / 10000,
-      }
-    })
-    .sort((a, b) => b.sales - a.sales)
-    .slice(0, 3)
-
-  return topRegions.map((region, index) => ({
-    regionId: region.regionId,
-    regionName: region.regionName,
-    advantage: index === 0 ? 'stock' : 'price',
-    advantageText: index === 0 ? '库存充足' : '价格优势',
-    avgPrice: region.avgPrice.toFixed(1),
-    stockStatus: 'sufficient',
-    stockText: '库存充足',
-    salesHeat: Math.max(50, 100 - index * 20),
-  }))
-}
 
 const enhancedPurchaseChecklist = [
   { id: 'budget', text: '确认购车预算和贷款方案', tip: '包含购置税、保险、上牌费用' },
@@ -2171,71 +1626,84 @@ const initPrimaryRadarChart = async () => {
 
     const primaryCar = recommendationResult.value.primaryRecommendation
 
+    // 计算每个维度的最大值（可用主推荐分数的1.2倍，或所有推荐车型的最大分数）
+    const getMax = (field: keyof ProcessedCarModel) => {
+      const all = recommendationResult.value?.recommendations ?? []
+      const max = Math.max(...all.map(car => car[field] ?? 0), primaryCar[field] ?? 0)
+      return Math.max(10, Math.ceil(max * 1.2))
+    }
+
     const radarData = [
-      { name: '价格匹配', max: 100, value: primaryCar.matchScore },
-      { name: '销量表现', max: 100, value: primaryCar.marketHeat },
-      { name: '用户口碑', max: 100, value: primaryCar.userRating * 20 },
-      { name: '市场热度', max: 100, value: primaryCar.marketHeat },
-      { name: '综合评分', max: 100, value: primaryCar.confidence },
+      { name: '价格匹配', max: getMax('budgetScore'), value: primaryCar.budgetScore },
+      { name: '车辆类型', max: getMax('levelScore'), value: primaryCar.levelScore },
+      { name: '动力类型', max: getMax('engineTypeScore'), value: primaryCar.engineTypeScore },
+      { name: '空间大小', max: getMax('seatNumScore'), value: primaryCar.seatNumScore },
+      { name: '主机厂偏好', max: getMax('brandScore'), value: primaryCar.brandScore },
     ]
 
-    const option = {
-      title: {
-        text: '综合评分雷达图',
-        left: 'center',
-        textStyle: {
-          fontSize: 14,
-          fontWeight: 600,
-        },
+   const option = {
+  // title: {
+  //   text: '综合评分雷达图',
+  //   left: 'center',
+  //   top: 8, // 上移标题，避免遮挡
+  //   textStyle: {
+  //     fontSize: 13,
+  //     fontWeight: 700,
+  //     color: '#222', // 更深的字体色
+  //   },
+  // },
+  radar: {
+    indicator: radarData.map((item) => ({ name: item.name, max: item.max })),
+    radius: '70%',
+    axisLine: { lineStyle: { color: '#b2b2b2', width: 1.5 } },
+    splitLine: { lineStyle: { color: '#b2b2b2', width: 1 } },
+    splitArea: {
+      areaStyle: {
+        color: [
+          'rgba(79,172,254,0.08)',
+          'rgba(79,172,254,0.04)',
+          'rgba(79,172,254,0.01)',
+          'rgba(255,255,255,0)',
+        ],
       },
-      radar: {
-        indicator: radarData.map((item) => ({ name: item.name, max: item.max })),
-        radius: '70%',
-        axisLine: {
-          lineStyle: {
-            color: '#e8eaed',
-          },
-        },
-        splitLine: {
-          lineStyle: {
-            color: '#e8eaed',
-          },
-        },
-        axisLabel: {
-          color: '#606266',
-          fontSize: 10,
-        },
-      },
-      series: [
+    },
+    axisLabel: { color: '#333', fontSize: 11, fontWeight: 600 },
+    name: {
+      color: '#222',
+      fontSize: 13,
+      fontWeight: 600,
+      backgroundColor: 'rgba(255,255,255,0.7)',
+      padding: [2, 6],
+      borderRadius: 4,
+    },
+  },
+  series: [
+    {
+      type: 'radar',
+      data: [
         {
-          type: 'radar',
-          data: [
-            {
-              value: radarData.map((item) => item.value),
-              name: '综合评分',
-              symbol: 'circle',
-              symbolSize: 6,
-              lineStyle: {
-                color: '#4facfe',
-                width: 2,
-              },
-              areaStyle: {
-                color: 'rgba(79, 172, 254, 0.2)',
-              },
-              itemStyle: {
-                color: '#4facfe',
-              },
-            },
-          ],
+          value: radarData.map((item) => item.value),
+          name: '综合评分',
+          symbol: 'circle',
+          symbolSize: 8,
+          lineStyle: { color: '#409EFF', width: 3 },
+          areaStyle: { color: 'rgba(64,158,255,0.25)' },
+          itemStyle: { color: '#409EFF', borderColor: '#fff', borderWidth: 2 },
         },
       ],
-      grid: {
-        left: 0,
-        right: 0,
-        top: 40,
-        bottom: 0,
+      label: {
+        show: true,
+        color: '#222',
+        fontWeight: 600,
+        fontSize: 12,
+        backgroundColor: 'rgba(255,255,255,0.8)',
+        borderRadius: 3,
+        padding: [2, 4],
       },
-    }
+    },
+  ],
+  grid: { left: 0, right: 0, top: 0, bottom: 0 }, 
+}
 
     primaryRadarChartInstance.setOption(option)
 
@@ -2272,12 +1740,7 @@ const addToComparison = (model: ProcessedCarModel | PrimaryRecommendation) => {
           matchScore: 95,
           level: model.level,
           seatNum: model.seatNum,
-          avgMonthlySales: getPrimarySalesData().avgMonthlySales,
-          totalSales: getPrimarySalesData().totalSales,
           avgPrice: parseFloat(model.priceRange.split('-')[0]),
-          userRating: getPrimaryOpinionScore(),
-          marketHeat: getPrimaryMarketHeat(),
-          salesRank: getPrimaryRecommendationSalesRank(),
           isHot: model.isHot,
           isNew: false,
         }
@@ -2320,7 +1783,6 @@ const startDetailedComparison = () => {
         comparisonList.value.map((car) => ({
           id: car.id,
           name: `${car.brand} ${car.name}`,
-          price: car.avgPrice,
         })),
       ),
     },
@@ -2416,12 +1878,10 @@ const restartQuestionnaire = () => {
     .then(() => {
       questionnaireData.value = {
         budget: '',
-        bodyTypes: [],
-        energyType: '',
-        passengers: '',
-        brandPreference: [],
-        // primaryUsage: '',
-        dailyMileage: '',
+        level: '',
+        engineType: '',
+        seatNum: '',
+        factory: '',
       }
       recommendationResult.value = null
       comparisonList.value = []
@@ -2448,6 +1908,9 @@ onMounted(async () => {
   ElMessage.success('欢迎使用智能购车推荐系统！')
 
   try {
+      await fetchLevelOptions()
+      await fetchEngineTypeOptions()
+  // 不主动加载factoryOptions，等用户输入再查
     await loadAllBaseData()
   } catch (error) {
     console.error('页面初始化失败:', error)
@@ -2525,58 +1988,71 @@ onUnmounted(() => {
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
 }
 
-/* 筛选卡片样式 */
+/* 筛选卡片整体 */
 .filter-card {
   margin-bottom: 24px;
-  border-radius: 16px;
-  box-shadow: 0 6px 30px rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 4px 20px rgba(64, 158, 255, 0.08);
   border: 1px solid #e8eaed;
-  overflow: hidden;
+  padding: 0 0 12px 0;
 }
 
+/* 卡片头部 */
 .filter-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  padding: 18px 24px 0 24px;
   font-weight: 600;
-  color: #1a1a1a;
+  color: #303133;
   font-size: 18px;
-}
-
-.filter-stats {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.filter-content {
-  padding: 8px 0;
-}
-
-/* 筛选区块样式 */
-.filter-section {
-  margin-bottom: 32px;
-  padding-bottom: 24px;
   border-bottom: 1px solid #f0f2f5;
+  background: linear-gradient(90deg, #f5f7fa 0%, #eaf6ff 100%);
+  border-radius: 12px 12px 0 0;
 }
 
-.filter-section:last-child {
-  border-bottom: none;
+/* 筛选内容区 */
+.filter-content {
+  padding: 24px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 32px 24px;
+  background: #f8fafb;
+  border-radius: 0 0 12px 12px;
+}
+
+.filter-radio-group {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  width: 100%;
+}
+
+/* 每个筛选区块 */
+.filter-section {
+  min-width: 220px;
+  flex: 1 1 220px;
+  background: #fff;
+  border-radius: 8px;
+  padding: 18px 16px 12px 16px;
+  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.04);
+  border: 1px solid #f0f2f5;
   margin-bottom: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .section-label {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 16px;
   font-weight: 600;
-  color: #1a1a1a;
-  font-size: 16px;
-}
-
-.section-label .el-icon {
-  color: #4facfe;
+  color: #409eff;
+  font-size: 15px;
+  margin-bottom: 8px;
 }
 
 .required {
@@ -2585,100 +2061,81 @@ onUnmounted(() => {
   margin-left: 4px;
 }
 
-.optional {
-  color: #909399;
-  font-size: 12px;
-  margin-left: 4px;
-}
-
-/* 筛选选项样式 */
+/* 筛选选项组 */
 .filter-options {
-  display: grid;
-  gap: 12px;
-}
-
-.budget-options {
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-}
-
-.body-type-options {
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-}
-
-.energy-options {
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-}
-
-.passenger-options {
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-}
-
-.brand-options {
-  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-}
-
-.usage-options {
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-}
-
-.mileage-options {
-  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .filter-option {
+  min-width: 80px;
+  padding: 10px 18px;
+  background: #f5f7fa;
+  border: 1.5px solid #e8eaed;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #303133;
+  transition: all 0.2s;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  padding: 16px 12px;
-  background: white;
-  border: 2px solid #e8eaed;
-  border-radius: 12px;
-  cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  text-align: center;
-  min-height: 80px;
+  gap: 2px;
+  box-shadow: 0 1px 4px rgba(64, 158, 255, 0.03);
 }
 
 .filter-option:hover {
-  border-color: #4facfe;
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(79, 172, 254, 0.2);
+  border-color: #409eff;
+  background: #eaf6ff;
+  color: #409eff;
 }
 
 .filter-option.active {
-  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-  border-color: #4facfe;
-  color: white;
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(79, 172, 254, 0.3);
+  background: linear-gradient(90deg, #409eff 0%, #67c23a 100%);
+  color: #fff;
+  border-color: #409eff;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.12);
+}
+
+.filter-option .option-label {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.filter-option .option-desc {
+  font-size: 11px;
+  color: #909399;
 }
 
 .filter-option.active .option-desc {
-  color: rgba(255, 255, 255, 0.9);
+  color: #fff;
 }
 
-.filter-option .el-icon {
-  font-size: 20px;
-  margin-bottom: 8px;
-  color: #4facfe;
+/* 响应式 */
+@media (max-width: 1200px) {
+  .filter-content {
+    flex-direction: column;
+    gap: 16px;
+    padding: 16px;
+  }
+  .filter-section {
+    min-width: 0;
+    padding: 12px 8px;
+  }
 }
 
-.filter-option.active .el-icon {
-  color: white;
-}
-
-.option-label {
-  font-size: 14px;
-  font-weight: 600;
-  margin-bottom: 4px;
-  line-height: 1.2;
-}
-
-.option-desc {
-  font-size: 11px;
-  color: #909399;
-  line-height: 1.3;
+@media (max-width: 768px) {
+  .filter-header {
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px 8px 0 8px;
+    font-size: 16px;
+  }
+  .filter-content {
+    padding: 8px;
+  }
 }
 
 /* 品牌选项特殊样式 */
@@ -3477,6 +2934,7 @@ onUnmounted(() => {
   .usage-options,
   .mileage-options {
     grid-template-columns: repeat(2, 1fr);
+    justify-content: center;
   }
 
   .filter-option {

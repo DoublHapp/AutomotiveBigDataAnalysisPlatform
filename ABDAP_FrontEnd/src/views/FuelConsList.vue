@@ -135,14 +135,16 @@
       <div class="filter-content">
         <el-row :gutter="16" align="bottom">
           <el-col :xs="24" :sm="6" :md="4">
-            <el-form-item label="车型类别">
-              <el-select v-model="vehicleType" @change="handleFilterChange" style="width: 100%">
-                <el-option label="全部车型" value="all" />
-                <el-option label="轿车" value="sedan" />
-                <el-option label="SUV" value="suv" />
-                <el-option label="MPV" value="mpv" />
-              </el-select>
-            </el-form-item>
+           <el-form-item label="车型类别">
+  <el-select v-model="vehicleType" @change="handleFilterChange" style="width: 100%">
+    <el-option
+      v-for="opt in vehicleTypeOptions"
+      :key="opt.value"
+      :label="opt.label"
+      :value="opt.value"
+    />
+  </el-select>
+</el-form-item>
           </el-col>
 
           <el-col :xs="24" :sm="6" :md="4">
@@ -150,7 +152,7 @@
     <el-input-number
       v-model="maxPrice"
       :min="1"
-      :max="200"
+      :max="1000"
       :precision="1"
       placeholder="请输入最高价格"
       style="width: 100%"
@@ -160,15 +162,16 @@
 </el-col>
 
           <el-col :xs="24" :sm="6" :md="4">
-            <el-form-item label="燃料类型">
-              <el-select v-model="fuelType" @change="handleFilterChange" style="width: 100%">
-                <el-option label="全部类型" value="all" />
-                <el-option label="燃油车" value="gasoline" />
-                <el-option label="纯电动" value="electric" />
-                <el-option label="混合动力" value="hybrid" />
-                <el-option label="插电混动" value="phev" />
-              </el-select>
-            </el-form-item>
+            <el-form-item label="动力类型">
+  <el-select v-model="fuelType" @change="handleFilterChange" style="width: 100%">
+    <el-option
+      v-for="opt in engineTypeOptions"
+      :key="opt.value"
+      :label="opt.label"
+      :value="opt.value"
+    />
+  </el-select>
+</el-form-item>
           </el-col>
 
           <el-col :xs="24" :sm="6" :md="4">
@@ -301,7 +304,7 @@
             </div>
 
             <div class="economy-score">
-              <span class="score-label">经济性评分</span>
+              <!-- <span class="score-label">经济性评分</span>
               <div class="score-bar">
                 <div
                   class="score-fill"
@@ -309,7 +312,7 @@
                   :class="getScoreClass(item.economyScore)"
                 ></div>
               </div>
-              <span class="score-text">{{ item.economyScore }}/100</span>
+              <span class="score-text">{{ item.economyScore }}/100</span> -->
             </div>
           </div>
 
@@ -653,7 +656,8 @@ interface CostResults {
 // 响应式数据
 const loading = ref(false)
 const currentPage = ref(1)
-
+const vehicleTypeOptions = ref<{ label: string; value: string }[]>([])
+const engineTypeOptions = ref<{ label: string; value: string }[]>([])
 
 // 筛选条件
 const vehicleType = ref('all')
@@ -701,6 +705,41 @@ const selectedCarDetail = ref<ProcessedFuelModel | null>(null)
 // API 调用函数
 // =============================================
 
+
+const fetchEngineTypeOptions = async () => {
+  try {
+    const res = await axios.get('/api/car-models/engine-types')
+    if (res.data.status === 200 && res.data.data) {
+      engineTypeOptions.value = [
+        { label: '全部类型', value: 'all' },
+        ...res.data.data.map((type: string) => ({
+          label: type,
+          value: type,
+        })),
+      ]
+    }
+  } catch (error) {
+    engineTypeOptions.value = [{ label: '全部类型', value: 'all' }]
+  }
+}
+
+const fetchVehicleTypeOptions = async () => {
+  try {
+    const res = await axios.get('/api/car-models/levels')
+    if (res.data.status === 200 && res.data.data) {
+      vehicleTypeOptions.value = [
+        { label: '全部车型', value: 'all' },
+        ...res.data.data.map((level: string) => ({
+          label: level,
+          value: level,
+        })),
+      ]
+    }
+  } catch (error) {
+    vehicleTypeOptions.value = [{ label: '全部车型', value: 'all' }]
+  }
+}
+
 const fetchFuelConsumptionRanking = async (
   level: string = 'all',
   maxPrice?: number,
@@ -730,52 +769,71 @@ const fetchFuelConsumptionRanking = async (
 // 数据处理函数
 // =============================================
 
+const getAvgConsumption = (item: any) => {
+  // 年油费/电费 ÷ 年里程 × 100 ÷ 单价
+  if (item.engineType === '纯电动') {
+    return item.annualFuelCost ? (item.annualFuelCost / 15000) * 100 / 7.5 : undefined
+  } else {
+    return item.annualFuelCost ? (item.annualFuelCost / 15000) * 100 / 7.5 : undefined
+  }
+}
 
 const processFuelConsRankingData = async () => {
   try {
     loading.value = true
     // 组装参数
+
+     // 车型类别参数
     let level = 'all'
     if (vehicleType.value !== 'all') {
-      const typeMap = { sedan: '轿车', suv: 'SUV', mpv: 'MPV' }
-      level = typeMap[vehicleType.value] || 'all'
+      level = vehicleType.value
     }
 
+
+       // 动力类型参数
     let engineType = 'all'
     if (fuelType.value !== 'all') {
-      const fuelMap = {
-        gasoline: '燃油',
-        electric: '纯电动',
-        hybrid: '混合动力',
-        phev: '插电混动',
-      }
-      engineType = fuelMap[fuelType.value] || 'all'
+      engineType = fuelType.value
     }
 
-    const data = await fetchFuelConsumptionRanking(level, maxPrice, engineType, displayCount.value)
+    const data = await fetchFuelConsumptionRanking(level, maxPrice.value, engineType, displayCount.value)
 
     // 适配接口返回结构
-    fuelConsRankingList.value = data.map((item: any) => ({
-      id: item.carModelId,
-      brand: item.brandName,
-      name: item.modelName,
-      type: item.level || '',
-      engine: item.engineType,
-      priceRange: item.officialPrice
-        ? `${(item.officialPrice / 10000).toFixed(1)}万`
-        : '--',
-      fuelType: item.engineType,
-      fuelConsumption: item.avgFuel,
-      powerConsumption: item.engineType === '纯电动' ? item.avgFuel : undefined,
-      image: item.imageUrl || `https://picsum.photos/300/200?random=${item.carModelId}`,
-      sampleSize: item.sampleCount || 0,
-      dataReliability: item.sampleCount
-        ? calculateReliability(item.sampleCount)
-        : 1,
-      economyScore: item.economyScore || 0,
-      isEcoChampion: item.avgFuel <= getEcoThreshold(item.engineType),
-      isNew: isNewModel(item.launchDate),
-    }))
+    fuelConsRankingList.value = data.map((item: any) => {
+  // 反推油耗/电耗
+  let fuelConsumption: number | undefined
+  let powerConsumption: number | undefined
+  if (item.annualFuelCost) {
+    if (item.engineType === '纯电动') {
+      powerConsumption = (item.annualFuelCost / 15000) * 100 / 7.5
+      fuelConsumption = powerConsumption
+    } else {
+      fuelConsumption = (item.annualFuelCost / 15000) * 100 / 7.5
+    }
+  }
+  return {
+    id: item.carModelId,
+    brand: item.brandName,
+    name: item.modelName,
+    type: item.level || '',
+    engine: item.engineType,
+    priceRange: item.officialPrice
+      ? `${Number(item.officialPrice).toFixed(2)}万`
+      : '--',
+    fuelType: item.engineType,
+    fuelConsumption,
+    powerConsumption,
+    image: item.imageUrl || `https://picsum.photos/300/200?random=${item.carModelId}`,
+    sampleSize: item.sampleCount || 0,
+    dataReliability: item.sampleCount
+      ? calculateReliability(item.sampleCount)
+      : 1,
+    economyScore: item.economyScore || 0,
+    isEcoChampion: fuelConsumption !== undefined && fuelConsumption <= getEcoThreshold(item.engineType),
+    isNew: isNewModel(item.launchDate),
+    annualFuelCost: item.annualFuelCost || 0,
+  }
+})
 
     console.log('油耗排行数据处理完成:', fuelConsRankingList.value.length, '个车型')
   } catch (error) {
@@ -798,48 +856,48 @@ const calculatePriceRange = (officialPrice: number): string => {
   return `${minPrice.toFixed(0)}-${maxPrice.toFixed(0)}万`
 }
 
-const calculateEconomyScore = (params: {
-  fuelConsumption: number
-  price: number
-  fuelType: string
-  sampleSize: number
-  rating: number
-}): number => {
-  const { fuelConsumption, price, fuelType, sampleSize, rating } = params
+// const calculateEconomyScore = (params: {
+//   fuelConsumption: number
+//   price: number
+//   fuelType: string
+//   sampleSize: number
+//   rating: number
+// }): number => {
+//   const { fuelConsumption, price, fuelType, sampleSize, rating } = params
 
-  // 基础油耗评分（40%权重）
-  const fuelScore = calculateFuelEfficiencyScore(fuelConsumption, fuelType)
+//   // 基础油耗评分（40%权重）
+//   const fuelScore = calculateFuelEfficiencyScore(fuelConsumption, fuelType)
 
-  // 价格经济性评分（30%权重）
-  const priceScore = calculatePriceEconomyScore(price, fuelConsumption)
+//   // 价格经济性评分（30%权重）
+//   const priceScore = calculatePriceEconomyScore(price, fuelConsumption)
 
-  // 数据可靠性评分（20%权重）
-  const reliabilityScore = Math.min(100, (sampleSize / 1000) * 100)
+//   // 数据可靠性评分（20%权重）
+//   const reliabilityScore = Math.min(100, (sampleSize / 1000) * 100)
 
-  // 用户评价评分（10%权重）
-  const ratingScore = (rating / 5) * 100
+//   // 用户评价评分（10%权重）
+//   const ratingScore = (rating / 5) * 100
 
-  // 综合评分
-  const totalScore = fuelScore * 0.4 + priceScore * 0.3 + reliabilityScore * 0.2 + ratingScore * 0.1
+//   // 综合评分
+//   const totalScore = fuelScore * 0.4 + priceScore * 0.3 + reliabilityScore * 0.2 + ratingScore * 0.1
 
-  return Math.floor(Math.min(100, Math.max(0, totalScore)))
-}
+//   return Math.floor(Math.min(100, Math.max(0, totalScore)))
+// }
 
-const calculateFuelEfficiencyScore = (consumption: number, fuelType: string): number => {
-  const standards = {
-    燃油: { excellent: 5, good: 7, poor: 12 },
-    纯电动: { excellent: 15, good: 20, poor: 25 },
-    混合动力: { excellent: 4, good: 6, poor: 10 },
-    插电混动: { excellent: 2, good: 4, poor: 8 },
-  }
+// const calculateFuelEfficiencyScore = (consumption: number, fuelType: string): number => {
+//   const standards = {
+//     燃油: { excellent: 5, good: 7, poor: 12 },
+//     纯电动: { excellent: 15, good: 20, poor: 25 },
+//     混合动力: { excellent: 4, good: 6, poor: 10 },
+//     插电混动: { excellent: 2, good: 4, poor: 8 },
+//   }
 
-  const standard = standards[fuelType] || standards['燃油']
+//   const standard = standards[fuelType] || standards['燃油']
 
-  if (consumption <= standard.excellent) return 100
-  if (consumption <= standard.good) return 80
-  if (consumption <= standard.poor) return 60
-  return 40
-}
+//   if (consumption <= standard.excellent) return 100
+//   if (consumption <= standard.good) return 80
+//   if (consumption <= standard.poor) return 60
+//   return 40
+// }
 
 const calculatePriceEconomyScore = (price: number, consumption: number): number => {
   const pricePerKm = price / 100000 / consumption // 每公里价格影响
@@ -970,7 +1028,7 @@ const getFuelTypeColor = (type: string) => {
 }
 
 const getFuelUnit = (fuelType: string) => {
-  if (fuelType === '纯电动') return 'kWh/100km'
+  if (fuelType === '纯电动') return 'L/100km(已转化的电能当量燃料消耗量)'
   return 'L/100km'
 }
 
@@ -1066,7 +1124,7 @@ const calculateYearlyCost = (model: ProcessedFuelModel) => {
   const defaultFuelPrice = 7.5
 
   if (model.fuelType === '纯电动') {
-    const electricPrice = 0.6
+    const electricPrice = 7.5
     const consumption = model.powerConsumption || model.fuelConsumption
     return Math.floor((yearlyMileage / 100) * consumption * electricPrice)
   } else {
@@ -1122,7 +1180,7 @@ const handlePageChange = (page: number) => {
 
 const resetFilters = async () => {
   vehicleType.value = 'all'
-  priceRange.value = 'all'
+  maxPrice.value = 1000
   fuelType.value = 'all'
   displayCount.value = 20
   currentPage.value = 1
@@ -1329,6 +1387,8 @@ watch(
 
 onMounted(async () => {
   ElMessage.success('欢迎使用油耗榜单！')
+  await fetchVehicleTypeOptions()
+  await fetchEngineTypeOptions()
 
   try {
     // 初始化计算器

@@ -725,10 +725,14 @@ const searchCarModels = (query: string) => {
     carModelSearchLoading.value = true
     try {
       const response = await axios.get('/api/car-models/search', {
-        params: { keyword: query, limit: 20 },
+        params: { keyword: query, limit: 100 },
       })
       if (response.data.status === 200 && response.data.data) {
-        carModelSearchResults.value = response.data.data
+         // 按 modelName 去重
+        const unique = Array.from(
+          new Map(response.data.data.map(item => [item.modelName, item])).values()
+        )
+        carModelSearchResults.value = unique
       } else {
         carModelSearchResults.value = []
       }

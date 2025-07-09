@@ -36,8 +36,8 @@
           <el-col :xs="24" :sm="12" :md="6">
             <el-form-item label="时间范围:">
               <el-select v-model="timeRange" @change="handleFilterChange">
-                <el-option label="近1个月" value="month" />
                 <el-option label="近3个月" value="quarter" />
+                <el-option label="近6个月" value="halfyear" />
                 <el-option label="近1年" value="year" />
                 <el-option label="自定义" value="custom" />
               </el-select>
@@ -59,16 +59,30 @@
 
           <el-col :xs="24" :sm="12" :md="6">
             <el-form-item label="地区筛选:">
-              <el-select v-model="selectedRegion" @change="handleFilterChange" clearable>
-                <el-option label="全部地区" value="" />
-                <el-option
-                  v-for="region in availableRegions"
-                  :key="region.regionId"
-                  :label="region.regionName"
-                  :value="region.regionId.toString()"
-                />
-              </el-select>
-            </el-form-item>
+  <el-select
+    v-model="selectedRegion"
+    filterable
+    remote
+    reserve-keyword
+    placeholder="输入地区名称搜索"
+    :remote-method="searchRegionByName"
+    :loading="regionSearchLoading"
+    @change="handleFilterChange"
+    clearable
+    style="width: 220px"
+  >
+    <el-option
+      label="全部地区"
+      value=""
+    />
+    <el-option
+      v-for="region in regionSearchResults"
+      :key="region.regionId"
+      :label="region.regionName"
+      :value="region.regionId.toString()"
+    />
+  </el-select>
+</el-form-item>
           </el-col>
         </el-row>
       </div>
@@ -142,11 +156,11 @@
               <li><b>销量排行：</b>按车型在当前筛选时间和地区内的真实销量总数从高到低排序。</li>
               <li>
                 <b>热度排行：</b
-                >综合销量、同比增长率、用户评分等多维度数据加权计算热度指数（销量40%+增长趋势25%+评分10%+基础分），再按热度指数排序。
+                >基于用户口碑评分排序
               </li>
               <li>
                 <b>性价比排行：</b
-                >基于车型配置价值、使用成本、价格等真实数据计算综合性价比评分，按性价比得分排序。
+                >基于当前筛选条件下的销量数据、用户口碑评分、官方指导价计算综合性价比评分排序。（性价比评分=当前筛选条件下的销量x口碑总评分/（官方指导价+1））
               </li>
             </ul>
           </el-dialog>
@@ -221,7 +235,7 @@
           </div>
 
           <!-- 操作按钮区 -->
-          <div class="car-actions">
+          <div class="car-actions"  @click.stop>
             <el-button
               size="small"
               @click.stop="toggleComparison(car)"
@@ -292,7 +306,7 @@
             <el-row :gutter="16">
               <el-col :span="12">
                 <div class="detail-metric">
-                  <span class="metric-label">当月销量</span>
+                  <span class="metric-label">当期销量</span>
                   <span class="metric-value">{{ selectedCarDetail.sales.toLocaleString() }}台</span>
                 </div>
               </el-col>
@@ -402,12 +416,12 @@ interface Opinion {
 
 // 基础数据存储
 interface BaseData {
-  carModels: CarModel[]
-  saleRecords: SaleRecord[]
-  regions: Region[]
-  topLevelRegions: Region[]
-  nonTopLevelRegions: Region[]
-  opinions: Opinion[]
+  carModels?: CarModel[]
+  saleRecords?: SaleRecord[]
+  regions?: Region[]
+  topLevelRegions?: Region[]
+  nonTopLevelRegions?: Region[]
+  opinions?: Opinion[]
 }
 
 // 计算数据层 - 基于基础数据计算
@@ -467,9 +481,10 @@ const availableCarModels = ref<CarModel[]>([])
 const availableRegions = ref<Region[]>([])
 
 // 筛选条件
-const timeRange = ref('month')
+const timeRange = ref('year')
 const customDateRange = ref<[Date, Date] | null>(null)
-// const selectedCarModel = ref('')
+const regionSearchResults = ref<Region[]>([])
+const regionSearchLoading = ref(false)
 const selectedRegion = ref('')
 
 // 排行榜配置
@@ -484,11 +499,32 @@ const selectedModels = ref<SelectedModel[]>([])
 const showDetailDrawer = ref(false)
 const selectedCarDetail = ref<ProcessedCarModel | null>(null)
 
+
+const searchRegionByName = async (query: string) => {
+  if (!query) {
+    regionSearchResults.value = []
+    return
+  }
+  regionSearchLoading.value = true
+  try {
+    // 合并省级和市级地区进行搜索，并去重
+    const allRegions = [...baseData.value.topLevelRegions, ...baseData.value.nonTopLevelRegions]
+    const filtered = allRegions.filter((region) => region.regionName.includes(query))
+    // 用 Map 以 regionName 去重
+    const unique = Array.from(
+      new Map(filtered.map((region) => [region.regionName, region])).values(),
+    )
+    regionSearchResults.value = unique
+  } finally {
+    regionSearchLoading.value = false
+  }
+}
+
 // 获取官方指导价（万元，保留1位小数）
 const getOfficialPrice = (carModelId: number): string => {
   const car = baseData.value.carModels.find((c) => c.carModelId === carModelId)
   if (!car) return '-'
-  return (car.officialPrice / 10000).toFixed(1)
+  return (car.officialPrice).toFixed(1)
 }
 
 // 趋势图表
@@ -525,6 +561,26 @@ const fetchCarModels = async (): Promise<CarModel[]> => {
     console.error('获取车型列表失败:', error)
     ElMessage.error('车型数据加载失败')
     throw error
+  }
+}
+
+
+const fetchMonthlySummary = async (params: {
+  startMonth: string
+  endMonth: string
+  region?: string
+  carModel?: string
+}) => {
+  try {
+    const response = await axios.get('/api/complex/monthly-summary', { params })
+    if (response.data.status === 200 && response.data.data) {
+      return response.data.data
+    } else {
+      throw new Error(response.data.message || 'API返回错误')
+    }
+  } catch (error) {
+    ElMessage.error('获取月度汇总数据失败')
+    return []
   }
 }
 
@@ -622,6 +678,50 @@ const fetchCarModelSalesRanking = async (
   }
 }
 
+const fetchCarModelOpinionScoreRanking = async (
+  startMonth: string,
+  endMonth: string,
+  region: string = 'all',
+  top: number = 10
+) => {
+  try {
+    const params: any = { startMonth, endMonth, region, top }
+    const response = await axios.get('/api/ranking/opinion-score', { params })
+    if (response.data.status === 200 && response.data.data) {
+      return response.data.data
+    } else {
+      throw new Error(response.data.message || 'API返回错误')
+    }
+  } catch (error) {
+    ElMessage.error('获取热度排行榜数据失败')
+    return []
+  }
+}
+
+
+const fetchCarModelValueRanking = async (
+  startMonth: string,
+  endMonth: string,
+  region: string = 'all',
+  top: number = 10
+) => {
+  try {
+    const params: any = { startMonth, endMonth, region, top }
+    const response = await axios.get('/api/ranking/value', { params })
+    if (response.data.status === 200 && response.data.data) {
+      return response.data.data
+    } else {
+      throw new Error(response.data.message || 'API返回错误')
+    }
+  } catch (error) {
+    ElMessage.error('获取性价比排行榜数据失败')
+    return []
+  }
+}
+
+
+
+
 // =============================================
 // 基础数据加载函数
 // =============================================
@@ -630,10 +730,9 @@ const loadAllBaseData = async () => {
   try {
     console.log('开始加载基础数据...')
 
-    const [carModels, saleRecords, regions, topLevelRegions, nonTopLevelRegions, opinions] =
+    const [carModels,regions, topLevelRegions, nonTopLevelRegions, opinions] =
       await Promise.all([
         fetchCarModels(),
-        fetchSaleRecords(),
         fetchRegions(),
         fetchTopLevelRegions(),
         fetchNonTopLevelRegions(),
@@ -642,7 +741,6 @@ const loadAllBaseData = async () => {
 
     baseData.value = {
       carModels,
-      saleRecords,
       regions,
       topLevelRegions,
       nonTopLevelRegions,
@@ -651,7 +749,6 @@ const loadAllBaseData = async () => {
 
     console.log('基础数据加载完成:', {
       车型数量: carModels.length,
-      销售记录数量: saleRecords.length,
       地区数量: regions.length,
       省份数量: topLevelRegions.length,
       城市数量: nonTopLevelRegions.length,
@@ -662,6 +759,11 @@ const loadAllBaseData = async () => {
     availableCarModels.value = carModels
     availableRegions.value = [...topLevelRegions, ...nonTopLevelRegions]
 
+     regionSearchResults.value = [
+    ...baseData.value.topLevelRegions,
+    ...baseData.value.nonTopLevelRegions,
+  ]
+
     ElMessage.success('基础数据加载完成')
   } catch (error) {
     console.error('基础数据加载失败:', error)
@@ -670,51 +772,12 @@ const loadAllBaseData = async () => {
   }
 }
 
-// =============================================
-// 地区筛选逻辑（省/市分流）
-// =============================================
-
-const loadSaleRecords = async () => {
-  // 判断当前地区筛选是省还是市
-  let params: {
-    // carModelId?: number;
-    regionId?: number
-    regionName?: string
-  } = {}
-  // if (selectedCarModel.value) {
-  //   params.carModelId = parseInt(selectedCarModel.value)
-  // }
-  if (selectedRegion.value) {
-    // 判断是省还是市
-    const region = availableRegions.value.find(
-      (r) => r.regionId?.toString() === selectedRegion.value,
-    )
-    if (region) {
-      // 市级有regionId且parentRegion不为空
-      if (region.parentRegion) {
-        params.regionId = region.regionId
-      } else {
-        // 省级只有regionName
-        params.regionName = region.regionName
-      }
-    }
-  }
-  baseData.value.saleRecords = await fetchSaleRecords(params)
-}
-
-// =============================================
-// 数据处理函数
-// =============================================
-
-
-
 
 const processHotCarData = async () => {
   loading.value = true
   try {
-    // 只处理销量排行时用API，其它排行类型可保留原逻辑或后续优化
-    if (rankingType.value === 'sales') {
-      const { startMonth, endMonth } = getTimeRange()
+    // 统一获取时间和地区
+    const { startMonth, endMonth } = getTimeRange()
       let region = 'all'
       if (selectedRegion.value) {
         const regionObj = availableRegions.value.find(
@@ -724,6 +787,10 @@ const processHotCarData = async () => {
           region = regionObj.regionName
         }
       }
+
+
+    if (rankingType.value === 'sales') {
+
       const data = await fetchCarModelSalesRanking(startMonth, endMonth, region, displayCount.value)
       hotCarList.value = data.map((item: any) => ({
         id: item.carModelId,
@@ -732,9 +799,9 @@ const processHotCarData = async () => {
         type: item.level || '',
         engine: item.engineType,
         priceRange: item.officialPrice
-          ? `${(item.officialPrice / 10000).toFixed(1)}万`
+          ? `${(item.officialPrice).toFixed(1)}万`
           : '--',
-        avgPrice: item.officialPrice ? item.officialPrice / 10000 : 0,
+        avgPrice: item.officialPrice ? item.officialPrice : 0,
         sales: item.saleCount,
         hotIndex: 0, // 其它排行类型时再计算
         valueScore: 0,
@@ -751,10 +818,64 @@ const processHotCarData = async () => {
         isNew: isNewModel(item.launchDate),
       }))
       console.log('销量排行榜数据处理完成:', hotCarList.value.length, '个车型')
-    } else {
-      // 其它排行类型可保留原有聚合逻辑或后续优化
-      // ...existing code for hot/value排行...
     }
+    else if (rankingType.value === 'hot') {
+      // 热度排行：用 opinion-score 接口
+      const data = await fetchCarModelOpinionScoreRanking(startMonth, endMonth, region, displayCount.value)
+      hotCarList.value = data.map((item: any) => ({
+        id: item.carModelId,
+        name: item.modelName,
+        brand: item.brandName,
+        type: item.level || '',
+        engine: item.engineType,
+        priceRange: item.officialPrice
+          ? `${(item.officialPrice).toFixed(1)}万`
+          : '--',
+        avgPrice: item.officialPrice ? item.officialPrice : 0,
+        sales: item.saleCount,
+        hotIndex: item.opinionScore ? item.opinionScore : 0, // 如有热度分字段可用，否则后续可自定义
+        valueScore: 0,
+        rating: item.opinionScore || 3.5,
+        salesGrowth: item.saleGrowthRate != null ? item.saleGrowthRate * 100 : 0,
+        trendDirection:
+          item.saleGrowthRate > 0.05
+            ? 'up'
+            : item.saleGrowthRate < -0.05
+            ? 'down'
+            : 'stable',
+        image: item.imageUrl || `https://picsum.photos/300/200?random=${item.carModelId}`,
+        isHot: false,
+        isNew: isNewModel(item.launchDate),
+      }))
+    }
+    else if (rankingType.value === 'value') {
+  const data = await fetchCarModelValueRanking(startMonth, endMonth, region, displayCount.value)
+  hotCarList.value = data.map((item: any) => ({
+    id: item.carModelId,
+    name: item.modelName,
+    brand: item.brandName,
+    type: item.level || '',
+    engine: item.engineType,
+    priceRange: item.officialPrice
+      ? `${(item.officialPrice).toFixed(1)}万`
+      : '--',
+    avgPrice: item.officialPrice ? item.officialPrice : 0,
+    sales: item.saleCount,
+    hotIndex: 0,
+    valueScore: item.valueScore ? item.valueScore : 0, // 直接用后端返回的性价比分
+    rating: item.opinionScore || 3.5,
+    salesGrowth: item.saleGrowthRate != null ? item.saleGrowthRate * 100 : 0,
+    trendDirection:
+      item.saleGrowthRate > 0.05
+        ? 'up'
+        : item.saleGrowthRate < -0.05
+        ? 'down'
+        : 'stable',
+    image: item.imageUrl || `https://picsum.photos/300/200?random=${item.carModelId}`,
+    isHot: false,
+    isNew: isNewModel(item.launchDate),
+  }))
+}
   } catch (error) {
     hotCarList.value = []
     ElMessage.error('排行榜数据处理失败')
@@ -886,8 +1007,8 @@ const getTimeRange = () => {
   const now = new Date()
   let monthsBack = 12
   switch (timeRange.value) {
-    case 'month': monthsBack = 1; break
     case 'quarter': monthsBack = 3; break
+    case 'halfyear': monthsBack = 6; break
     case 'year': monthsBack = 12; break
   }
   const endMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
@@ -914,8 +1035,7 @@ const handleFilterChange = async () => {
   loading.value = true
   currentPage.value = 1
   try {
-    await loadSaleRecords()
-    processHotCarData()
+    await processHotCarData()
     ElMessage.success('筛选已更新')
   } catch (error) {
     ElMessage.error('筛选更新失败')
@@ -943,8 +1063,9 @@ const handleRankingTypeChange = async () => {
   }
 }
 
-const handleDisplayCountChange = () => {
+const handleDisplayCountChange = async () => {
   currentPage.value = 1
+  await processHotCarData()
   ElMessage.info(`显示数量已调整为TOP ${displayCount.value}`)
 }
 
@@ -954,7 +1075,7 @@ const handlePageChange = (page: number) => {
 }
 
 const resetFilters = async () => {
-  timeRange.value = 'month'
+  timeRange.value = 'year'
   customDateRange.value = null
   // selectedCarModel.value = ''
   selectedRegion.value = ''
@@ -1030,11 +1151,10 @@ const addToComparison = (car: ProcessedCarModel) => {
   showDetailDrawer.value = false
 }
 
-const viewTrend = (car: ProcessedCarModel) => {
+const viewTrend = async (car: ProcessedCarModel) => {
   showTrendDialog.value = true
-  nextTick(() => {
-    initTrendChart(car)
-  })
+  await nextTick()
+  await initTrendChartWithMonthlySummary(car)
 }
 
 const shareCar = (car: ProcessedCarModel) => {
@@ -1115,37 +1235,50 @@ const exportRanking = () => {
 }
 
 // 图表初始化
-const initTrendChart = async (car: ProcessedCarModel) => {
+const initTrendChartWithMonthlySummary = async (car: ProcessedCarModel) => {
   if (!trendChart.value) return
 
   if (trendChartInstance) {
     trendChartInstance.dispose()
   }
-
   trendChartInstance = echarts.init(trendChart.value)
 
-  // 只取近12个月的真实销量数据
+  // 计算近一年时间范围
   const now = new Date()
-  const oneYearAgo = new Date(now.getFullYear(), now.getMonth() - 11, 1)
-  const carSalesData = baseData.value.saleRecords
-    .filter(
-      (record) =>
-        record.carModelId === car.id &&
-        new Date(record.saleMonth) >= oneYearAgo &&
-        new Date(record.saleMonth) <= now,
-    )
-    .sort((a, b) => new Date(a.saleMonth).getTime() - new Date(b.saleMonth).getTime())
+  const endMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+  const start = new Date(now.getFullYear(), now.getMonth() - 11, 1)
+  const startMonth = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}`
 
-  const months = carSalesData.map((record) => {
-    const date = new Date(record.saleMonth)
-    return `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`
+  // 地区名称
+  let region = 'all'
+  if (selectedRegion.value) {
+    const regionObj = availableRegions.value.find(
+      (r) => r.regionId?.toString() === selectedRegion.value,
+    )
+    if (regionObj) {
+      region = regionObj.regionName
+    }
+  }
+
+  // 车型短名
+  const carModel = car.name
+
+  // 请求月度汇总数据
+  const data = await fetchMonthlySummary({
+    startMonth,
+    endMonth,
+    region,
+    carModel,
   })
 
-  const salesData = carSalesData.map((record) => record.saleCount)
+  // 按月份排序
+  const sorted = data.slice().sort((a, b) => a.month.localeCompare(b.month))
+  const months = sorted.map((item) => item.month)
+  const sales = sorted.map((item) => item.saleCount)
 
   const option = {
     title: {
-      text: `${car.brand} ${car.name} 销量趋势`,
+      text: `${car.brand} ${car.name} 近一年销量趋势`,
       left: 'center',
       textStyle: { fontSize: 16 },
     },
@@ -1178,7 +1311,7 @@ const initTrendChart = async (car: ProcessedCarModel) => {
       {
         name: '月销量',
         type: 'line',
-        data: salesData,
+        data: sales,
         smooth: true,
         itemStyle: { color: '#409EFF' },
         lineStyle: { width: 3 },
@@ -1226,6 +1359,7 @@ onMounted(async () => {
      await processHotCarData()
     await loadAllBaseData()
     window.addEventListener('resize', handleResize)
+
   } catch (error) {
     console.error('页面初始化失败:', error)
     ElMessage.error('初始化失败，部分功能可能不可用')
