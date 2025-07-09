@@ -450,7 +450,7 @@ const debounceSearchModels = debounceAsync(searchModels, 500)
 const fetchHotCarList = async () => {
   try {
     // 现在使用生成数据，时间定为2024-12到2025-05；真实数据库应当是2025-05到2025-05
-    const response = await axios.get('/api/ranking/sales', { params: { startMonth: "2024-12", endMonth: "2025-05", region: "all", top: 30 } })
+    const response = await axios.get('/api/ranking/sales', { params: { startMonth: "2025-05", endMonth: "2025-05", region: "all", top: 30 } })
     if (response.data.status === 200 && response.data.data) {
       hotCarList.value = response.data.data.map((item: any) => ({
         id: item.carModelId,
