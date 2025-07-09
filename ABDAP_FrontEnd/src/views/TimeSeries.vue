@@ -72,8 +72,8 @@ const powerType = ref<string>('all')
 
 // 筛选条件
 const dateRangeType = ref<'month' | 'quarter' | 'year'>('month')
-const dateRange = ref<[string, string]>(['2023-01', '2023-12'])
-const regionSingle = ref<string>('北京'); 
+const dateRange = ref<[string, string]>(['2023-01', '2025-05'])
+const regionSingle = ref<string>(''); 
 const regionArray = ref<string[]>([]);
 const carModelSingle = ref<string>(''); 
 const carModelArray = ref<string[]>([]);
@@ -94,6 +94,11 @@ const carModelTargets = computed<any>({
       carModelSingle.value = newVal;
     }
   },
+});
+
+const disabledButton = computed(() => {
+  // 如果没有选择地区或车型，则禁用按钮
+  return !((regionSingle.value || regionArray.value.length > 0) && (carModelSingle.value || carModelArray.value.length > 0));
 });
 
 // 在<script setup>中添加
@@ -185,15 +190,21 @@ watch(compareMode, (mode) => {
   if (mode === 'region') {
     // 地区多选，车型单选，不包含全国
     regionArray.value = [];
+    regionSingle.value = '';
+    carModelArray.value = [];
     carModelSingle.value = ''; 
   } else if (mode === 'carModel') {
     // 车型多选，地区单选，包含全国
-    carModelArray.value = [];
+    regionArray.value = [];
     regionSingle.value = '';
+    carModelArray.value = [];
+    carModelSingle.value = ''; 
   } else {
     // 不限，地区多选不含全国，车型多选
     regionArray.value = [];
+    regionSingle.value = '';
     carModelArray.value = [];
+    carModelSingle.value = ''; 
   }
 })
 
@@ -300,9 +311,10 @@ function processResponseData(salesData: repsonseData[]): chartData[] {
 }
 
 // API接口调用函数
-const fetchCarModels = async () => {
+const fetchCarModels = async () => { 
   try {
-    const response = await axios.get('/api/car-models/page?page=0&size=20')
+    const response = await axios.get('/api/ranking/sales', { params: { startMonth: "2025-01", endMonth: "2025-05", region: "all", top: 30 } })
+    // const response = await axios.get('/api/car-models/page?page=370&size=30')
     console.log('获取车型列表:', response)
     if (response.data.status === 200) {
       response.data.data.forEach((model: any) => {
@@ -585,16 +597,12 @@ onMounted(() => {
               :value="item.value"
             />
           </el-select> -->
-          <!-- 动力类型选择 -->
-          <el-select v-model="powerType" placeholder="动力类型" style="margin-left: 16px; width: 120px">
-            <el-option
-              v-for="option in powerOptions"
-              :key="option.label"
-              :label="option.label"
-              :value="option.value"
-            />
-          </el-select>
-          <el-button @click="fetchDataAndRender" style="margin-left: 30px;">更新数据</el-button>
+          <el-button 
+          :disabled="disabledButton"
+          @click="fetchDataAndRender" 
+          style="margin-left: 30px;">
+          更新数据
+        </el-button>
         </div>
       </div>
     </el-card>
