@@ -55,8 +55,8 @@ interface CarModel {
 
 interface SearchResult {
   id: number
-  name: string
-  brand: string
+  name: string  // 实际存储modelFullName
+  brand: string  // 实际存储modelName
   priceRange: string
 }
 
@@ -201,7 +201,9 @@ const scenarioWeights: Record<string, WeightConfig> = {
 // 工具函数
 const calculateModelScore = (model: CarModel): number => {
   const weights = customWeights.value
-  const normalizedPrice = Math.max(0, 100 - model.price / 1000) // 价格越低得分越高
+  let topPrice = 50 // 评分价格上限设为50万
+  let lowPrice = 10 // 评分价格下限设为0万
+  const normalizedPrice: number =Math.min(Math.max(0, 100 - (model.price - lowPrice)/(topPrice - lowPrice) * 100), 100) // 价格转换为评分 // 价格越低得分越高
 
   return (
     normalizedPrice * weights.price +
@@ -420,13 +422,13 @@ const searchModels = async (query: string) => {
 
   searching.value = true
   try {
-    const response = await axios.get('/api/car-models/search', { params: { keyword: query, limit: 10 } })
+    const response = await axios.get('/api/car-models/search', { params: { keyword: query, limit: 20 } })
     if (response.data.status === 200 && response.data.data) {
       // searchResults.value = generateMockSearchResults(query)
       searchResults.value = response.data.data.map((item: any) => ({
-        id: item.id,
-        name: item.modelName,
-        brand: item.brandName,
+        id: item.carModelId,
+        name: item.modelFullName,
+        brand: item.modelName,
         priceRange: item.officialPrice,
       }))
     } else {
@@ -448,7 +450,7 @@ const debounceSearchModels = debounceAsync(searchModels, 500)
 const fetchHotCarList = async () => {
   try {
     // 现在使用生成数据，时间定为2024-12到2025-05；真实数据库应当是2025-05到2025-05
-    const response = await axios.get('/api/ranking/sales', { params: { startMonth: "2024-12", endMonth: "2025-05", region: "all", top: 10 } })
+    const response = await axios.get('/api/ranking/sales', { params: { startMonth: "2024-12", endMonth: "2025-05", region: "all", top: 30 } })
     if (response.data.status === 200 && response.data.data) {
       hotCarList.value = response.data.data.map((item: any) => ({
         id: item.carModelId,
@@ -456,7 +458,7 @@ const fetchHotCarList = async () => {
         brand: item.brandName,
         priceRange: item.officialPrice,
         image: item.imageUrl || `https://picsum.photos/300/200?random=${item.id}`,
-        sales: item.salesCount,
+        sales: item.saleCount,
         rating: item.opinionScore,
       }))
     } else {
@@ -474,7 +476,28 @@ const fetchModelDetails = async (modelId: number): Promise<CarModel | null> => {
   try {
     const response = await axios.get(`/api/car-models/detail/${modelId}`)
     if (response.data.status === 200 && response.data.data) {
-      return response.data.data
+      console.log('获取车型详情:', response)
+      const res = response.data.data
+      const modelData: CarModel = {
+        id: res.carModelId,
+        name: res.modelFullName,
+        brand: res.modelName,
+        type: res.level,
+        engine: res.engineType,
+        priceRange: res.officialPrice,
+        image: res.imageUrl,
+
+        price: res.officialPrice,
+        power: Math.round(res.powerScore * 200) / 10, //
+        control: Math.round(res.controlScore * 200) / 10,
+        comfort: Math.round(res.comfortScore * 200) / 10,
+        appearance: Math.round(res.appearanceScore * 200) / 10,
+        config: Math.round(res.configScore * 200) / 10,
+
+        sales: res.saleCount,
+        rating: res.totalScore * 20,
+      }
+      return modelData
     } else {
       return generateMockCarModel(modelId)
     }
@@ -563,6 +586,7 @@ const generateMockCarModel = (modelId: number): CarModel => {
 // 事件处理函数
 const handleAddModel = async (modelId: number) => {
   if (!modelId || selectedModels.value.length >= 4) {
+    console.log(modelId, selectedModels.value.length)
     ElMessage.warning('最多只能选择4款车型进行对比')
     return
   }
@@ -716,14 +740,16 @@ const initRadarChart = async () => {
   const maxValues =
     radarViewType.value === 'score'
       ? [100, 100, 100, 100, 100, 100]
-      : [600000, 100, 100, 100, 100, 100]
+      : [50, 5, 5, 5, 5, 5]
+  let topPrice = 50 // 评分价格上限设为50万
+  let lowPrice = 10 // 评分价格下限设为0万
 
   const series = selectedModels.value.map((model, index) => {
     const colors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#feca57', '#ff9ff3']
     const data =
       radarViewType.value === 'score'
         ? [
-            Math.max(0, 100 - model.price / 6000), // 价格转换为评分
+            Math.min(Math.max(0, 100 - (model.price - lowPrice)/(topPrice - lowPrice) * 100), 100).toFixed(1), // 价格转换为评分
             model.power,
             model.control,
             model.comfort,
@@ -732,11 +758,11 @@ const initRadarChart = async () => {
           ]
         : [
             model.price,
-            model.power,
-            model.control,
-            model.comfort,
-            model.appearance,
-            model.config,
+            model.power / 20,
+            model.control / 20,
+            model.comfort / 20,
+            model.appearance / 20,
+            model.config / 20,
           ]
 
     return {
@@ -794,7 +820,7 @@ const initBarChart = async () => {
       label: '价格对比',
       field: 'price',
       unit: '万元',
-      transform: (v: number) => Math.round(v / 10000),
+      transform: (v: number) => v,
     },
     power: {
       label: '性能对比',
@@ -938,7 +964,7 @@ const shareComparison = () => {
 }
 
 const copyShareLink = () => {
-  const shareUrl = `${window.location.origin}/comparison?models=${selectedModels.value.map((m) => m.id).join(',')}`
+  const shareUrl = `${window.location.origin}/app/VehicleModelCompAnalysis?models=${selectedModels.value.map((m) => m.id).join(',')}`
 
   navigator.clipboard
     .writeText(shareUrl)
@@ -1100,7 +1126,7 @@ onUnmounted(() => {
                 <el-option
                   v-for="model in searchResults"
                   :key="model.id"
-                  :label="`${model.brand} ${model.name} (${model.priceRange})`"
+                  :label="`${model.brand} ${model.name} (${model.priceRange}万元)`"
                   :value="model.id"
                   :disabled="isModelSelected(model.id)"
                 />
@@ -1134,8 +1160,8 @@ onUnmounted(() => {
               </div>
             </div>
             <div class="model-info">
-              <h4>{{ model.brand }} {{ model.name }}</h4>
-              <p class="model-price">{{ model.priceRange }}</p>
+              <h4>{{ model.name}}</h4>
+              <p class="model-price">{{ model.priceRange }}万元</p>
               <div class="model-tags">
                 <el-tag size="small">{{ model.type }}</el-tag>
                 <el-tag size="small" type="success">{{ model.engine }}</el-tag>
@@ -1267,7 +1293,7 @@ onUnmounted(() => {
               <img :src="model.image" :alt="model.name" class="rank-image" />
               <div class="rank-info">
                 <h4>{{ model.brand }} {{ model.name }}</h4>
-                <p>{{ model.priceRange }}</p>
+                <p>{{ model.priceRange }}万元</p>
               </div>
             </div>
             <div class="rank-score">
@@ -1329,9 +1355,6 @@ onUnmounted(() => {
           <div class="table-header">
             <span>详细参数对比</span>
             <div class="table-actions">
-              <el-button size="small" @click="toggleAllDimensions">
-                {{ showAllDimensions ? '收起' : '展开' }}全部参数
-              </el-button>
               <el-button size="small" type="primary" @click="exportComparisonTable">
                 导出对比表
               </el-button>
@@ -1362,7 +1385,7 @@ onUnmounted(() => {
                   <img :src="model.image" :alt="model.name" class="header-image" />
                   <div class="header-info">
                     <span class="header-name">{{ model.brand }} {{ model.name }}</span>
-                    <span class="header-price">{{ model.priceRange }}</span>
+                    <span class="header-price">{{ model.priceRange }}万元</span>
                   </div>
                 </div>
               </template>
@@ -1536,7 +1559,7 @@ onUnmounted(() => {
               <img :src="hotModel.image" :alt="hotModel.name" class="hot-model-image" />
               <div class="hot-model-info">
                 <h5>{{ hotModel.brand }} {{ hotModel.name }}</h5>
-                <p class="hot-model-price">{{ hotModel.priceRange }}</p>
+                <p class="hot-model-price">{{ hotModel.priceRange }}万元</p>
                 <div class="hot-model-stats">
                   <span class="sales">销量: {{ hotModel.sales.toLocaleString() }}</span>
                   <el-rate v-model="hotModel.rating" disabled size="small" />
