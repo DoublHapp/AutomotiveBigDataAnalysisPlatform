@@ -44,4 +44,27 @@ public class CarModelService {
     public List<CarModelDTO> searchCarModels(String keyword, int limit) {
         return carModelRepository.findTopByKeyword(keyword, PageRequest.of(0, limit));
     }
+
+    /**
+     * 获取所有level列表
+     */
+    public List<String> getAllLevels() {
+        return carModelRepository.findAllLevels();
+    }
+
+    /**
+     * 获取所有engine_type列表
+     */
+    public List<String> getAllEngineTypes() {
+        return carModelRepository.findAllEngineTypes();
+    }
+
+    /**
+     * 模糊匹配factory列表
+     */
+    public List<String> getFactorysByKeyword(String keyword) {
+        return carModelRepository.findFactorysByKeyword(
+            "all".equalsIgnoreCase(keyword) ? null : keyword
+        );
+    }
 }

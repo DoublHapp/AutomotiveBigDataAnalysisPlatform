@@ -17,6 +17,15 @@ import org.springframework.stereotype.Repository;
  */
 @Repository
 public interface CarModelRepository extends JpaRepository<CarModel, Long> {
+        @Query("SELECT DISTINCT c.level FROM CarModel c")
+        List<String> findAllLevels();
+
+        @Query("SELECT DISTINCT c.engineType FROM CarModel c")
+        List<String> findAllEngineTypes();
+
+        @Query("SELECT DISTINCT b.factory FROM Brand b WHERE (:keyword IS NULL OR b.factory LIKE %:keyword%)")
+        List<String> findFactorysByKeyword(@Param("keyword") String keyword);
+
         @Query(value = "SELECT new cn.com.undefined.abdap_backend.dto.CarModelDTO(" +
                         "c.carModelId, c.modelName, c.modelFullName, c.brandId, " +
                         "b.brandName, c.level, c.launchDate, c.officialPrice, " +
