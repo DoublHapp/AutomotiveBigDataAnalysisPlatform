@@ -982,6 +982,8 @@ const carModelSearchResults = ref<CarModel[]>([])
 const carModelSearchLoading = ref(false)
 let carModelSearchTimer: ReturnType<typeof setTimeout> | null = null
 
+const selectedCarModelObj = ref<CarModel | null>(null)
+
 // 车型远程搜索方法
 const searchCarModels = (query: string) => {
   if (carModelSearchTimer) clearTimeout(carModelSearchTimer)
@@ -993,10 +995,14 @@ const searchCarModels = (query: string) => {
     carModelSearchLoading.value = true
     try {
       const response = await axios.get('/api/car-models/search', {
-        params: { keyword: query, limit: 20 },
+        params: { keyword: query, limit: 500 },
       })
       if (response.data.status === 200 && response.data.data) {
-        carModelSearchResults.value = response.data.data
+         // 按 modelName 去重
+        const unique = Array.from(
+          new Map(response.data.data.map(item => [item.modelName, item])).values()
+        )
+        carModelSearchResults.value = unique
       } else {
         carModelSearchResults.value = []
       }
@@ -1007,6 +1013,7 @@ const searchCarModels = (query: string) => {
     }
   }, 300) // 300ms防抖
 }
+
 
 const querySearchRegion = (queryString: string, cb: (results: Region[]) => void) => {
   if (!queryString) {
@@ -1581,7 +1588,9 @@ const calculateBusinessMetrics = (): BusinessMetrics => {
   const selectedCarModel = baseData.value.carModels.find(
     (model) => model.carModelId === forecastConfig.value.carModelId,
   )
-  const avgPrice = selectedCarModel ? selectedCarModel.officialPrice : 220000
+  const avgPrice = selectedCarModelObj.value
+  ? selectedCarModelObj.value.officialPrice
+  : 10
 
   // 计算库存建议
   const avgMonthlySales = predictedTotalSales / forecastData.length
@@ -1590,7 +1599,7 @@ const calculateBusinessMetrics = (): BusinessMetrics => {
   const safetyStock = Math.floor(avgMonthlySales * 1.5)
 
   // 计算预测收入
-  const predictedRevenue = predictedTotalSales * avgPrice
+  const predictedRevenue = predictedTotalSales * avgPrice*10000
 
   // 计算市场波动性
   const values = forecastData.map((item) => item.value)
@@ -1733,7 +1742,7 @@ const salesGrowth = computed(() => businessMetrics.value.salesGrowth)
 const recommendedInventory = computed(() => businessMetrics.value.recommendedInventory)
 const safetyStock = computed(() => businessMetrics.value.safetyStock)
 const predictedRevenue = computed(() => businessMetrics.value.predictedRevenue)
-const avgPrice = computed(() => businessMetrics.value.avgPrice / 10000) // 转换为万元
+const avgPrice = computed(() => businessMetrics.value.avgPrice) // 转换为万元
 const riskLevel = computed(() => businessMetrics.value.riskLevel)
 const predictionResults = computed(() => predictionResult.value?.allData || null)
 
@@ -1827,7 +1836,9 @@ const getScenarioText = () => {
   return scenarioMap[forecastScenario.value]
 }
 
-const handleCarModelChange = () => {
+const handleCarModelChange = (carModelId: number) => {
+  selectedCarModelObj.value =
+    carModelSearchResults.value.find((model) => model.carModelId === carModelId) || null
   predictionResult.value = null
   if (forecastChartInstance) {
     forecastChartInstance.clear()
@@ -2079,7 +2090,7 @@ const initForecastChart = async () => {
   const option = {
     title: {
       text: `${getScenarioText()}销售预测 (${forecastConfig.value.modelType})`,
-      subtext: `模型精度: ${(100 - predictionResult.value.modelMetrics.mape).toFixed(1)}%`,
+      // subtext: `模型精度: ${(100 - predictionResult.value.modelMetrics.mape).toFixed(1)}%`,
       left: 'center',
       textStyle: { fontSize: 16, fontWeight: 'bold', color: '#333' },
       subtextStyle: { fontSize: 12, color: '#666' },
@@ -2186,6 +2197,8 @@ const resetConfig = () => {
 
   forecastScenario.value = 'normal'
   predictionResult.value = null
+
+  regionInput.value = '' // 清空地区搜索框
 
   if (forecastChartInstance) {
     forecastChartInstance.clear()

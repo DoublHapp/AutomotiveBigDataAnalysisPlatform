@@ -45,8 +45,8 @@
         <div class="filter-right">
           <!-- 时间范围选择 -->
           <el-radio-group v-model="timeRange" @change="handleTimeRangeChange">
-            <el-radio-button value="month">近一月</el-radio-button>
             <el-radio-button value="quarter">近一季</el-radio-button>
+            <el-radio-button value="halfyear">近半年</el-radio-button>
             <el-radio-button value="year">近一年</el-radio-button>
             <el-radio-button value="custom">自定义</el-radio-button>
           </el-radio-group>
@@ -105,9 +105,9 @@
             <div class="overview-details">
               <div class="overview-value">{{ totalSales.toLocaleString() }}</div>
               <div class="overview-label">总销量 (台)</div>
-              <div class="overview-trend" :class="totalSalesGrowth >= 0 ? 'positive' : 'negative'">
+              <!-- <div class="overview-trend" :class="totalSalesGrowth >= 0 ? 'positive' : 'negative'">
                 {{ totalSalesGrowth >= 0 ? '+' : '' }}{{ totalSalesGrowth.toFixed(1) }}%
-              </div>
+              </div> -->
             </div>
           </div>
         </el-card>
@@ -158,7 +158,7 @@
                 {{ averageGrowth >= 0 ? '+' : '' }}{{ averageGrowth.toFixed(1) }}%
               </div>
               <div class="overview-label">平均增长率</div>
-              <div class="overview-trend">行业平均: {{ industryAverageGrowth.toFixed(1) }}%</div>
+              <!-- <div class="overview-trend">行业平均: {{ industryAverageGrowth.toFixed(1) }}%</div> -->
             </div>
           </div>
         </el-card>
@@ -274,9 +274,10 @@
                   </span>
                 </div>
                 <div class="market-info">
-                  <span class="market-share">份额: {{ item.marketShare.toFixed(1) }}%</span>
+                  <span class="market-share">所占市场份额: {{ item.marketShare.toFixed(1) }}%</span>
+                  <div></div>
                   <span class="vs-average"
-                    >vs行业: {{ (item.growthRate - averageGrowth).toFixed(1) }}%</span
+                    >与行业平均增长率的差值: {{ (item.growthRate - averageGrowth).toFixed(1) }}%</span
                   >
                 </div>
               </div>
@@ -314,7 +315,7 @@
                     <li><b>热门增长地区</b>：增长率大于0的地区，按增长率降序取前5名。</li>
                     <li><b>占比</b>：各类地区数量占当前覆盖地区总数的百分比。</li>
                     <li>
-                      所有数据均基于当前筛选条件（时间、车型、地区层级）下的真实销量数据动态计算。
+                      所有数据均基于当前筛选条件（时间、地区层级）下的真实销量数据动态计算。
                     </li>
                   </ul>
                 </div>
@@ -393,12 +394,12 @@
                 <span class="label">销量:</span>
                 <span class="value">{{ selectedRegionDetail.salesCount.toLocaleString() }} 台</span>
               </div>
-              <div class="detail-item">
+              <!-- <div class="detail-item">
                 <span class="label">销售额:</span>
                 <span class="value"
                   >¥{{ (selectedRegionDetail.salesAmount / 10000).toFixed(0) }} 万元</span
                 >
-              </div>
+              </div> -->
               <div class="detail-item">
                 <span class="label">市场份额:</span>
                 <span class="value">{{ selectedRegionDetail.marketShare.toFixed(2) }}%</span>
@@ -419,7 +420,7 @@
                 </span>
               </div>
               <div class="detail-item">
-                <span class="label">vs 平均:</span>
+                <span class="label">与行业平均增长率的差值:</span>
                 <span class="value"
                   >{{ (selectedRegionDetail.growthRate - averageGrowth).toFixed(1) }}%</span
                 >
@@ -579,7 +580,7 @@ const showMapHelp = ref(false)
 const showScatterDetail = ref(false)
 const showGrowthDetail = ref(false)
 const selectedRegionDetail = ref<RegionSalesData | null>(null)
-const timeRange = ref<'month' | 'quarter' | 'year' | 'custom'>('year')
+const timeRange = ref<'month' | 'quarter' | 'halfyear' | 'year' | 'custom'>('quarter')
 const customDateRange = ref<[Date, Date] | null>(null)
 // const selectedCarModel = ref('')
 const regionLevel = ref<'province' | 'city'>('province')
@@ -751,8 +752,8 @@ const processRegionSalesData = async () => {
   const now = new Date()
   let monthsBack = 12
   switch (timeRange.value) {
-    case 'month': monthsBack = 1; break
     case 'quarter': monthsBack = 3; break
+    case 'halfyear': monthsBack = 6; break
     case 'year': monthsBack = 12; break
   }
   const endMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
@@ -847,7 +848,7 @@ const calculateBusinessMetrics = () => {
   businessMetrics.value.totalAmountGrowth = 0
 
   // 行业平均增长率也无法再用 saleRecords 计算，只能置为 0 或根据后端返回的数据补充
-  businessMetrics.value.industryAverageGrowth = 0
+  businessMetrics.value.industryAverageGrowth = businessMetrics.value.averageGrowth
 
   console.log('业务指标计算完成:', businessMetrics.value)
 }

@@ -14,7 +14,7 @@
           <el-button type="primary" :icon="Refresh" @click="refreshData" :loading="loading">
             刷新数据
           </el-button>
-          <el-button type="success" :icon="Download" @click="exportData"> 导出报告 </el-button>
+          <!-- <el-button type="success" :icon="Download" @click="exportData"> 导出报告 </el-button> -->
         </div>
       </div>
     </el-card>
@@ -141,8 +141,8 @@
         <div class="filter-group">
           <label>时间范围:</label>
           <el-radio-group v-model="globalFilters.timeRange" @change="handleGlobalFilterChange">
-            <el-radio-button value="month">近一月</el-radio-button>
             <el-radio-button value="quarter">近一季</el-radio-button>
+            <el-radio-button value="halfyear">近半年</el-radio-button>
             <el-radio-button value="year">近一年</el-radio-button>
             <el-radio-button value="all">全部时间</el-radio-button>
             <el-radio-button value="custom">自定义</el-radio-button>
@@ -180,9 +180,9 @@
               :value="model.carModelId.toString()"
             />
           </el-select>
-        </div>
 
-        <el-select
+          <label>地区:</label>
+           <el-select
           v-model="globalFilters.region"
           filterable
           remote
@@ -201,6 +201,7 @@
             :value="region.regionId || region.regionName"
           />
         </el-select>
+        </div>
       </div>
     </el-card>
 
@@ -223,8 +224,9 @@
               </div>
               <div class="kpi-label">目标完成率</div>
               <div class="kpi-trend">
-                实际: {{ actualSales.toLocaleString() }} / 目标:
-                {{ targetSales.toLocaleString() }} 台
+                实际: {{ actualSales.toLocaleString() }} 台
+                <div></div>
+                目标:{{ targetSales.toLocaleString() }} 台
               </div>
             </div>
           </div>
@@ -243,8 +245,9 @@
               </div>
               <div class="kpi-label">同比增长</div>
               <div class="kpi-trend">
-                当年: {{ actualSales.toLocaleString() }} / 去年:
-                {{ lastYearSales.toLocaleString() }} 台
+                当年: {{ actualSales.toLocaleString() }} 
+                <div></div>
+                去年:{{ lastYearSales.toLocaleString() }} 台
               </div>
               <div class="kpi-benchmark">行业平均: {{ industryGrowth.toFixed(1) }}%</div>
             </div>
@@ -279,7 +282,7 @@
                 class="kpi-value"
                 :class="channelROI >= 4 ? 'success' : channelROI >= 2 ? 'warning' : 'danger'"
               >
-                {{ channelROI.toFixed(1) }}
+                {{ channelROI.toFixed(1) }}%
               </div>
               <div class="kpi-label">实际ROI</div>
               <div class="kpi-trend">投入: {{ (channelInvestment / 10000).toFixed(0) }} 万</div>
@@ -322,7 +325,7 @@
         </el-card>
       </el-col>
 
-      <el-col :xs="24" :md="6">
+      <!-- <el-col :xs="24" :md="6">
         <el-card shadow="never" class="summary-card">
           <div class="summary-content">
             <div class="summary-icon models">
@@ -334,7 +337,7 @@
             </div>
           </div>
         </el-card>
-      </el-col>
+      </el-col> -->
 
       <el-col :xs="24" :md="6">
         <el-card shadow="never" class="summary-card">
@@ -343,7 +346,7 @@
               <el-icon><Location /></el-icon>
             </div>
             <div class="summary-details">
-              <div class="summary-value">{{ availableRegions.length }}</div>
+              <div class="summary-value">{{ baseData.topLevelRegions?.length }}省{{ baseData.nonTopLevelRegions?.length }}市</div>
               <div class="summary-label">覆盖地区</div>
             </div>
           </div>
@@ -375,7 +378,7 @@
                   <template #dropdown>
                     <el-dropdown-menu>
                       <el-dropdown-item command="image">导出图片</el-dropdown-item>
-                      <el-dropdown-item command="excel">导出Excel</el-dropdown-item>
+                      <!-- <el-dropdown-item command="excel">导出Excel</el-dropdown-item> -->
                     </el-dropdown-menu>
                   </template>
                 </el-dropdown>
@@ -405,6 +408,21 @@
                 <el-tag size="small" type="success">{{ selectedTimePoint }}</el-tag>
                 <el-button size="small" type="text" @click="clearTimeSelection">清除选择</el-button>
               </div>
+
+              <div class="chart-actions">
+          <el-dropdown @command="handleAmountExport">
+            <el-button size="small">
+              导出<el-icon><ArrowDown /></el-icon>
+            </el-button>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item command="image">导出图片</el-dropdown-item>
+                <!-- <el-dropdown-item command="excel">导出Excel</el-dropdown-item> -->
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
+        </div>
+
             </div>
             <div class="amount-analysis-summary">
               <el-tag :type="amountAnalysis.type">{{ amountAnalysis.summary }}</el-tag>
@@ -415,7 +433,7 @@
             ref="salesAmountChart"
             class="chart-container"
             v-loading="loading"
-            @click="handleAmountChartClick"
+           
           ></div>
         </el-card>
       </el-col>
@@ -431,6 +449,7 @@
                   v-model="modelRankingType"
                   size="small"
                   @change="handleRankingTypeChange"
+                  style="width: 120px"
                 >
                   <el-option label="销量排行" value="sales" />
                   <el-option label="增长率排行" value="growth" />
@@ -443,6 +462,19 @@
                   size="small"
                   @change="handleTopNChange"
                 />
+
+                 <el-dropdown @command="handleTopModelsExport">
+            <el-button size="small">
+              导出<el-icon><ArrowDown /></el-icon>
+            </el-button>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item command="image">导出图片</el-dropdown-item>
+                <!-- <el-dropdown-item command="excel">导出Excel</el-dropdown-item> -->
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
+
               </div>
             </div>
           </template>
@@ -467,6 +499,17 @@
                   <el-button size="small" type="text" @click="clearRegionHighlight">清除</el-button>
                 </div>
                 <el-button size="small" @click="showHeatMap" type="primary">热力图</el-button>
+                <el-dropdown @command="handleRegionExport">
+            <el-button size="small">
+              导出<el-icon><ArrowDown /></el-icon>
+            </el-button>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item command="image">导出图片</el-dropdown-item>
+                <!-- <el-dropdown-item command="excel">导出Excel</el-dropdown-item> -->
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
               </div>
             </div>
           </template>
@@ -540,7 +583,7 @@
             <span class="kpi-number">{{ currentKPIValue }}</span>
             <span class="kpi-unit">{{ currentKPIUnit }}</span>
           </div>
-          <div class="kpi-comparison">
+          <!-- <div class="kpi-comparison">
             <div class="comparison-item">
               <span class="comparison-label">与目标对比:</span>
               <span class="comparison-value" :class="kpiVsTarget.type">
@@ -553,7 +596,7 @@
                 {{ kpiVsIndustry.text }}
               </span>
             </div>
-          </div>
+          </div> -->
         </div>
         <div ref="kpiTrendChart" class="kpi-trend-chart"></div>
       </div>
@@ -725,7 +768,7 @@ const searchCarModels = (query: string) => {
     carModelSearchLoading.value = true
     try {
       const response = await axios.get('/api/car-models/search', {
-        params: { keyword: query, limit: 100 },
+        params: { keyword: query, limit: 500 },
       })
       if (response.data.status === 200 && response.data.data) {
          // 按 modelName 去重
@@ -850,11 +893,11 @@ const getMonthRange = () => {
     const now = new Date()
     let monthsBack = 12
     switch (globalFilters.timeRange) {
-      case 'month':
-        monthsBack = 1
-        break
       case 'quarter':
         monthsBack = 3
+        break
+      case 'halfyear':
+        monthsBack = 6
         break
       case 'year':
         monthsBack = 12
@@ -983,6 +1026,48 @@ const fetchRegionSalesRanking = async (
     }
   } catch (error) {
     ElMessage.error('获取地区销量排行榜数据失败')
+    return []
+  }
+}
+
+const fetchGrowthRateRanking = async (
+  startMonth: string,
+  endMonth: string,
+  region: string = 'all',
+  top: number = 10
+) => {
+  try {
+    const response = await axios.get('/api/ranking/growth-rate', {
+      params: { startMonth, endMonth, region, top }
+    })
+    if (response.data.status === 200 && response.data.data) {
+      return response.data.data
+    } else {
+      throw new Error(response.data.message || 'API返回错误')
+    }
+  } catch (error) {
+    ElMessage.error('获取增长率排行榜数据失败')
+    return []
+  }
+}
+
+const fetchMarketShareRanking = async (
+  startMonth: string,
+  endMonth: string,
+  region: string = 'all',
+  top: number = 10
+) => {
+  try {
+    const response = await axios.get('/api/ranking/market-share', {
+      params: { startMonth, endMonth, region, top }
+    })
+    if (response.data.status === 200 && response.data.data) {
+      return response.data.data
+    } else {
+      throw new Error(response.data.message || 'API返回错误')
+    }
+  } catch (error) {
+    ElMessage.error('获取市场份额排行榜数据失败')
     return []
   }
 }
@@ -1161,10 +1246,11 @@ const processSalesAmountData = () => {
 // 处理车型排行数据
 const processTopModelsData = async () => {
   console.log('处理车型排行数据...')
-  if (modelRankingType.value === 'sales') {
-    // 只在销量排行时调用后端接口
     const { startMonth, endMonth } = getMonthRange()
     const region = globalFilters.region && globalFilters.region !== 'all' ? globalFilters.region : 'all'
+
+  if (modelRankingType.value === 'sales') {
+    // 销量排行时调用后端接口
     const data = await fetchSalesRanking(startMonth, endMonth, region, topN.value)
     // 适配接口返回结构
     topModelsData.value = data.map((item:any) => ({
@@ -1177,6 +1263,38 @@ const processTopModelsData = async () => {
       opinionScore: item.opinionScore,
     }))
     console.log('销量排行数据已更新:', topModelsData.value.length)
+    return
+  }
+
+   if (modelRankingType.value === 'growth') {
+    //增长率排行调用 growth-rate 接口
+    const data = await fetchGrowthRateRanking(startMonth, endMonth, region, topN.value)
+    topModelsData.value = data.map((item: any) => ({
+      carModel: item.modelName,
+      brandName: item.brandName,
+      salesVolume: item.saleCount,
+      growthRate: item.saleGrowthRate != null ? item.saleGrowthRate * 100 : 0,
+      marketShare: item.marketShare != null ? item.marketShare * 100 : 0,
+      imageUrl: item.imageUrl,
+      opinionScore: item.opinionScore,
+    }))
+    console.log('增长率排行数据已更新:', topModelsData.value.length)
+    return
+  }
+
+  if (modelRankingType.value === 'share') {
+    // 市场份额排行调用 market-share 接口
+    const data = await fetchMarketShareRanking(startMonth, endMonth, region, topN.value)
+    topModelsData.value = data.map((item: any) => ({
+      carModel: item.modelName,
+      brandName: item.brandName,
+      salesVolume: item.saleCount,
+      growthRate: item.saleGrowthRate != null ? item.saleGrowthRate * 100 : 0,
+      marketShare: item.marketShare != null ? item.marketShare * 100 : 0,
+      imageUrl: item.imageUrl,
+      opinionScore: item.opinionScore,
+    }))
+    console.log('市场份额排行数据已更新:', topModelsData.value.length)
     return
   }
 
@@ -1822,7 +1940,7 @@ const showKPIDetail = (type: string) => {
     case 'roi':
       kpiDialogTitle.value = '实际ROI详情'
       currentKPIValue.value = channelROI.value.toFixed(1)
-      currentKPIUnit.value = ''
+      currentKPIUnit.value = '%'
       break
   }
   showKPIDialog.value = true
@@ -1893,8 +2011,9 @@ const handleRankingTypeChange = () => {
   initTopModelsChart()
 }
 
-const handleTopNChange = () => {
-  processTopModelsData()
+const handleTopNChange = async () => {
+  await processTopModelsData()
+  await nextTick()
   initTopModelsChart()
 }
 
@@ -1908,6 +2027,57 @@ const handleTrendExport = (command: string) => {
       const link = document.createElement('a')
       link.href = url
       link.download = 'sales_trend.png'
+      link.click()
+    }
+  } else if (command === 'excel') {
+    ElMessage.info('Excel导出功能开发中...')
+  }
+}
+
+const handleAmountExport = (command: string) => {
+  if (command === 'image') {
+    const url = salesAmountChartInstance?.getDataURL({
+      type: 'png',
+      backgroundColor: '#fff',
+    })
+    if (url) {
+      const link = document.createElement('a')
+      link.href = url
+      link.download = 'sales_amount.png'
+      link.click()
+    }
+  } else if (command === 'excel') {
+    ElMessage.info('Excel导出功能开发中...')
+  }
+}
+
+const handleTopModelsExport = (command: string) => {
+  if (command === 'image') {
+    const url = topModelsChartInstance?.getDataURL({
+      type: 'png',
+      backgroundColor: '#fff',
+    })
+    if (url) {
+      const link = document.createElement('a')
+      link.href = url
+      link.download = 'top_models.png'
+      link.click()
+    }
+  } else if (command === 'excel') {
+    ElMessage.info('Excel导出功能开发中...')
+  }
+}
+
+const handleRegionExport = (command: string) => {
+  if (command === 'image') {
+    const url = regionSalesChartInstance?.getDataURL({
+      type: 'png',
+      backgroundColor: '#fff',
+    })
+    if (url) {
+      const link = document.createElement('a')
+      link.href = url
+      link.download = 'region_sales.png'
       link.click()
     }
   } else if (command === 'excel') {
@@ -2249,6 +2419,12 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.region-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .ranking-filters {
