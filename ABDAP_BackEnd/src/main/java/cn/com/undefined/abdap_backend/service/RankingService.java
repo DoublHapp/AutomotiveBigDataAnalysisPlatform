@@ -1,6 +1,7 @@
 package cn.com.undefined.abdap_backend.service;
 
 import cn.com.undefined.abdap_backend.dto.CarModelDTO;
+import cn.com.undefined.abdap_backend.dto.CarModelMatchScoreDTO;
 import cn.com.undefined.abdap_backend.dto.CarModelSalesRankingDTO;
 import cn.com.undefined.abdap_backend.dto.FuelConsumptionRankingDTO;
 import cn.com.undefined.abdap_backend.dto.RegionDTO;
@@ -11,8 +12,6 @@ import cn.com.undefined.abdap_backend.repository.SaleRecordRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
-import org.springframework.web.bind.annotation.RequestParam;
-
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -208,6 +207,48 @@ public class RankingService {
                                         opinionScore
                         // diffWithBest
                         );
+                }).collect(Collectors.toList());
+        }
+
+        public List<CarModelMatchScoreDTO> getCarModelMatchScoreRanking(String level,
+                        Double minPrice, Double maxPrice, String engineType, Integer seatNum, String factory, Integer top) {
+                // 查询匹配分数榜单数据
+                List<Object[]> results = repository.findCarModelMatchScoreRanking(
+                                normalizeParam(level),
+                                minPrice,
+                                maxPrice,
+                                normalizeParam(engineType),
+                                seatNum,
+                                normalizeParam(factory),
+                                PageRequest.of(0, top != null ? top : 10));
+
+                // 组装DTO
+                return results.stream().map(arr -> {
+                        CarModelDTO carModelDTO = new CarModelDTO(
+                                        ((Number) arr[0]).longValue(), // carModelId
+                                        (String) arr[1], // modelName
+                                        (String) arr[2], // modelFullName
+                                        ((Number) arr[3]).longValue(), // brandId
+                                        (String) arr[4], // brandName
+                                        (String) arr[5], // level
+                                        arr[6] != null ? ((java.sql.Date) arr[6]).toLocalDate() : null, // launchDate
+                                        arr[7] != null ? new BigDecimal(arr[7].toString()) : null, // officialPrice
+                                        (String) arr[8], // engineType
+                                        arr[9] != null ? ((Number) arr[9]).intValue() : null, // seatNum
+                                        (String) arr[10], // driveType
+                                        arr[11] != null ? ((Number) arr[11]).intValue() : null, // rangeKm
+                                        (String) arr[12] // imageUrl
+                        );
+                        BigDecimal budgetScore = arr[13] != null ? new BigDecimal(arr[13].toString()) : BigDecimal.ZERO;
+                        BigDecimal levelScore = arr[14] != null ? new BigDecimal(arr[14].toString()) : BigDecimal.ZERO;
+                        BigDecimal engineScore = arr[15] != null ? new BigDecimal(arr[15].toString()) : BigDecimal.ZERO;
+                        BigDecimal seatNumScore = arr[16] != null ? new BigDecimal(arr[16].toString()) : BigDecimal.ZERO;
+                        BigDecimal brandScore = arr[17] != null ? new BigDecimal(arr[17].toString()) : BigDecimal.ZERO;
+                        BigDecimal totalScore = budgetScore.add(levelScore).add(engineScore)
+                                        .add(seatNumScore).add(brandScore);
+
+                        return new CarModelMatchScoreDTO(carModelDTO, totalScore, budgetScore, levelScore,
+                                        engineScore, seatNumScore, brandScore);
                 }).collect(Collectors.toList());
         }
 

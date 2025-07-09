@@ -134,7 +134,7 @@ public interface RankingRepository extends JpaRepository<Ranking, Long> {
                      // "WHERE (:region IS NULL OR re.region_name = :region OR re.parent_region =
                      // :region) " +
                      "WHERE (:level IS NULL OR c.level = :level) " +
-                     "AND (:maxPrice IS NULL OR c.official_price <= :maxPrice * 10000) " +
+                     "AND (:maxPrice IS NULL OR c.official_price <= :maxPrice) " +
                      "AND (:engineType IS NULL OR c.engine_type = :engineType) " +
                      "AND fu.avg_fuel IS NOT NULL " +
                      "GROUP BY c.model_name " +
@@ -146,5 +146,53 @@ public interface RankingRepository extends JpaRepository<Ranking, Long> {
                      @Param("level") String level,
                      @Param("maxPrice") Double maxPrice,
                      @Param("engineType") String engineType,
+                     Pageable pageable);
+
+       /**
+        * 多表联合查询，返回车型基础信息及购车推荐榜单各维度分数和总分
+        *
+        * @param minPrice   用户预算下限
+        * @param maxPrice   用户预算上限
+        * @param level      用户选择车型类别
+        * @param engineType 用户选择能源类型
+        * @param seatNum    用户需求座位数
+        * @param factory    用户主机厂偏好
+        * @param pageable   分页
+        * @return Object[]: [carModelId, modelName, modelFullName, brandId, brandName,
+        *         level, launchDate, officialPrice, engineType, seatNum, driveType,
+        *         rangeKm, imageUrl,
+        *         budgetScore, levelScore, engineTypeScore, seatNumScore, brandScore]
+        */
+       @Query(value = "SELECT " +
+                     "c.car_model_id, c.model_name, c.model_full_name, b.brand_id, b.brand_name, "
+                     +
+                     "c.level, c.launch_date, c.official_price, c.engine_type, " +
+                     "c.seat_num, c.drive_type, c.range_km, c.image_url, " +
+                     // 匹配度打分各项
+                     // 预算匹配分（30分，区间内满分，超出区间线性递减）
+                     "CASE " +
+                     "  WHEN :minPrice IS NOT NULL AND c.official_price < :minPrice THEN GREATEST(0, 30 - ((:minPrice - c.official_price) / (:minPrice)) * 30) "
+                     +
+                     "  WHEN :maxPrice IS NOT NULL AND c.official_price > :maxPrice THEN GREATEST(0, 30 - ((c.official_price - :maxPrice) / (:maxPrice)) * 30) "
+                     +
+                     "  ELSE 30 END AS budgetScore, " +
+                     // 车型类别匹配分（25分）
+                     "CASE WHEN :level IS NULL OR c.level = :level THEN 25 ELSE 0 END AS levelScore, " +
+                     // 能源类型匹配分（20分）
+                     "CASE WHEN :engineType IS NULL OR c.engine_type = :engineType THEN 20 ELSE 0 END AS engineTypeScore, "
+                     +
+                     // 座位数匹配分（15分，大于等于用户需求得满分，否则0）
+                     "CASE WHEN :seatNum IS NULL OR c.seat_num >= :seatNum THEN 15 ELSE 0 END AS seatNumScore, " +
+                     // 主机厂匹配分（10分）
+                     "CASE WHEN :factory IS NULL OR b.factory = :factory THEN 10 ELSE 0 END AS brandScore " +
+                     "FROM car_model c " +
+                     "LEFT JOIN brand b ON c.brand_id = b.brand_id ", nativeQuery = true)
+       List<Object[]> findCarModelMatchScoreRanking(
+                     @Param("level") String level,
+                     @Param("minPrice") Double minPrice,
+                     @Param("maxPrice") Double maxPrice,
+                     @Param("engineType") String engineType,
+                     @Param("seatNum") Integer seatNum,
+                     @Param("factory") String factory,
                      Pageable pageable);
 }

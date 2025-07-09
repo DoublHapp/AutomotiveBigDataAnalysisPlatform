@@ -1,6 +1,7 @@
 package cn.com.undefined.abdap_backend.controller;
 
 import cn.com.undefined.abdap_backend.dto.ApiResponse;
+import cn.com.undefined.abdap_backend.dto.CarModelMatchScoreDTO;
 import cn.com.undefined.abdap_backend.dto.CarModelSalesRankingDTO;
 import cn.com.undefined.abdap_backend.dto.FuelConsumptionRankingDTO;
 import cn.com.undefined.abdap_backend.dto.RegionSalesRankingDTO;
@@ -39,7 +40,8 @@ public class RankingController {
         List<CarModelSalesRankingDTO> result = null;
         if (ranking != null) {
             // 如果已经存在该排行榜，则直接返回
-            List<CarModelSalesRankingDTO> cachedResult = rankingService.parseRankingDTOList(ranking, CarModelSalesRankingDTO.class);
+            List<CarModelSalesRankingDTO> cachedResult = rankingService.parseRankingDTOList(ranking,
+                    CarModelSalesRankingDTO.class);
             if (cachedResult != null && !cachedResult.isEmpty()) {
                 return ResponseUtil.success(cachedResult);
             }
@@ -71,7 +73,8 @@ public class RankingController {
         List<RegionSalesRankingDTO> result = null;
         if (ranking != null) {
             // 已有缓存则直接返回
-            List<RegionSalesRankingDTO> cachedResult = rankingService.parseRankingDTOList(ranking, RegionSalesRankingDTO.class);
+            List<RegionSalesRankingDTO> cachedResult = rankingService.parseRankingDTOList(ranking,
+                    RegionSalesRankingDTO.class);
             if (cachedResult != null && !cachedResult.isEmpty()) {
                 return ResponseUtil.success(cachedResult);
             }
@@ -86,7 +89,8 @@ public class RankingController {
 
     /**
      * 油耗排行榜接口
-     * GET /api/ranking/fuel-consumption?level=all&maxPrice=2.1&engineType=all&top=10
+     * GET
+     * /api/ranking/fuel-consumption?level=all&maxPrice=2.1&engineType=all&top=10
      */
     @GetMapping("/fuel-consumption")
     public ResponseEntity<ApiResponse<List<FuelConsumptionRankingDTO>>> getFuelConsumptionRanking(
@@ -98,12 +102,49 @@ public class RankingController {
         Ranking ranking = rankingService.getRankingByType(rankType);
         List<FuelConsumptionRankingDTO> result = null;
         if (ranking != null) {
-            List<FuelConsumptionRankingDTO> cachedResult = rankingService.parseRankingDTOList(ranking, FuelConsumptionRankingDTO.class);
+            List<FuelConsumptionRankingDTO> cachedResult = rankingService.parseRankingDTOList(ranking,
+                    FuelConsumptionRankingDTO.class);
             if (cachedResult != null && !cachedResult.isEmpty()) {
                 return ResponseUtil.success(cachedResult);
             }
         } else {
             result = rankingService.getFuelConsumptionRanking(level, maxPrice, engineType, top);
+            if (!result.isEmpty()) {
+                rankingService.saveRanking(result, rankType, LocalDate.now());
+            }
+        }
+        return ResponseUtil.success(result);
+    }
+
+    /**
+     * 购车推荐排行榜接口
+     * GET
+     * /api/ranking/match-score?level=all&minPrice=10.0&maxPrice=30.0&engineType=all&seatNum=5&factory=all&top=4
+     */
+    @GetMapping("/match-score")
+    public ResponseEntity<ApiResponse<List<CarModelMatchScoreDTO>>> getCarModelMatchScoreRanking(
+            @RequestParam(required = false, defaultValue = "all") String level,
+            @RequestParam(required = false) Double minPrice,
+            @RequestParam(required = false) Double maxPrice,
+            @RequestParam(required = false, defaultValue = "all") String engineType,
+            @RequestParam(required = false) Integer seatNum,
+            @RequestParam(required = false, defaultValue = "all") String factory,
+            @RequestParam(required = false, defaultValue = "4") Integer top) {
+        // 拼接参数作为rankType
+        String rankType = String.format("购车推荐榜_%s_%s_%s_%s_%s_%s_%d",
+                level, minPrice, maxPrice, engineType, seatNum, factory, top);
+        Ranking ranking = rankingService.getRankingByType(rankType);
+        List<CarModelMatchScoreDTO> result = null;
+        if (ranking != null) {
+            // 已有缓存则直接返回
+            List<CarModelMatchScoreDTO> cachedResult = rankingService.parseRankingDTOList(ranking,
+                    CarModelMatchScoreDTO.class);
+            if (cachedResult != null && !cachedResult.isEmpty()) {
+                return ResponseUtil.success(cachedResult);
+            }
+        } else {
+            result = rankingService.getCarModelMatchScoreRanking(level, minPrice, maxPrice, engineType, seatNum,
+                    factory, top);
             if (!result.isEmpty()) {
                 rankingService.saveRanking(result, rankType, LocalDate.now());
             }
