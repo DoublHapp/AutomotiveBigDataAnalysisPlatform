@@ -143,4 +143,29 @@ public interface SaleRecordRepository extends JpaRepository<SaleRecord, Long> {
                      @Param("startMonth") String startMonth,
                      @Param("endMonth") String endMonth,
                      @Param("region") String region);
+
+       /**
+        * 查询指定时间范围和地区的市场份额统计（原生SQL实现）
+        * 
+        * @param startMonth 开始月份（格式：yyyy-MM-dd，建议为月初日期）
+        * @param endMonth   结束月份（格式：yyyy-MM-dd，建议为
+        * @param region     地区名称（为null时统计全部地区）
+        * @param carModel   车型名称（为null时统计全部车型）
+        * @return 每行包含：marketShare（BigDecimal）、totalSaleCount（Long）、totalSaleAmount（BigDecimal）
+        */
+       @Query(value = "SELECT " +
+                     "IFNULL(SUM(CASE WHEN c.model_name = :carModel THEN sr.sale_count ELSE 0 END) / NULLIF(SUM(sr.sale_count), 0), 0) AS marketShare, "
+                     +
+                     "SUM(sr.sale_count) AS totalSaleCount, " +
+                     "SUM(sr.sale_amount) AS totalSaleAmount " +
+                     "FROM sale_record sr " +
+                     "LEFT JOIN region r ON sr.region_id = r.region_id " +
+                     "LEFT JOIN car_model c ON sr.car_model_id = c.car_model_id " +
+                     "WHERE sr.sale_month >= :startMonth AND sr.sale_month <= :endMonth " +
+                     "AND (:region IS NULL OR r.region_name = :region OR r.parent_region = :region)", nativeQuery = true)
+       List<Object[]> findMarketShareSummary(
+                     @Param("startMonth") String startMonth,
+                     @Param("endMonth") String endMonth,
+                     @Param("region") String region,
+                     @Param("carModel") String carModel);
 }
