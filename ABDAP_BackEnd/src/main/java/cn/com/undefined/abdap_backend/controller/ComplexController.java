@@ -1,6 +1,7 @@
 package cn.com.undefined.abdap_backend.controller;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.List;
 
@@ -14,7 +15,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import cn.com.undefined.abdap_backend.dto.ApiResponse;
+import cn.com.undefined.abdap_backend.entity.Ranking;
 import cn.com.undefined.abdap_backend.repository.SaleRecordRepository;
+import cn.com.undefined.abdap_backend.service.RankingService;
 import cn.com.undefined.abdap_backend.util.ResponseUtil;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -29,10 +32,14 @@ public class ComplexController {
     @Autowired
     private SaleRecordRepository saleRecordRepository;
 
+    @Autowired
+    private RankingService rankingService;
+
     /**
      * 获取月度销售汇总
      * GET
      * /api/complex/monthly-summary?startMonth=2023-01&endMonth=2023-12&region=all&carModel=Toyota
+     * 
      * @param startMonth
      * @param endMonth
      * @param region
@@ -80,23 +87,33 @@ public class ComplexController {
             @RequestParam(defaultValue = "all") String region,
             @RequestParam String carModel) {
 
-        List<Object[]> result = saleRecordRepository.findMarketShareSummary(
-                startMonth.atDay(1).toString(),
-                endMonth.atEndOfMonth().toString(),
-                "all".equalsIgnoreCase(region) ? null : region,
-                carModel);
-
+        // 拼接参数作为rankType
+        String rankType = String.format("market_share_%s_%s_%s_%s", startMonth, endMonth, region, carModel);
+        // 将该对象当做Ranking缓存与读取，以提高效率
+        Ranking ranking = rankingService.getRankingByType(rankType);
         MarketShareSummaryDTO dto = null;
-        if (result != null && !result.isEmpty()) {
-            Object[] arr = result.get(0);
-            dto = new MarketShareSummaryDTO(
-                    arr[0] != null ? new BigDecimal(arr[0].toString()) : BigDecimal.ZERO,
-                    arr[1] != null ? ((Number) arr[1]).intValue() : 0,
-                    arr[2] != null ? new BigDecimal(arr[2].toString()) : BigDecimal.ZERO);
+        if (ranking != null) {
+            // 已有缓存则直接返回
+            List<MarketShareSummaryDTO> cachedResult = rankingService.parseRankingDTOList(ranking,
+                    MarketShareSummaryDTO.class);
+            if (cachedResult != null && !cachedResult.isEmpty()) {
+                dto = cachedResult.get(0);
+            }
         } else {
-            return ResponseUtil.badRequest("没有找到相关的市场份额数据");
+            List<Object[]> result = saleRecordRepository.findMarketShareSummary(
+                    startMonth.atDay(1).toString(),
+                    endMonth.atEndOfMonth().toString(),
+                    "all".equalsIgnoreCase(region) ? null : region,
+                    carModel);
+            if (result != null && !result.isEmpty()) {
+                Object[] arr = result.get(0);
+                dto = new MarketShareSummaryDTO(
+                        arr[0] != null ? new BigDecimal(arr[0].toString()) : BigDecimal.ZERO,
+                        arr[1] != null ? ((Number) arr[1]).intValue() : 0,
+                        arr[2] != null ? new BigDecimal(arr[2].toString()) : BigDecimal.ZERO);
+            }
+            rankingService.saveRanking(List.of(dto), rankType, LocalDate.now());
         }
-
         return ResponseUtil.success(dto);
     }
 
