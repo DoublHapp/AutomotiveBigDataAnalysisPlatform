@@ -44,12 +44,10 @@ interface RegionInfo {
 }
 
 interface RegionalCompetitor {
-  brand: string
+  modelName: string
   marketShare: number
   growth: number
-  channelStrength: string
-  threat: 'success' | 'warning' | 'danger'
-  threatText: string
+  saleCount: string
 }
 
 interface InventoryRecommendation {
@@ -227,8 +225,7 @@ const fetchRegionTree = async () => {
         })
       })
     } else {
-      console.error('获取区域树失败:', response.data.message)
-      regionTree.value = generateMockRegionTree()
+      throw new Error(`API返回错误状态: ${response.data.status}`)
     }
   } catch (error) {
     console.error('获取区域树失败:', error)
@@ -245,12 +242,11 @@ const fetchRegionAnalysis = async () => {
 
     console.log('请求地区分析url:', `/api/prediction/ARIMA/detail?regionId=110&months=6`)
     const response = await axios.get(`/api/prediction/ARIMA/detail?${params.toString()}`)
-    if (response.data.status === 200) {
+    if (response.data.status === 200 && response.data.data) {
       console.log('获取地区分析数据:', response)
       return response.data.data
     } else {
-      console.error('获取地区分析失败:', response.data.message)
-      return generateMockRegionAnalysis()
+      throw new Error(`API返回错误状态: ${response.data.status}`)
     }
   } catch (error) {
     console.error('获取地区分析失败:', error)
@@ -258,7 +254,25 @@ const fetchRegionAnalysis = async () => {
   }
 }
 
-
+const fetchRegionRank = async () => {
+    try {
+    const response = await axios.get(`/api/ranking/market-share}`,{ params:{
+      startMonth: "2025-05",
+      endMonth: "2025-05",
+      region: selectedRegion.value,
+      top: "4"
+    }})
+    if (response.data.status === 200 && response.data.data) {
+      console.log('获取地区分析数据:', response)
+      return response.data.data
+    } else {
+      throw new Error(`API返回错误状态: ${response.data.status}`)
+    }
+  } catch (error) {
+    console.error('获取地区分析失败:', error)
+    return generateMockRegionAnalysis()
+  }
+}
 
 // 库存规划工具函数
 // 计算安全库存 没有日销数据，以月销数据的标准差代替
@@ -408,36 +422,28 @@ const generateMockRegionAnalysis = () => {
   // 生成竞争对手数据
   regionalCompetition.value = [
     {
-      brand: '特斯拉',
+      modelName: '特斯拉',
       marketShare: 23.5,
       growth: 12.8,
-      channelStrength: '线上优势',
-      threat: 'danger',
-      threatText: '高威胁',
+      saleCount: '线上优势',
     },
     {
-      brand: '蔚来',
+      modelName: '蔚来',
       marketShare: 15.2,
       growth: 8.3,
-      channelStrength: '服务体验',
-      threat: 'warning',
-      threatText: '中威胁',
+      saleCount: '服务体验',
     },
     {
-      brand: '理想',
+      modelName: '理想',
       marketShare: 12.8,
       growth: 15.6,
-      channelStrength: '产品力',
-      threat: 'warning',
-      threatText: '中威胁',
+      saleCount: '产品力',
     },
     {
-      brand: '小鹏',
+      modelName: '小鹏',
       marketShare: 9.7,
       growth: 6.2,
-      channelStrength: '智能化',
-      threat: 'success',
-      threatText: '低威胁',
+      saleCount: '智能化',
     },
   ]
 
@@ -590,6 +596,15 @@ const startAnalysis = async () => {
       adjustment: ((city.recommendedStock || 0) - (city.inventory || 0)),
       adjustmentPercent: ((city.recommendedStock || 0) - (city.inventory || 0)) / (city.inventory || 1) * 100,
     }))
+
+    let regionRankData: any[] = (await fetchRegionRank()) || []
+    regionalCompetition.value = regionRankData.map(item => ({
+      modelName: item.modelFullName,
+      marketShare: item.marketShare,
+      growth: item.saleGrowthRate,
+      saleCount: item.saleCount,
+    }))
+
     // 初始化图表
     await nextTick()
     await initAllCharts()
@@ -780,7 +795,7 @@ const initCompetitionChart = async () => {
     },
     xAxis: {
       type: 'category',
-      data: regionalCompetition.value.map((item) => item.brand),
+      data: regionalCompetition.value.map((item) => item.modelName),
     },
     yAxis: {
       type: 'value',
@@ -793,8 +808,7 @@ const initCompetitionChart = async () => {
         data: regionalCompetition.value.map((item) => ({
           value: item.marketShare,
           itemStyle: {
-            color:
-              item.threat === 'danger' ? '#f56c6c' : item.threat === 'warning' ? '#e6a23c' : '#67c23a',
+            color: item.marketShare > 20 ? '#67c23a' : item.marketShare > 10 ? '#e6a23c' : '#f56c6c',
           },
         })),
         barWidth: '60%',
@@ -1111,12 +1125,11 @@ onUnmounted(() => {
                 <h6>主要竞争对手</h6>
                 <div
                   v-for="competitor in regionalCompetition"
-                  :key="competitor.brand"
+                  :key="competitor.modelName"
                   class="competitor-item"
                 >
                   <div class="competitor-header">
-                    <span class="competitor-name">{{ competitor.brand }}</span>
-                    <el-tag :type="competitor.threat" size="small">{{ competitor.threatText }}</el-tag>
+                    <span class="competitor-name">{{ competitor.modelName }}</span>
                   </div>
                   <div class="competitor-metrics">
                     <div class="metric">
@@ -1128,10 +1141,6 @@ onUnmounted(() => {
                       <strong :class="competitor.growth >= 0 ? 'text-success' : 'text-danger'">
                         {{ competitor.growth >= 0 ? '+' : '' }}{{ competitor.growth.toFixed(1) }}%
                       </strong>
-                    </div>
-                    <div class="metric">
-                      <span>渠道优势:</span>
-                      <strong>{{ competitor.channelStrength }}</strong>
                     </div>
                   </div>
                 </div>
