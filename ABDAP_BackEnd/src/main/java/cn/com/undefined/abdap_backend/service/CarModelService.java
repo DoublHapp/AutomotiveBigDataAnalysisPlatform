@@ -1,6 +1,7 @@
 package cn.com.undefined.abdap_backend.service;
 
 import cn.com.undefined.abdap_backend.dto.CarModelDTO;
+import cn.com.undefined.abdap_backend.dto.CarModelDetailDTO;
 import cn.com.undefined.abdap_backend.repository.CarModelRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
@@ -64,7 +65,14 @@ public class CarModelService {
      */
     public List<String> getFactorysByKeyword(String keyword) {
         return carModelRepository.findFactorysByKeyword(
-            "all".equalsIgnoreCase(keyword) ? null : keyword
-        );
+                "all".equalsIgnoreCase(keyword) ? null : keyword);
+    }
+
+    /**
+     * 根据车型ID获取车型详情DTO
+     * 包含品牌、评分、销售记录等信息
+     */
+    public CarModelDetailDTO getCarModelDetailDTOById(Long carModelId) {
+        return carModelRepository.findCarModelDetailDTOById(carModelId);
     }
 }

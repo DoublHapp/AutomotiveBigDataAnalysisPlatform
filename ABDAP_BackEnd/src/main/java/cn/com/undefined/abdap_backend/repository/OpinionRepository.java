@@ -14,11 +14,11 @@ import org.springframework.stereotype.Repository;
  */
 @Repository
 public interface OpinionRepository extends JpaRepository<Opinion, Long> {
-    @Query(value = "SELECT new cn.com.undefined.abdap_backend.dto.OpinionDTO(" +
-            "o.opinionId, o.carModelId, c.modelName, b.brandName, o.score) " +
+    @Query("SELECT new cn.com.undefined.abdap_backend.dto.OpinionDTO(" +
+            "o.opinionId, o.carModelId, c.modelName, b.brandName, o.totalScore) " +
             "FROM Opinion o " +
-            "LEFT JOIN o.carModel c " +
-            "LEFT JOIN c.brand b " +
+            "LEFT JOIN CarModel c ON o.carModelId = c.carModelId " +
+            "LEFT JOIN Brand b ON c.brandId = b.brandId " +
             "ORDER BY o.opinionId")
     List<OpinionDTO> findAllOpinionDTOs();
 }

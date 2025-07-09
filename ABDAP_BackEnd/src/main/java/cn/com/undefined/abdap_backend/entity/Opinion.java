@@ -24,8 +24,24 @@ public class Opinion {
     @Column(name = "car_model_id", nullable = false)
     private Long carModelId;
 
-    @Column(name = "score", precision = 3, scale = 1)
-    private BigDecimal score;
+    @Column(name = "power_current", precision = 3, scale = 2)
+    private BigDecimal powerScore;
+
+    @Column(name = "control_current", precision = 3, scale = 2)
+    private BigDecimal controlScore;
+
+    @Column(name = "comfort_current", precision = 3, scale = 2)
+    private BigDecimal comfortScore;
+
+    @Column(name = "appearance_current", precision = 3, scale = 2)
+    private BigDecimal appearanceScore;
+
+    @Column(name = "config_current", precision = 3, scale = 2)
+    private BigDecimal configScore;
+
+    @Column(name = "score_current", precision = 3, scale = 2)
+    private BigDecimal totalScore;
+
     /**
      * 关联的车型（一对一关系）
      * 通过car_model_id外键建立关联
