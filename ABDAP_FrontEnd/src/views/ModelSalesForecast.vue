@@ -1423,36 +1423,6 @@ onUnmounted(() => {
                 </el-row>
               </div>
             </div>
-
-            <!-- 竞品定价对比 -->
-            <div class="competitor-pricing">
-              <h5>竞品定价对比</h5>
-              <el-table :data="competitorPricing" size="small">
-                <el-table-column prop="modelName" label="车型" width="120" />
-                <el-table-column prop="currentPrice" label="当前价格" width="100">
-                  <template #default="{ row }"> ¥{{ row.currentPrice.toLocaleString() }} </template>
-                </el-table-column>
-                <el-table-column prop="pricePosition" label="价格定位" width="100">
-                  <template #default="{ row }">
-                    <el-tag :type="row.pricePosition.type" size="small">
-                      {{ row.pricePosition.text }}
-                    </el-tag>
-                  </template>
-                </el-table-column>
-                <el-table-column prop="marketResponse" label="市场反应" min-width="150">
-                  <template #default="{ row }">
-                    <el-progress
-                      :percentage="row.marketResponse"
-                      :stroke-width="6"
-                      :show-text="false"
-                    />
-                    <span style="margin-left: 8px; font-size: 12px">
-                      {{ row.marketResponse }}%
-                    </span>
-                  </template>
-                </el-table-column>
-              </el-table>
-            </div>
           </div>
         </el-card>
       </el-col>
