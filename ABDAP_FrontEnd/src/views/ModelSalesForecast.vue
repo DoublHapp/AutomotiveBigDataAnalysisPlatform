@@ -752,7 +752,7 @@ function generateTimeSeries(baseTime: string, period: number): string[] {
     result.push(`${currentYear}/${formattedMonth}`);
   }
 
-  return result;
+  return result.reverse();
 }
 
 // 图表初始化函数
