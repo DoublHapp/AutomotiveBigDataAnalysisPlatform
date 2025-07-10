@@ -53,10 +53,6 @@
             <el-icon><Warning /></el-icon>
             <span>竞品冲击</span>
           </el-radio-button>
-          <el-radio-button value="seasonal">
-            <el-icon><Calendar /></el-icon>
-            <span>季节调整</span>
-          </el-radio-button>
         </el-radio-group>
       </div>
 
@@ -64,16 +60,21 @@
       <div class="scenario-config" v-if="forecastScenario !== 'normal'">
         <!-- 新品上市配置 -->
         <div v-if="forecastScenario === 'newProduct'" class="config-section">
-          <h4>新品上市参数</h4>
+          <h4>
+            新品上市参数
+            <el-button
+              type="text"
+              style="margin-left: 6px; padding: 0"
+              @click="showNewProductTip = true"
+            >
+              <el-icon><QuestionFilled /></el-icon>
+            </el-button>
+          </h4>
           <el-row :gutter="16">
-            <el-col :span="8">
-              <el-form-item label="上市时间:">
-                <el-date-picker v-model="scenarioConfig.newProduct.launchDate" type="month" />
-              </el-form-item>
-            </el-col>
             <el-col :span="8">
               <el-form-item label="预期市场接受度:">
                 <el-select v-model="scenarioConfig.newProduct.marketAcceptance">
+                  <el-option label="无影响" value="none" />
                   <el-option label="保守(30%)" value="conservative" />
                   <el-option label="乐观(60%)" value="optimistic" />
                   <el-option label="激进(90%)" value="aggressive" />
@@ -92,21 +93,27 @@
             </el-col>
           </el-row>
         </div>
+        <el-dialog v-model="showNewProductTip" title="新品上市参数说明" width="420px">
+          <ul style="font-size: 15px; line-height: 1.8; padding-left: 18px">
+            <li><b>预期市场接受度：</b>“无影响”不调整，“保守”+2%，“乐观”+5%，“激进”+10%。</li>
+            <li><b>同类产品替换率：</b>每10%替换率，销量提升3%。</li>
+            <li>最终扰动 = 市场接受度扰动 + 替换率扰动，最大正向提升不超过50%。</li>
+          </ul>
+        </el-dialog>
 
         <!-- 促销活动配置 -->
         <div v-if="forecastScenario === 'promotion'" class="config-section">
-          <h4>促销活动参数</h4>
+          <h4>
+            促销活动参数
+            <el-button
+              type="text"
+              style="margin-left: 6px; padding: 0"
+              @click="showPromotionTip = true"
+            >
+              <el-icon><QuestionFilled /></el-icon>
+            </el-button>
+          </h4>
           <el-row :gutter="16">
-            <el-col :span="6">
-              <el-form-item label="活动类型:">
-                <el-select v-model="scenarioConfig.promotion.type">
-                  <el-option label="价格折扣" value="discount" />
-                  <el-option label="置换补贴" value="trade_in" />
-                  <el-option label="金融方案" value="financing" />
-                  <el-option label="礼品赠送" value="gift" />
-                </el-select>
-              </el-form-item>
-            </el-col>
             <el-col :span="6">
               <el-form-item label="折扣幅度:">
                 <el-input-number
@@ -123,28 +130,33 @@
                 <span>月</span>
               </el-form-item>
             </el-col>
-            <el-col :span="6">
-              <el-form-item label="预期提升:">
-                <el-input-number
-                  v-model="scenarioConfig.promotion.expectedLift"
-                  :min="0"
-                  :max="200"
-                />
-                <span>%</span>
-              </el-form-item>
-            </el-col>
           </el-row>
         </div>
+        <el-dialog v-model="showPromotionTip" title="促销活动参数说明" width="420px">
+          <ul style="font-size: 15px; line-height: 1.8; padding-left: 18px">
+            <li><b>折扣幅度：</b>每10%折扣，销量提升5%，最高提升50%。</li>
+            <li><b>活动时长：</b>每1个月提升5%，最多6个月（加成上限30%）。</li>
+            <li>最终扰动 = 折扣扰动 + 时长扰动，最大正向提升不超过50%。</li>
+          </ul>
+        </el-dialog>
 
         <!-- 竞品冲击配置 -->
         <div v-if="forecastScenario === 'competitor'" class="config-section">
-          <h4>竞品冲击分析</h4>
+          <h4>
+            竞品冲击分析
+            <el-button
+              type="text"
+              style="margin-left: 6px; padding: 0"
+              @click="showCompetitorTip = true"
+            >
+              <el-icon><QuestionFilled /></el-icon>
+            </el-button>
+          </h4>
           <el-row :gutter="16">
             <el-col :span="8">
               <el-form-item label="竞品类型:">
                 <el-select v-model="scenarioConfig.competitor.type">
                   <el-option label="同级别新品" value="same_level" />
-                  <el-option label="降维打击" value="downgrade" />
                   <el-option label="价格战" value="price_war" />
                 </el-select>
               </el-form-item>
@@ -152,6 +164,7 @@
             <el-col :span="8">
               <el-form-item label="冲击强度:">
                 <el-select v-model="scenarioConfig.competitor.intensity">
+                  <el-option label="无影响" value="none" />
                   <el-option label="轻微影响" value="mild" />
                   <el-option label="中等影响" value="moderate" />
                   <el-option label="强烈冲击" value="severe" />
@@ -163,39 +176,21 @@
                 <el-slider
                   v-model="scenarioConfig.competitor.marketLoss"
                   :min="0"
-                  :max="50"
+                  :max="100"
                   show-input
                 />
               </el-form-item>
             </el-col>
           </el-row>
         </div>
-
-        <!-- 季节调整配置 -->
-        <div v-if="forecastScenario === 'seasonal'" class="config-section">
-          <h4>季节性调整参数</h4>
-          <el-row :gutter="16">
-            <el-col :span="12">
-              <el-form-item label="季节性强度:">
-                <el-radio-group v-model="scenarioConfig.seasonal.intensity">
-                  <el-radio value="weak">弱季节性</el-radio>
-                  <el-radio value="normal">正常季节性</el-radio>
-                  <el-radio value="strong">强季节性</el-radio>
-                </el-radio-group>
-              </el-form-item>
-            </el-col>
-            <el-col :span="12">
-              <el-form-item label="特殊事件:">
-                <el-checkbox-group v-model="scenarioConfig.seasonal.events">
-                  <el-checkbox value="spring_festival">春节</el-checkbox>
-                  <el-checkbox value="golden_week">国庆黄金周</el-checkbox>
-                  <el-checkbox value="auto_show">车展</el-checkbox>
-                  <el-checkbox value="policy_change">政策变化</el-checkbox>
-                </el-checkbox-group>
-              </el-form-item>
-            </el-col>
-          </el-row>
-        </div>
+        <el-dialog v-model="showCompetitorTip" title="竞品冲击参数说明" width="420px">
+          <ul style="font-size: 15px; line-height: 1.8; padding-left: 18px">
+            <li><b>竞品类型：</b>同级别新品影响2%，价格战影响8%。</li>
+            <li><b>冲击强度：</b>“无影响”0，“轻微”1，“中等”1.5，“强烈”2倍影响。</li>
+            <li><b>预期市场流失：</b>为负向扰动上限（如15%，最大销量下滑15%）。</li>
+            <li>最终扰动 = -min(类型扰动×强度扰动, 市场流失)，最大负向不超过-50%。</li>
+          </ul>
+        </el-dialog>
       </div>
     </el-card>
 
@@ -214,21 +209,26 @@
           <el-form :model="forecastConfig" label-width="100px" class="config-form">
             <!-- 预测对象选择 -->
             <el-form-item label="预测车型">
-              <el-select
-                v-model="forecastConfig.carModelId"
-                placeholder="选择车型"
-                filterable
-                @change="handleCarModelChange"
-              >
-                <el-option label="全部车型" :value="null" />
-                <el-option
-                  v-for="model in availableCarModels"
-                  :key="model.carModelId"
-                  :label="`${model.brandName} ${model.modelName}`"
-                  :value="model.carModelId"
-                />
-              </el-select>
-            </el-form-item>
+  <el-select
+    v-model="forecastConfig.carModelId"
+    placeholder="搜索车型"
+    filterable
+    remote
+    :remote-method="searchCarModels"
+    :loading="carModelSearchLoading"
+    clearable
+    @change="handleCarModelChange"
+    style="width: 220px"
+  >
+    <el-option label="全部车型" :value="null" />
+    <el-option
+      v-for="model in carModelSearchResults"
+      :key="model.carModelId"
+      :label="`${model.brandName} ${model.modelName}`"
+      :value="model.carModelId"
+    />
+  </el-select>
+</el-form-item>
 
             <!-- 地区选择 -->
             <el-form-item label="预测地区">
@@ -385,7 +385,7 @@
               <div class="metric-details">
                 <div class="metric-value">{{ (predictedRevenue / 10000).toFixed(0) }}</div>
                 <div class="metric-label">预测销售额(万)</div>
-                <div class="metric-trend">均价: {{ avgPrice.toFixed(1) }}万</div>
+                <div class="metric-trend">官方指导价: {{ avgPrice.toFixed(1) }}万</div>
               </div>
             </div>
           </el-col>
@@ -526,6 +526,40 @@
       <div class="advanced-config-content">
         <el-tabs v-model="activeAdvancedTab">
           <el-tab-pane label="外部因素" name="external">
+            <el-form-item label="是否启用外部参数进行市场模拟">
+              <el-switch
+                v-model="enableExternalFactors"
+                active-text="启用"
+                inactive-text="不启用"
+              />
+              <el-button
+                type="text"
+                style="margin-left: 8px; padding: 0"
+                @click="showExternalFactorsTip = true"
+              >
+                <el-icon><QuestionFilled /></el-icon>
+              </el-button>
+            </el-form-item>
+
+            <el-dialog
+              v-model="showExternalFactorsTip"
+              title="外部因素影响说明"
+              width="420px"
+              :show-close="true"
+            >
+              <ul style="font-size: 15px; line-height: 1.8; padding-left: 18px">
+                <li><b>GDP增长率：</b>每高于5% 1个百分点，销量提升0.8%；低于5%则下降。</li>
+                <li><b>消费信心指数：</b>每高于100 10点，销量提升0.5%；低于100则下降。</li>
+                <li><b>汽车购置税率：</b>每低于10% 1个百分点，销量提升1.2%；高于10%则下降。</li>
+                <li><b>新能源政策：</b>“强力推进”销量提升2%；“政策收紧”销量下降2%。</li>
+                <li><b>供应链稳定性：</b>每低于4分1分，销量下降1%。</li>
+                <li><b>原材料价格趋势：</b>“上涨”销量下降1%；“下降”销量提升1%。</li>
+              </ul>
+              <div style="color: #909399; font-size: 13px; margin-top: 8px">
+                启用后，系统将在预测流程最后一步根据这些参数对预测销量做市场性修正。
+              </div>
+            </el-dialog>
+
             <div class="external-factors">
               <h4>宏观经济因素</h4>
               <el-row :gutter="16">
@@ -618,28 +652,41 @@
               <el-collapse-item title="Prophet模型参数" name="prophet">
                 <div class="prophet-params">
                   <el-row :gutter="16">
-                    <el-col :span="8">
-                      <el-form-item label="季节性开关:">
-                        <el-switch v-model="forecastConfig.prophetParams.seasonality" />
-                      </el-form-item>
-                    </el-col>
-                    <el-col :span="8">
-                      <el-form-item label="趋势变化点数量:">
+                    <el-col :span="6">
+                      <el-form-item label="季节性周期(月):">
                         <el-input-number
-                          v-model="forecastConfig.prophetParams.changepoints"
+                          v-model="forecastConfig.prophetParams.seasonalityPeriod"
                           :min="1"
-                          :max="20"
+                          :max="24"
+                          :step="1"
                         />
                       </el-form-item>
                     </el-col>
-                    <el-col :span="8">
-                      <el-form-item label="置信区间:">
-                        <el-slider
-                          v-model="forecastConfig.prophetParams.confidence"
-                          :min="80"
-                          :max="99"
-                          show-input
+                    <el-col :span="6">
+                      <el-form-item label="季节性强度:">
+                        <el-input-number
+                          v-model="forecastConfig.prophetParams.seasonalityStrength"
+                          :min="0"
+                          :max="2"
+                          :step="0.01"
+                          :precision="2"
                         />
+                      </el-form-item>
+                    </el-col>
+                    <el-col :span="6">
+                      <el-form-item label="趋势灵活性:">
+                        <el-input-number
+                          v-model="forecastConfig.prophetParams.trendFlexibility"
+                          :min="0"
+                          :max="1"
+                          :step="0.01"
+                          :precision="2"
+                        />
+                      </el-form-item>
+                    </el-col>
+                    <el-col :span="6">
+                      <el-form-item label="包含假日效应:">
+                        <el-switch v-model="forecastConfig.prophetParams.includeHolidays" />
                       </el-form-item>
                     </el-col>
                   </el-row>
@@ -827,9 +874,10 @@ interface ForecastConfig {
     q: number
   }
   prophetParams: {
-    seasonality: boolean
-    changepoints: number
-    confidence: number
+    seasonalityPeriod: number
+    seasonalityStrength: number
+    trendFlexibility: number
+    includeHolidays: boolean
   }
 }
 
@@ -923,6 +971,50 @@ const analysisView = ref('trend')
 const regionInput = ref('')
 const regionSearchResults = ref<Region[]>([])
 
+const enableExternalFactors = ref(false)
+const showExternalFactorsTip = ref(false)
+
+const showNewProductTip = ref(false)
+const showPromotionTip = ref(false)
+const showCompetitorTip = ref(false)
+
+const carModelSearchResults = ref<CarModel[]>([])
+const carModelSearchLoading = ref(false)
+let carModelSearchTimer: ReturnType<typeof setTimeout> | null = null
+
+const selectedCarModelObj = ref<CarModel | null>(null)
+
+// 车型远程搜索方法
+const searchCarModels = (query: string) => {
+  if (carModelSearchTimer) clearTimeout(carModelSearchTimer)
+  carModelSearchTimer = setTimeout(async () => {
+    if (!query) {
+      carModelSearchResults.value = []
+      return
+    }
+    carModelSearchLoading.value = true
+    try {
+      const response = await axios.get('/api/car-models/search', {
+        params: { keyword: query, limit: 500 },
+      })
+      if (response.data.status === 200 && response.data.data) {
+         // 按 modelName 去重
+        const unique = Array.from(
+          new Map(response.data.data.map(item => [item.modelName, item])).values()
+        )
+        carModelSearchResults.value = unique
+      } else {
+        carModelSearchResults.value = []
+      }
+    } catch (error) {
+      carModelSearchResults.value = []
+    } finally {
+      carModelSearchLoading.value = false
+    }
+  }, 300) // 300ms防抖
+}
+
+
 const querySearchRegion = (queryString: string, cb: (results: Region[]) => void) => {
   if (!queryString) {
     cb([])
@@ -972,30 +1064,21 @@ const predictionHistory = ref<PredictionRecord[]>([])
 const monthlyBreakdownData = ref<any[]>([])
 
 // 预测场景配置
-const forecastScenario = ref<'normal' | 'newProduct' | 'promotion' | 'competitor' | 'seasonal'>(
-  'normal',
-)
+const forecastScenario = ref<'normal' | 'newProduct' | 'promotion' | 'competitor'>('normal')
 
 const scenarioConfig = reactive({
   newProduct: {
-    launchDate: new Date(),
-    marketAcceptance: 'optimistic',
-    replacementRate: 30,
+    marketAcceptance: 'none',
+    replacementRate: 0,
   },
   promotion: {
-    type: 'discount',
-    discountRate: 10,
-    duration: 3,
-    expectedLift: 25,
+    discountRate: 0,
+    duration: 0,
   },
   competitor: {
     type: 'same_level',
-    intensity: 'moderate',
-    marketLoss: 15,
-  },
-  seasonal: {
-    intensity: 'normal',
-    events: [] as string[],
+    intensity: 'none',
+    marketLoss: 0,
   },
 })
 
@@ -1006,21 +1089,22 @@ const forecastConfig = ref<ForecastConfig>({
   modelType: 'ARIMA',
   period: '6M',
   arimaParams: {
-    p: 1,
+    p: 2,
     d: 1,
     q: 1,
   },
   prophetParams: {
-    seasonality: true,
-    changepoints: 5,
-    confidence: 95,
+    seasonalityPeriod: 12,
+    seasonalityStrength: 1.0,
+    trendFlexibility: 0.05,
+    includeHolidays: false,
   },
 })
 
 // 高级配置
 const externalFactors = reactive({
-  gdpGrowth: 5.2,
-  consumerConfidence: 115,
+  gdpGrowth: 5.0,
+  consumerConfidence: 100,
   purchaseTax: 10,
   evPolicy: 'moderate',
   supplyChain: 4,
@@ -1251,6 +1335,10 @@ const fetchProphetDetailPrediction = async (config: {
   regionId?: number
   regionName?: string
   months: number
+  seasonalityPeriod?: number
+  seasonalityStrength?: number
+  trendFlexibility?: number
+  includeHolidays?: boolean
 }): Promise<ProphetDetailResult> => {
   try {
     console.log('开始Prophet详细预测...')
@@ -1258,6 +1346,12 @@ const fetchProphetDetailPrediction = async (config: {
     let url = `/api/prediction/Prophet/detail?carModelId=${config.carModelId}&months=${config.months}`
     if (config.regionId) url += `&regionId=${config.regionId}`
     if (config.regionName) url += `&regionName=${encodeURIComponent(config.regionName)}`
+    if (config.seasonalityPeriod !== undefined)
+      url += `&seasonalityPeriod=${config.seasonalityPeriod}`
+    if (config.seasonalityStrength !== undefined)
+      url += `&seasonalityStrength=${config.seasonalityStrength}`
+    if (config.trendFlexibility !== undefined) url += `&trendFlexibility=${config.trendFlexibility}`
+    if (config.includeHolidays !== undefined) url += `&includeHolidays=${config.includeHolidays}`
 
     const response = await axios.get(url)
 
@@ -1330,6 +1424,50 @@ const loadAllBaseData = async () => {
 // =============================================
 // 数据处理函数
 // =============================================
+
+// 将外部因素的6个参数应用在预测流程最后环节，修正预测数据
+const applyExternalFactorsAdjustment = () => {
+  if (!enableExternalFactors.value || !predictionResult.value) return
+
+  // 业务修正逻辑示例（可根据实际业务调整权重和影响方式）
+  const factor = externalFactors
+  predictionResult.value.forecastData = predictionResult.value.forecastData.map((item) => {
+    let adjustment = 0
+
+    // GDP增长率（基准为5%，每+1%，销量+0.8%）
+    adjustment += ((factor.gdpGrowth - 5) * 0.8 * item.value) / 100
+
+    // 消费信心指数（基准100，每+10，销量+0.5%）
+    adjustment += (((factor.consumerConfidence - 100) / 10) * 0.5 * item.value) / 100
+
+    // 购置税率（基准10%，每-1%，销量+1.2%）
+    adjustment += ((10 - factor.purchaseTax) * 1.2 * item.value) / 100
+
+    // 新能源政策（基准为“无政策”，强政策每+1%，销量+2%，限制政策每-1%，销量-2%）
+    if (factor.evPolicy === 'strong') adjustment += 0.02 * item.value
+    if (factor.evPolicy === 'restrictive') adjustment -= 0.02 * item.value
+
+    // 供应链稳定性（5分满分，低于4分每-1分销量-1%）
+    if (factor.supplyChain < 4) adjustment -= (4 - factor.supplyChain) * 0.01 * item.value
+
+    // 原材料价格趋势（基准为“稳定”，上涨每-1%，销量-1%，下降每+1%，销量+1%）
+    if (factor.materialPrice === 'rising') adjustment -= 0.01 * item.value
+    if (factor.materialPrice === 'falling') adjustment += 0.01 * item.value
+
+    return {
+      ...item,
+      value: Math.max(0, item.value + adjustment),
+      upper: item.upper !== undefined ? Math.max(0, item.upper + adjustment) : undefined,
+      lower: item.lower !== undefined ? Math.max(0, item.lower + adjustment) : undefined,
+    }
+  })
+
+  // 重新合并 allData
+  predictionResult.value.allData = [
+    ...predictionResult.value.historicalData,
+    ...predictionResult.value.forecastData,
+  ]
+}
 
 const processDetailPredictionResult = (
   rawResult: ARIMADetailResult | ProphetDetailResult,
@@ -1450,7 +1588,9 @@ const calculateBusinessMetrics = (): BusinessMetrics => {
   const selectedCarModel = baseData.value.carModels.find(
     (model) => model.carModelId === forecastConfig.value.carModelId,
   )
-  const avgPrice = selectedCarModel ? selectedCarModel.officialPrice : 220000
+  const avgPrice = selectedCarModelObj.value
+  ? selectedCarModelObj.value.officialPrice
+  : 10
 
   // 计算库存建议
   const avgMonthlySales = predictedTotalSales / forecastData.length
@@ -1459,7 +1599,7 @@ const calculateBusinessMetrics = (): BusinessMetrics => {
   const safetyStock = Math.floor(avgMonthlySales * 1.5)
 
   // 计算预测收入
-  const predictedRevenue = predictedTotalSales * avgPrice
+  const predictedRevenue = predictedTotalSales * avgPrice*10000
 
   // 计算市场波动性
   const values = forecastData.map((item) => item.value)
@@ -1602,7 +1742,7 @@ const salesGrowth = computed(() => businessMetrics.value.salesGrowth)
 const recommendedInventory = computed(() => businessMetrics.value.recommendedInventory)
 const safetyStock = computed(() => businessMetrics.value.safetyStock)
 const predictedRevenue = computed(() => businessMetrics.value.predictedRevenue)
-const avgPrice = computed(() => businessMetrics.value.avgPrice / 10000) // 转换为万元
+const avgPrice = computed(() => businessMetrics.value.avgPrice) // 转换为万元
 const riskLevel = computed(() => businessMetrics.value.riskLevel)
 const predictionResults = computed(() => predictionResult.value?.allData || null)
 
@@ -1692,12 +1832,13 @@ const getScenarioText = () => {
     newProduct: '新品上市',
     promotion: '促销活动',
     competitor: '竞品冲击',
-    seasonal: '季节调整',
   }
   return scenarioMap[forecastScenario.value]
 }
 
-const handleCarModelChange = () => {
+const handleCarModelChange = (carModelId: number) => {
+  selectedCarModelObj.value =
+    carModelSearchResults.value.find((model) => model.carModelId === carModelId) || null
   predictionResult.value = null
   if (forecastChartInstance) {
     forecastChartInstance.clear()
@@ -1740,11 +1881,14 @@ const startPrediction = async () => {
         ...regionParams,
       })
     } else {
-      rawResult = await fetchProphetDetailPrediction({
+      const params = {
         carModelId: forecastConfig.value.carModelId!,
         months: periodMonths,
         ...regionParams,
-      })
+        ...forecastConfig.value.prophetParams,
+      }
+
+      rawResult = await fetchProphetDetailPrediction(params)
     }
 
     // 处理预测结果
@@ -1755,6 +1899,9 @@ const startPrediction = async () => {
 
     // 应用场景调整
     applyScenarioAdjustments()
+
+    // 应用外部因素修正
+    applyExternalFactorsAdjustment()
 
     // 生成月度分解数据
     generateMonthlyBreakdown()
@@ -1773,41 +1920,62 @@ const startPrediction = async () => {
 const applyScenarioAdjustments = () => {
   if (!predictionResult.value || forecastScenario.value === 'normal') return
 
-  predictionResult.value.forecastData = predictionResult.value.forecastData.map(
-    (prediction, index) => {
-      let adjustment = 0
+  let f_scenario1 = 0
+  let f_scenario2 = 0
+  let f_scenario3 = 0
 
-      switch (forecastScenario.value) {
-        case 'newProduct':
-          adjustment = index > 3 ? (index - 3) * 15 : 0
-          break
-        case 'promotion':
-          adjustment =
-            index <= scenarioConfig.promotion.duration
-              ? (scenarioConfig.promotion.expectedLift * prediction.value) / 100
-              : 0
-          break
-        case 'competitor':
-          adjustment =
-            index > 2 ? (-scenarioConfig.competitor.marketLoss * prediction.value) / 100 : 0
-          break
-        case 'seasonal':
-          const intensity = scenarioConfig.seasonal.intensity
-          const multiplier = intensity === 'strong' ? 1.5 : intensity === 'weak' ? 0.5 : 1.0
-          adjustment = Math.sin((index + new Date().getMonth()) * 0.5) * 45 * multiplier
-          break
-      }
+  // 新品上市
+  if (forecastScenario.value === 'newProduct') {
+    let acceptance = 0
+    if (scenarioConfig.newProduct.marketAcceptance === 'conservative') acceptance = 0.02
+    else if (scenarioConfig.newProduct.marketAcceptance === 'optimistic') acceptance = 0.05
+    else if (scenarioConfig.newProduct.marketAcceptance === 'aggressive') acceptance = 0.1
+    // 'none' 时为0
+    const replaceFactor = ((scenarioConfig.newProduct.replacementRate || 0) / 100) * 0.3
+    f_scenario1 = acceptance + replaceFactor
+  }
 
-      return {
-        ...prediction,
-        value: Math.max(80, prediction.value + adjustment),
-        upper: prediction.upper ? Math.max(80, prediction.upper + adjustment) : undefined,
-        lower: prediction.lower ? Math.max(80, prediction.lower + adjustment) : undefined,
-      }
-    },
-  )
+  // 促销活动
+  if (forecastScenario.value === 'promotion') {
+    const discountBoost = ((scenarioConfig.promotion.discountRate || 0) / 100) * 0.5
+    const durationBoost = (Math.min(scenarioConfig.promotion.duration || 0, 6) / 6) * 0.3
+    f_scenario2 = discountBoost + durationBoost
+  }
 
-  // 重新计算合并数据
+  // 竞品冲击
+  if (forecastScenario.value === 'competitor') {
+    const typeMap: Record<string, number> = {
+      same_level: 0.02,
+      price_war: 0.08,
+    }
+    const strengthMap: Record<string, number> = {
+      none: 0,
+      mild: 1,
+      moderate: 1.5,
+      severe: 2,
+    }
+    const typeImpact = typeMap[scenarioConfig.competitor.type] || 0.02
+    const strengthImpact = strengthMap[scenarioConfig.competitor.intensity] || 0
+    const competitionImpact = typeImpact * strengthImpact
+    const marketLoss = (scenarioConfig.competitor.marketLoss || 0) / 100
+    f_scenario3 = -Math.min(competitionImpact, marketLoss)
+  }
+
+  let f_total = f_scenario1 + f_scenario2 + f_scenario3
+  f_total = Math.max(Math.min(f_total, 0.5), -0.5)
+
+  predictionResult.value.forecastData = predictionResult.value.forecastData.map((prediction) => {
+    const adjusted = prediction.value * (1 + f_total)
+    return {
+      ...prediction,
+      value: Math.max(0, adjusted),
+      upper:
+        prediction.upper !== undefined ? Math.max(0, prediction.upper * (1 + f_total)) : undefined,
+      lower:
+        prediction.lower !== undefined ? Math.max(0, prediction.lower * (1 + f_total)) : undefined,
+    }
+  })
+
   predictionResult.value.allData = [
     ...predictionResult.value.historicalData,
     ...predictionResult.value.forecastData,
@@ -1922,7 +2090,7 @@ const initForecastChart = async () => {
   const option = {
     title: {
       text: `${getScenarioText()}销售预测 (${forecastConfig.value.modelType})`,
-      subtext: `模型精度: ${(100 - predictionResult.value.modelMetrics.mape).toFixed(1)}%`,
+      // subtext: `模型精度: ${(100 - predictionResult.value.modelMetrics.mape).toFixed(1)}%`,
       left: 'center',
       textStyle: { fontSize: 16, fontWeight: 'bold', color: '#333' },
       subtextStyle: { fontSize: 12, color: '#666' },
@@ -2018,12 +2186,19 @@ const resetConfig = () => {
     regionId: null,
     modelType: 'ARIMA',
     period: '6M',
-    arimaParams: { p: 1, d: 1, q: 1 },
-    prophetParams: { seasonality: true, changepoints: 5, confidence: 95 },
+    arimaParams: { p: 2, d: 1, q: 1 },
+    prophetParams: {
+      seasonalityPeriod: 12,
+      seasonalityStrength: 1.0,
+      trendFlexibility: 0.05,
+      includeHolidays: false,
+    },
   }
 
   forecastScenario.value = 'normal'
   predictionResult.value = null
+
+  regionInput.value = '' // 清空地区搜索框
 
   if (forecastChartInstance) {
     forecastChartInstance.clear()
@@ -2113,8 +2288,8 @@ const handleAdvancedConfigClose = () => {
 
 const resetAdvancedConfig = () => {
   Object.assign(externalFactors, {
-    gdpGrowth: 5.2,
-    consumerConfidence: 115,
+    gdpGrowth: 5.0,
+    consumerConfidence: 100,
     purchaseTax: 10,
     evPolicy: 'moderate',
     supplyChain: 4,
