@@ -209,26 +209,26 @@
           <el-form :model="forecastConfig" label-width="100px" class="config-form">
             <!-- 预测对象选择 -->
             <el-form-item label="预测车型">
-  <el-select
-    v-model="forecastConfig.carModelId"
-    placeholder="搜索车型"
-    filterable
-    remote
-    :remote-method="searchCarModels"
-    :loading="carModelSearchLoading"
-    clearable
-    @change="handleCarModelChange"
-    style="width: 220px"
-  >
-    <el-option label="全部车型" :value="null" />
-    <el-option
-      v-for="model in carModelSearchResults"
-      :key="model.carModelId"
-      :label="`${model.brandName} ${model.modelName}`"
-      :value="model.carModelId"
-    />
-  </el-select>
-</el-form-item>
+              <el-select
+                v-model="forecastConfig.carModelId"
+                placeholder="搜索车型"
+                filterable
+                remote
+                :remote-method="searchCarModels"
+                :loading="carModelSearchLoading"
+                clearable
+                @change="handleCarModelChange"
+                style="width: 220px"
+              >
+                <el-option label="全部车型" :value="null" />
+                <el-option
+                  v-for="model in carModelSearchResults"
+                  :key="model.carModelId"
+                  :label="`${model.brandName} ${model.modelName}`"
+                  :value="model.carModelId"
+                />
+              </el-select>
+            </el-form-item>
 
             <!-- 地区选择 -->
             <el-form-item label="预测地区">
@@ -998,9 +998,9 @@ const searchCarModels = (query: string) => {
         params: { keyword: query, limit: 500 },
       })
       if (response.data.status === 200 && response.data.data) {
-         // 按 modelName 去重
+        // 按 modelName 去重
         const unique = Array.from(
-          new Map(response.data.data.map(item => [item.modelName, item])).values()
+          new Map(response.data.data.map((item) => [item.modelName, item])).values(),
         )
         carModelSearchResults.value = unique
       } else {
@@ -1013,7 +1013,6 @@ const searchCarModels = (query: string) => {
     }
   }, 300) // 300ms防抖
 }
-
 
 const querySearchRegion = (queryString: string, cb: (results: Region[]) => void) => {
   if (!queryString) {
@@ -1588,9 +1587,7 @@ const calculateBusinessMetrics = (): BusinessMetrics => {
   const selectedCarModel = baseData.value.carModels.find(
     (model) => model.carModelId === forecastConfig.value.carModelId,
   )
-  const avgPrice = selectedCarModelObj.value
-  ? selectedCarModelObj.value.officialPrice
-  : 10
+  const avgPrice = selectedCarModelObj.value ? selectedCarModelObj.value.officialPrice : 10
 
   // 计算库存建议
   const avgMonthlySales = predictedTotalSales / forecastData.length
@@ -1599,7 +1596,7 @@ const calculateBusinessMetrics = (): BusinessMetrics => {
   const safetyStock = Math.floor(avgMonthlySales * 1.5)
 
   // 计算预测收入
-  const predictedRevenue = predictedTotalSales * avgPrice*10000
+  const predictedRevenue = predictedTotalSales * avgPrice * 10000
 
   // 计算市场波动性
   const values = forecastData.map((item) => item.value)

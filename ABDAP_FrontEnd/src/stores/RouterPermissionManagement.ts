@@ -126,38 +126,38 @@ export const usePermissionStore = defineStore('permission', () => {
         keepAlive: true,
       },
     },
-    {
-      path: '/app/Evaluative',
-      name: 'Evaluative',
-      meta: {
-        title: '口碑聚合分析',
-        icon: 'ChatDotRound',
-        roles: ['Customer'],
-        keepAlive: true,
-      },
-    },
+    // {
+    //   path: '/app/Evaluative',
+    //   name: 'Evaluative',
+    //   meta: {
+    //     title: '口碑聚合分析',
+    //     icon: 'ChatDotRound',
+    //     roles: ['Customer'],
+    //     keepAlive: true,
+    //   },
+    // },
 
     //产品经理 (ProductManager) 菜单
-    {
-      path: '/app/VehicleConfiguration',
-      name: 'VehicleConfiguration',
-      meta: {
-        title: '车辆配置热度分析',
-        icon: 'Setting',
-        roles: ['ProductManager'],
-        keepAlive: true,
-      },
-    },
-    {
-      path: '/app/CompetitiveProductComp',
-      name: 'CompetitiveProductComp',
-      meta: {
-        title: '竞品对比分析',
-        icon: 'DataBoard',
-        roles: ['ProductManager'],
-        keepAlive: true,
-      },
-    },
+    // {
+    //   path: '/app/VehicleConfiguration',
+    //   name: 'VehicleConfiguration',
+    //   meta: {
+    //     title: '车辆配置热度分析',
+    //     icon: 'Setting',
+    //     roles: ['ProductManager'],
+    //     keepAlive: true,
+    //   },
+    // },
+    // {
+    //   path: '/app/CompetitiveProductComp',
+    //   name: 'CompetitiveProductComp',
+    //   meta: {
+    //     title: '竞品对比分析',
+    //     icon: 'DataBoard',
+    //     roles: ['ProductManager'],
+    //     keepAlive: true,
+    //   },
+    // },
   ]
 
   // 根据用户角色生成菜单
@@ -178,14 +178,14 @@ export const usePermissionStore = defineStore('permission', () => {
     const defaultRoutes: Record<string, string> = {
       SalesManager: '/app/SaleTotal',
       Customer: '/app/TopCarModelList',
-      ProductManager: '/app/VehicleConfiguration',
+      // ProductManager: '/app/VehicleConfiguration',
     }
     return defaultRoutes[userRole] || '/app/SaleTotal'
   }
 
   // 检查用户是否有权限访问指定路由
   const hasPermission = (userRole: string, routePath: string): boolean => {
-    const targetMenu = baseMenus.find(menu => menu.path === routePath)
+    const targetMenu = baseMenus.find((menu) => menu.path === routePath)
     return targetMenu?.meta?.roles?.includes(userRole) || false
   }
 

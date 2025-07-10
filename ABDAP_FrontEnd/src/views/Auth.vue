@@ -89,26 +89,26 @@ const rolePermissions = {
     'TimeSeries:view',
     'SalesForecast:view',
     'ModelSalesForcast:view',
-    'RegionSalesForcast:view'
+    'RegionSalesForcast:view',
   ],
   Customer: [
     'TopCarModelList:view',
     'VehicleModelCompAnalysis:view',
     'Recommendation:view',
     'FuelConsList:view',
-    'Evaluative:view'
+    // 'Evaluative:view'
   ],
-  ProductManager: [
-    'VehicleConfiguration:view',
-    'VehicleModelCompAnalysis:view'
-  ],
+  // ProductManager: [
+  //   'VehicleConfiguration:view',
+  //   'VehicleModelCompAnalysis:view'
+  // ],
 }
 
 // 角色默认路由
 const roleDefaultRoutes = {
   SalesManager: '/app/SaleTotal',
   Customer: '/app/TopCarModelList',
-  ProductManager: '/app/VehicleConfiguration',
+  // ProductManager: '/app/VehicleConfiguration',
 }
 
 // 登录处理
@@ -199,7 +199,7 @@ const mockLogin = async () => {
   const mockUsers = {
     DB: { password: '123456', role: 'SalesManager', user_id: 1 },
     LJJ: { password: '123456', role: 'Customer', user_id: 2 },
-    PM: { password: '123456', role: 'ProductManager', user_id: 3 },
+    // PM: { password: '123456', role: 'ProductManager', user_id: 3 },
   }
 
   const user = mockUsers[username as keyof typeof mockUsers]
@@ -247,7 +247,7 @@ const handleRegister = async () => {
           role: registerForm.role,
         })
 
-        if (response.data.status === 200) {
+        if (response.data.status === 200 || response.data.status === 201) {
           // 注册成功
           ElMessage.success(response.data.msg)
 
@@ -332,10 +332,6 @@ const showTerms = () => {
   )
 }
 </script>
-
-
-
-
 
 <template>
   <div class="auth-container">
@@ -519,12 +515,12 @@ const showTerms = () => {
                     <small>可查看热门车型、购车推荐等信息</small>
                   </div>
                 </el-option>
-                <el-option label="产品经理" value="ProductManager">
+                <!-- <el-option label="产品经理" value="ProductManager">
                   <div class="role-option">
                     <span>产品经理</span>
                     <small>可查看产品配置、对比分析等功能</small>
                   </div>
-                </el-option>
+                </el-option> -->
               </el-select>
             </el-form-item>
 
@@ -569,21 +565,19 @@ const showTerms = () => {
                 <small>可查看热门车型排行</small>
               </div>
             </div>
-            <div class="demo-item" @click="quickLogin('PM', '123456', 'ProductManager')">
+            <!-- <div class="demo-item" @click="quickLogin('PM', '123456', 'ProductManager')">
               <el-icon><Avatar /></el-icon>
               <div>
                 <p><strong>PM</strong> - 产品经理</p>
                 <small>可查看产品配置分析</small>
               </div>
-            </div>
+            </div> -->
           </div>
         </el-card>
       </div>
     </div>
   </div>
 </template>
-
-
 
 <style scoped>
 .auth-container {

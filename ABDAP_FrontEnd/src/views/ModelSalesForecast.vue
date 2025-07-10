@@ -102,16 +102,16 @@ interface repsonseData {
 interface carModelOption {
   label: string
   value: string
-  launchDate?: string 
+  launchDate?: string
 }
 
 // 查询车型的接口无法接通，先用fake数据
-const carModelOptionsFake: carModelOption[]=[
-  { label: '宝马X3', value: '1',launchDate: '2020-01-01' },
-  { label: '奔驰C200L', value: '2',launchDate: '2021-02-01' },
-  { label: '奥迪A4L', value: '3',launchDate: '2019-03-01' },
-  { label: '特斯拉Model 3', value: '4',launchDate: '2018-04-01' },
-  { label: '比亚迪汉EV', value: '5',launchDate: '2020-05-01' }
+const carModelOptionsFake: carModelOption[] = [
+  { label: '宝马X3', value: '1', launchDate: '2020-01-01' },
+  { label: '奔驰C200L', value: '2', launchDate: '2021-02-01' },
+  { label: '奥迪A4L', value: '3', launchDate: '2019-03-01' },
+  { label: '特斯拉Model 3', value: '4', launchDate: '2018-04-01' },
+  { label: '比亚迪汉EV', value: '5', launchDate: '2020-05-01' },
 ]
 const carModelOptions = ref<carModelOption[]>([])
 
@@ -163,9 +163,9 @@ let historyDates: string[]
 let historyPeriods: number
 let forecastDates: string[]
 let forecastPeriods: number
-let values : number[]
-let upper : number[]
-let lower : number[]
+let values: number[]
+let upper: number[]
+let lower: number[]
 
 // 库存规划数据
 let avgSales: number
@@ -231,10 +231,16 @@ const getMaturityColor = (value: number) => {
 
 // 库存规划工具函数
 // 计算安全库存 没有日销数据，以月销数据的标准差代替
-function calcSafetyStock(salesHistory: number[], replenishmentCycleDays: number, serviceFactor = 1.65) {
+function calcSafetyStock(
+  salesHistory: number[],
+  replenishmentCycleDays: number,
+  serviceFactor = 1.65,
+) {
   if (!salesHistory || salesHistory.length === 0) return 0
   const avg = salesHistory.reduce((a, b) => a + b, 0) / salesHistory.length
-  const std = Math.sqrt(salesHistory.reduce((sum, v) => sum + Math.pow(v - avg, 2), 0) / salesHistory.length)
+  const std = Math.sqrt(
+    salesHistory.reduce((sum, v) => sum + Math.pow(v - avg, 2), 0) / salesHistory.length,
+  )
   // 按月为单位，补货周期天数/30
   return Math.round(serviceFactor * std * Math.sqrt(replenishmentCycleDays / 30))
 }
@@ -286,7 +292,7 @@ function fillSeasonalInventoryByForecastPeriods() {
       month: m,
       demandIndex: demandIndex,
       recommendedStock: Math.round(safety + values[idx]),
-      adjustment: adjustmentMap[mNum] || '维持库存'
+      adjustment: adjustmentMap[mNum] || '维持库存',
     }
   })
 }
@@ -311,47 +317,39 @@ watch(replenishmentCycle, (val) => {
 // 生命周期工具函数
 // 计算选中车型的 launchDate
 const selectedLaunchDate = computed(() => {
-  const selected = carModelOptions.value.find(item => item.value === selectedModel.value)
+  const selected = carModelOptions.value.find((item) => item.value === selectedModel.value)
   return selected?.launchDate || '未知'
 })
 
 // 计算生命周期
-function calcLifecycleStage(launchDate: string, expectedLifecycle: number=84) {
+function calcLifecycleStage(launchDate: string, expectedLifecycle: number = 84) {
   if (!launchDate || !expectedLifecycle) return 'introduction'
   const now = new Date()
   const launch = new Date(launchDate)
   // 已上市月数
-  const monthsOnMarket = (now.getFullYear() - launch.getFullYear()) * 12 + (now.getMonth() - launch.getMonth())
+  const monthsOnMarket =
+    (now.getFullYear() - launch.getFullYear()) * 12 + (now.getMonth() - launch.getMonth())
   // 阶段分割（可根据实际业务调整比例）
-  const introEnd = Math.round(expectedLifecycle * 0.15)      // 导入期15%
-  const growthEnd = Math.round(expectedLifecycle * 0.45)      // 成长期30%
-  const maturityEnd = Math.round(expectedLifecycle * 0.85)    // 成熟期40%
+  const introEnd = Math.round(expectedLifecycle * 0.15) // 导入期15%
+  const growthEnd = Math.round(expectedLifecycle * 0.45) // 成长期30%
+  const maturityEnd = Math.round(expectedLifecycle * 0.85) // 成熟期40%
   // 判断阶段
-  if (monthsOnMarket < introEnd) 
-    currentLifecycleStage.value = 'introduction'
-  else if (monthsOnMarket < growthEnd)  
-    currentLifecycleStage.value = 'growth'
-  else if (monthsOnMarket < maturityEnd)  
-    currentLifecycleStage.value = 'maturity'
-  else 
-    currentLifecycleStage.value = 'decline'
+  if (monthsOnMarket < introEnd) currentLifecycleStage.value = 'introduction'
+  else if (monthsOnMarket < growthEnd) currentLifecycleStage.value = 'growth'
+  else if (monthsOnMarket < maturityEnd) currentLifecycleStage.value = 'maturity'
+  else currentLifecycleStage.value = 'decline'
 
   marketMaturity.value = Math.min(Math.round((monthsOnMarket / expectedLifecycle) * 100), 100)
 
-  if (!historySales || historySales.length < 6) 
-    return 1
+  if (!historySales || historySales.length < 6) return 1
   const n = historyPeriods
   const recent = historySales.slice(n - 3, n).reduce((a, b) => a + b, 0) / 3
   const prev = historySales.slice(n - 6, n - 3).reduce((a, b) => a + b, 0) / 3
   const rate = (recent - prev) / prev
-  if (rate > 0.3) 
-    growthPotential.value = 5
-  if (rate > 0.15) 
-    growthPotential.value = 4
-  if (rate > 0.05) 
-    growthPotential.value = 3
-  if (rate > -0.05) 
-    growthPotential.value = 2
+  if (rate > 0.3) growthPotential.value = 5
+  if (rate > 0.15) growthPotential.value = 4
+  if (rate > 0.05) growthPotential.value = 3
+  if (rate > -0.05) growthPotential.value = 2
   return
 }
 
@@ -359,7 +357,7 @@ function calcLifecycleStage(launchDate: string, expectedLifecycle: number=84) {
 function debounce<T extends (...args: any[]) => any>(
   func: T,
   wait: number = 300,
-  immediate: boolean = false
+  immediate: boolean = false,
 ): (...args: Parameters<T>) => void {
   let timer: ReturnType<typeof setTimeout> | null = null
 
@@ -382,7 +380,7 @@ function debounce<T extends (...args: any[]) => any>(
 // 异步防抖
 function debounceAsync<T extends (...args: any[]) => Promise<any>>(
   fn: T,
-  delay = 300
+  delay = 300,
 ): (...args: Parameters<T>) => Promise<ReturnType<T>> {
   let timer: ReturnType<typeof setTimeout> | null = null
   let resolveList: ((value: any) => void)[] = []
@@ -404,7 +402,9 @@ function debounceAsync<T extends (...args: any[]) => Promise<any>>(
 // API调用函数
 const fetchCarModels = async (query: string) => {
   try {
-    const response = await axios.get('/api/car-models/search', { params: { keyword: query, limit: 20 } })
+    const response = await axios.get('/api/car-models/search', {
+      params: { keyword: query, limit: 20 },
+    })
     if (response.data.status === 200) {
       carModelOptions.value = [] // 清空之前的选项
       response.data.data.forEach((model: any) => {
@@ -425,7 +425,6 @@ const fetchCarModels = async (query: string) => {
 
 // 搜索防抖
 const debounceFetchCarModels = debounceAsync(fetchCarModels, 500)
-
 
 // const fetchCarModels = async (query: string) => {
 //   try {
@@ -449,7 +448,7 @@ const debounceFetchCarModels = debounceAsync(fetchCarModels, 500)
 
 const fetchModelAnalysis = async (modelId: string) => {
   try {
-    const params = new URLSearchParams();
+    const params = new URLSearchParams()
     // 直传车型和预测周期参数
     params.append('carModelId', selectedModel.value.toString())
     params.append('months', forecastPeriod.value.toString())
@@ -501,10 +500,7 @@ const resetSelection = () => {
   modelResults.value = null
 
   // 清理图表
-  const chartInstances = [
-    elasticityChartInstance,
-    inventoryChartInstance,
-  ]
+  const chartInstances = [elasticityChartInstance, inventoryChartInstance]
 
   chartInstances.forEach((instance) => {
     if (instance) {
@@ -527,12 +523,12 @@ const startModelAnalysis = async () => {
     const res = await fetchModelAnalysis(selectedModel.value)
 
     console.log('车型分析结果:', res)
-    if(res){
+    if (res) {
       const results: repsonseData = res
       modelResults.value = results
-      
+
       // 车型销量预测数据
-      historySales = results.historicalData   
+      historySales = results.historicalData
       historyPeriods = results.historicalDataCount
       forecastPeriods = results.forecastDataCount
       values = results.forecastValues
@@ -544,7 +540,7 @@ const startModelAnalysis = async () => {
       // 更新库存需求数据
       avgSales = Math.round(historySales.reduce((a, b) => a + b, 0) / historySales.length)
       fillSeasonalInventoryByForecastPeriods()
-      
+
       // 更新生命周期数据
       calcLifecycleStage(selectedLaunchDate.value, expectedLifecycle.value)
 
@@ -711,57 +707,53 @@ const applyPricingStrategy = () => {
 function generateTimeSeries(baseTime: string, period: number): string[] {
   // 验证输入格式
   if (!/^\d{4}\/\d{2}$/.test(baseTime)) {
-    throw new Error('基准时间格式不正确，应为 "yyyy/mm"');
+    throw new Error('基准时间格式不正确，应为 "yyyy/mm"')
   }
 
-  const [yearStr, monthStr] = baseTime.split('/');
-  let year = parseInt(yearStr, 10);
-  let month = parseInt(monthStr, 10);
+  const [yearStr, monthStr] = baseTime.split('/')
+  let year = parseInt(yearStr, 10)
+  let month = parseInt(monthStr, 10)
 
   // 验证月份是否有效
   if (month < 1 || month > 12) {
-    throw new Error('月份必须在 1-12 之间');
+    throw new Error('月份必须在 1-12 之间')
   }
 
-  const result: string[] = [];
-  const direction = period > 0 ? 1 : -1;
-  const count = Math.abs(period);
+  const result: string[] = []
+  const direction = period > 0 ? 1 : -1
+  const count = Math.abs(period)
 
   for (let i = 0; i < count; i++) {
     // 计算当前月份和年份
-    let currentMonth = month;
-    let currentYear = year;
+    let currentMonth = month
+    let currentYear = year
 
     if (direction > 0) {
       // 正向计算
-      currentMonth += i;
-      currentYear += Math.floor((currentMonth - 1) / 12);
-      currentMonth = ((currentMonth - 1) % 12) + 1;
+      currentMonth += i
+      currentYear += Math.floor((currentMonth - 1) / 12)
+      currentMonth = ((currentMonth - 1) % 12) + 1
     } else {
       // 反向计算
-      currentMonth -= i;
+      currentMonth -= i
       // 处理跨年
       while (currentMonth < 1) {
-        currentMonth += 12;
-        currentYear -= 1;
+        currentMonth += 12
+        currentYear -= 1
       }
     }
 
     // 格式化月份为两位数
-    const formattedMonth = currentMonth.toString().padStart(2, '0');
-    result.push(`${currentYear}/${formattedMonth}`);
+    const formattedMonth = currentMonth.toString().padStart(2, '0')
+    result.push(`${currentYear}/${formattedMonth}`)
   }
 
-  return result.reverse();
+  return result.reverse()
 }
 
 // 图表初始化函数
 const initAllCharts = async () => {
-  await Promise.all([
-    initForecastChart(),
-    initElasticityChart(),
-    initInventoryChart(),
-  ])
+  await Promise.all([initForecastChart(), initElasticityChart(), initInventoryChart()])
 }
 
 const initForecastChart = async () => {
@@ -862,7 +854,8 @@ const initForecastChart = async () => {
       nameLocation: 'middle',
       nameGap: 50,
       axisLabel: {
-        formatter: (value: number) => (value >= 1000 ? (value / 1000).toFixed(1) + 'k' : value.toString()),
+        formatter: (value: number) =>
+          value >= 1000 ? (value / 1000).toFixed(1) + 'k' : value.toString(),
       },
       splitLine: { lineStyle: { type: 'dashed', color: '#e0e6ed' } },
     },
@@ -871,12 +864,12 @@ const initForecastChart = async () => {
         name: '历史销量',
         type: 'line',
         data: historySales,
-        itemStyle: { 
-          color: '#409EFF' 
+        itemStyle: {
+          color: '#409EFF',
         },
-        lineStyle: { 
-          width: 2, 
-          type: 'dashed' 
+        lineStyle: {
+          width: 2,
+          type: 'dashed',
         },
         symbol: 'circle',
         symbolSize: 4,
@@ -885,11 +878,11 @@ const initForecastChart = async () => {
         name: '预测销量',
         type: 'line',
         data: forecastSales,
-        itemStyle: { 
-          color: '#E6A23C' 
+        itemStyle: {
+          color: '#E6A23C',
         },
-        lineStyle: { 
-          width: 3 
+        lineStyle: {
+          width: 3,
         },
         symbol: 'diamond',
         symbolSize: 6,
@@ -1145,11 +1138,7 @@ const initSimulationChart = async () => {
 
 // 窗口大小调整
 const handleResize = () => {
-  const chartInstances = [
-    elasticityChartInstance,
-    inventoryChartInstance,
-    simulationChartInstance,
-  ]
+  const chartInstances = [elasticityChartInstance, inventoryChartInstance, simulationChartInstance]
 
   chartInstances.forEach((instance) => {
     if (instance) {
@@ -1240,9 +1229,9 @@ onUnmounted(() => {
                   @change="handleModelChange"
                   style="width: 100%"
                 >
-                <!-- 使用 carModelOptionsFake 代替 carModelOptions -->
+                  <!-- 使用 carModelOptionsFake 代替 carModelOptions -->
                   <el-option
-                    v-for="model in carModelOptions" 
+                    v-for="model in carModelOptions"
                     :key="model.label"
                     :label="model.label"
                     :value="model.value"
@@ -1344,11 +1333,11 @@ onUnmounted(() => {
           </div>
         </el-card>
       </el-col>
-    
+
       <!-- 预测结果 -->
       <el-col :xs="24" :lg="16">
         <!-- 新增生命周期预测图表 -->
-        <el-card shadow="never" class="result-card" style="margin-bottom: 20px;">
+        <el-card shadow="never" class="result-card" style="margin-bottom: 20px">
           <template #header>
             <div class="card-header-colored">
               <span>车型销量预测</span>
@@ -1376,8 +1365,7 @@ onUnmounted(() => {
         <!-- ...原有配置组合分析内容... -->
       </el-col>
     </el-row>
-    <br>
-
+    <br />
 
     <!-- 定价策略与库存规划 -->
     <el-row :gutter="20" v-if="modelResults">
@@ -1437,7 +1425,7 @@ onUnmounted(() => {
 
           <div class="inventory-planning">
             <!-- 新增补货周期输入 -->
-            <el-form-item label="补货周期(天):" style="max-width: 220px;">
+            <el-form-item label="补货周期(天):" style="max-width: 220px">
               <el-input-number
                 v-model="replenishmentCycle"
                 :min="7"
@@ -1475,7 +1463,7 @@ onUnmounted(() => {
         </el-card>
       </el-col>
     </el-row>
-    <br>
+    <br />
 
     <!-- 价格模拟器弹窗 -->
     <el-dialog v-model="showPricingSimulator" title="价格策略模拟器" width="70%">
@@ -1563,7 +1551,6 @@ onUnmounted(() => {
         </div>
       </template>
     </el-dialog>
-
   </div>
 </template>
 
@@ -1682,7 +1669,7 @@ onUnmounted(() => {
 
 .el-card {
   border-radius: 16px !important;
-  box-shadow: 0 8px 32px rgba(79, 172, 254, 0.10) !important;
+  box-shadow: 0 8px 32px rgba(79, 172, 254, 0.1) !important;
   border: none !important;
 }
 
@@ -1695,7 +1682,7 @@ onUnmounted(() => {
   background: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%);
   border-radius: 12px 12px 0 0;
   padding: 16px 28px;
-  box-shadow: 0 2px 8px rgba(79,172,254,0.10);
+  box-shadow: 0 2px 8px rgba(79, 172, 254, 0.1);
   letter-spacing: 1px;
   min-height: 48px;
   position: relative;
@@ -1881,7 +1868,7 @@ onUnmounted(() => {
 }
 
 /* 配置组合卡片 */
-.configuration-card { 
+.configuration-card {
   height: 100%;
   border-radius: 16px;
   box-shadow: 0 6px 30px rgba(0, 0, 0, 0.08);
@@ -2144,15 +2131,12 @@ onUnmounted(() => {
 
 .competitor-comparison,
 .threat-assessment,
-
 .competitor-comparison {
   border-bottom: 1px solid #f0f2f5;
 }
 
 .threat-assessment h5,
-
 .threat-assessment h5::before,
-
 .threat-card {
   background: white;
   border: 1px solid #e8eaed;
@@ -2322,7 +2306,7 @@ onUnmounted(() => {
 
 .el-table th {
   background: #f0f9ff !important;
-  color: #409EFF !important;
+  color: #409eff !important;
   font-weight: 700 !important;
   font-size: 15px !important;
 }
@@ -2341,7 +2325,7 @@ onUnmounted(() => {
   overflow: hidden;
   margin-top: 12px;
   background: #f8fafb;
-  box-shadow: 0 2px 12px rgba(79,172,254,0.06);
+  box-shadow: 0 2px 12px rgba(79, 172, 254, 0.06);
   border: 1px solid #e8eaed;
 }
 
@@ -2797,7 +2781,6 @@ onUnmounted(() => {
   .seasonal-adjustment,
   .competitor-comparison,
   .threat-assessment,
-
   .chart-container {
     height: 200px;
   }

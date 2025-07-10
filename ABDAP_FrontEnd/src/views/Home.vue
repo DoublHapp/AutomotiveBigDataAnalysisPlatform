@@ -1,13 +1,7 @@
 <script lang="ts">
-  export default {
-    
-  }
+export default {}
 </script>
 
-<template>
+<template></template>
 
-</template>
-
-<style>
-
-</style>
+<style></style>

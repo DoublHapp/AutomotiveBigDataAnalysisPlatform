@@ -266,7 +266,7 @@
                     {{
                       rankingType === 'sales'
                         ? item.salesCount.toLocaleString() + '台'
-                          : (item.growthRate >= 0 ? '+' : '') + item.growthRate.toFixed(1) + '%'
+                        : (item.growthRate >= 0 ? '+' : '') + item.growthRate.toFixed(1) + '%'
                     }}
                   </span>
                   <span class="growth-rate" :class="item.growthRate >= 0 ? 'positive' : 'negative'">
@@ -277,7 +277,8 @@
                   <span class="market-share">所占市场份额: {{ item.marketShare.toFixed(1) }}%</span>
                   <div></div>
                   <span class="vs-average"
-                    >与行业平均增长率的差值: {{ (item.growthRate - averageGrowth).toFixed(1) }}%</span
+                    >与行业平均增长率的差值:
+                    {{ (item.growthRate - averageGrowth).toFixed(1) }}%</span
                   >
                 </div>
               </div>
@@ -314,9 +315,7 @@
                     <li><b>下滑地区</b>：增长率小于-5%的地区数量。</li>
                     <li><b>热门增长地区</b>：增长率大于0的地区，按增长率降序取前5名。</li>
                     <li><b>占比</b>：各类地区数量占当前覆盖地区总数的百分比。</li>
-                    <li>
-                      所有数据均基于当前筛选条件（时间、地区层级）下的真实销量数据动态计算。
-                    </li>
+                    <li>所有数据均基于当前筛选条件（时间、地区层级）下的真实销量数据动态计算。</li>
                   </ul>
                 </div>
               </el-popover>
@@ -613,12 +612,11 @@ const businessMetrics = ref<BusinessMetrics>({
   totalAmountGrowth: 0,
 })
 
-
 // 图表和显示控制
 const currentLevel = ref<'country' | 'province' | 'city'>('country')
 const currentProvince = ref('')
 const currentProvinceId = ref<number | null>(null)
-const rankingType = ref<'sales'  | 'growth'>('sales')
+const rankingType = ref<'sales' | 'growth'>('sales')
 
 // 图表实例
 const chinaMapChart = ref<HTMLDivElement>()
@@ -632,9 +630,6 @@ let detailScatterChartInstance: echarts.ECharts | null = null
 let growthTrendChartInstance: echarts.ECharts | null = null
 
 // API 调用函数保持不变...
-
-
-
 
 const fetchRegions = async (): Promise<Region[]> => {
   try {
@@ -690,16 +685,15 @@ const fetchNonTopLevelRegions = async (): Promise<Region[]> => {
   }
 }
 
-
 const fetchRegionSalesRanking = async (
   startMonth: string,
   endMonth: string,
   region: string = 'all',
-  top: number = 31 // 全国省份最多31个
+  top: number = 31, // 全国省份最多31个
 ) => {
   try {
     const response = await axios.get('/api/ranking/region-sales', {
-      params: { startMonth, endMonth, region, top }
+      params: { startMonth, endMonth, region, top },
     })
     if (response.data.status === 200 && response.data.data) {
       return response.data.data
@@ -712,19 +706,15 @@ const fetchRegionSalesRanking = async (
   }
 }
 
-
-
-
 const loadAllBaseData = async () => {
   try {
     console.log('开始加载基础数据...')
 
-    const [ regions, topLevelRegions, nonTopLevelRegions] =
-      await Promise.all([
-        fetchRegions(),
-        fetchTopLevelRegions(),
-        fetchNonTopLevelRegions(),
-      ])
+    const [regions, topLevelRegions, nonTopLevelRegions] = await Promise.all([
+      fetchRegions(),
+      fetchTopLevelRegions(),
+      fetchNonTopLevelRegions(),
+    ])
 
     baseData.value = {
       regions,
@@ -752,9 +742,15 @@ const processRegionSalesData = async () => {
   const now = new Date()
   let monthsBack = 12
   switch (timeRange.value) {
-    case 'quarter': monthsBack = 3; break
-    case 'halfyear': monthsBack = 6; break
-    case 'year': monthsBack = 12; break
+    case 'quarter':
+      monthsBack = 3
+      break
+    case 'halfyear':
+      monthsBack = 6
+      break
+    case 'year':
+      monthsBack = 12
+      break
   }
   const endMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
   const start = new Date(now.getFullYear(), now.getMonth() - monthsBack + 1, 1)
@@ -775,9 +771,9 @@ const processRegionSalesData = async () => {
   salesData.value = data.map((item: any) => ({
     regionId: item.regionId,
     regionName:
-    currentLevel.value === 'province'
-      ? item.regionName + '市'
-      : provinceNameMapping[item.regionName] || item.regionName, // 关键：标准化
+      currentLevel.value === 'province'
+        ? item.regionName + '市'
+        : provinceNameMapping[item.regionName] || item.regionName, // 关键：标准化
     salesCount: item.saleCount,
     salesAmount: 0, // 如有销售额字段可补充
     growthRate: item.saleGrowthRate != null ? item.saleGrowthRate * 100 : 0,
@@ -864,7 +860,6 @@ const processAllData = async () => {
     ElMessage.error('数据处理失败，请重试')
   }
 }
-
 
 // 计算属性保持不变...
 const totalSales = computed(() => businessMetrics.value.totalSales)
@@ -968,7 +963,7 @@ const handleRankingTypeChange = () => {
 
 // 图表初始化函数...省份地图数据URL映射等保持不变
 const provinceMapUrls: Record<string, string> = {
-   北京市: 'https://geo.datav.aliyun.com/areas_v3/bound/110000_full.json',
+  北京市: 'https://geo.datav.aliyun.com/areas_v3/bound/110000_full.json',
   天津市: 'https://geo.datav.aliyun.com/areas_v3/bound/120000_full.json',
   上海市: 'https://geo.datav.aliyun.com/areas_v3/bound/310000_full.json',
   重庆市: 'https://geo.datav.aliyun.com/areas_v3/bound/500000_full.json',

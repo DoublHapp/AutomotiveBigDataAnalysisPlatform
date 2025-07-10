@@ -102,7 +102,7 @@ const router = createRouter({
           },
         },
         // 消费者 (Customer) 页面
-           {
+        {
           path: 'TopCarModelList',
           name: 'TopCarModelList',
           component: () => import('../views/TopCarModelList.vue'),
@@ -142,39 +142,38 @@ const router = createRouter({
             roles: ['Customer'],
           },
         },
-        {
-          path: 'Evaluative',
-          name: 'Evaluative',
-          component: () => import('../views/Evaluative.vue'),
-          meta: {
-            title: '口碑聚合分析',
-            requiresAuth: true,
-            roles: ['Customer'],
-          },
-        },
+        // {
+        //   path: 'Evaluative',
+        //   name: 'Evaluative',
+        //   component: () => import('../views/Evaluative.vue'),
+        //   meta: {
+        //     title: '口碑聚合分析',
+        //     requiresAuth: true,
+        //     roles: ['Customer'],
+        //   },
+        // },
         // 产品经理 (ProductManager) 页面
-         {
-          path: 'VehicleConfiguration',
-          name: 'VehicleConfiguration',
-          component: () => import('../views/VehicleConfiguration.vue'),
-          meta: {
-            title: '车辆配置热度分析',
-            requiresAuth: true,
-            roles: ['ProductManager'],
-          },
-        },
+        //  {
+        //   path: 'VehicleConfiguration',
+        //   name: 'VehicleConfiguration',
+        //   component: () => import('../views/VehicleConfiguration.vue'),
+        //   meta: {
+        //     title: '车辆配置热度分析',
+        //     requiresAuth: true,
+        //     roles: ['ProductManager'],
+        //   },
+        // },
 
-        {
-           path: '/app/CompetitiveProductComp',
-           name: 'CompetitiveProductComp',
-           component: () => import('@/views/CompetitiveProductComp.vue'),
-          meta: {
-          title: '竞品对比分析',
-          requiresAuth:true,
-          roles: ['ProductManager']
-          }
-         },
-
+        // {
+        //    path: '/app/CompetitiveProductComp',
+        //    name: 'CompetitiveProductComp',
+        //    component: () => import('@/views/CompetitiveProductComp.vue'),
+        //   meta: {
+        //   title: '竞品对比分析',
+        //   requiresAuth:true,
+        //   roles: ['ProductManager']
+        //   }
+        //  },
       ],
     },
 
@@ -187,10 +186,10 @@ const router = createRouter({
       path: '/TopCarModelList',
       redirect: '/app/TopCarModelList',
     },
-    {
-      path: '/VehicleConfiguration',
-      redirect: '/app/VehicleConfiguration',
-    },
+    // {
+    //   path: '/VehicleConfiguration',
+    //   redirect: '/app/VehicleConfiguration',
+    // },
     {
       path: '/CarPurchasesHeatMap',
       redirect: '/app/CarPurchasesHeatMap',
@@ -225,7 +224,7 @@ router.beforeEach((to, from, next) => {
       const roleDefaultRoutes: Record<string, string> = {
         SalesManager: '/SaleTotal',
         Customer: '/TopCarModelList',
-        ProductManager: '/VehicleConfiguration',
+        // ProductManager: '/VehicleConfiguration',
       }
       const defaultRoute = roleDefaultRoutes[user.role] || '/TopCarModelList'
       console.log('用户已登录，重定向到:', defaultRoute)
@@ -252,7 +251,7 @@ router.beforeEach((to, from, next) => {
       const roleDefaultRoutes: Record<string, string> = {
         SalesManager: '/SaleTotal',
         Customer: '/TopCarModelList',
-        ProductManager: '/VehicleConfiguration',
+        // ProductManager: '/VehicleConfiguration',
       }
       const defaultRoute = roleDefaultRoutes[userRole] || '/Auth'
       next(defaultRoute)

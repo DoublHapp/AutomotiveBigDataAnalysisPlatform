@@ -27,7 +27,7 @@ interface RegionNode {
   children?: RegionNode[]
 }
 
-interface Region{
+interface Region {
   id: string
   name: string
   parentRegion: string
@@ -68,22 +68,22 @@ interface OptimizationResult {
 
 // 库存分析图表数据结构
 interface inventoryChartData {
-  name: string;
-  data: number[];
-  avgSales?: number; // 平均月销
-  inventory?: number; // 当下库存
-  recommendedStock?: number; // 推荐库存
+  name: string
+  data: number[]
+  avgSales?: number // 平均月销
+  inventory?: number // 当下库存
+  recommendedStock?: number // 推荐库存
 }
 
 interface repsonseData {
-  saleId: number;
-  carModelId: number;
-  carModelName: string;
-  regionId: number;
-  regionName: string;
-  saleMonth: string;
-  saleCount: number;
-  saleAmount: number;
+  saleId: number
+  carModelId: number
+  carModelName: string
+  regionId: number
+  regionName: string
+  saleMonth: string
+  saleCount: number
+  saleAmount: number
 }
 
 let citiesData: inventoryChartData[] = []
@@ -93,7 +93,7 @@ const loading = ref(false)
 const analyzing = ref(false)
 
 // 区域选择与配置
-const selectedRegion = ref<string>("四川省")
+const selectedRegion = ref<string>('四川省')
 const selectedRegionIdx = ref<number>(0)
 const forecastPeriod = ref('6')
 const analysisDimension = ref('market')
@@ -153,9 +153,9 @@ let historyDates: string[]
 let historyPeriods: number
 let forecastDates: string[]
 let forecastPeriods: number
-let values : number[]
-let upper : number[]
-let lower : number[]
+let values: number[]
+let upper: number[]
+let lower: number[]
 
 // 级联选择器配置
 const cascaderProps = {
@@ -174,10 +174,7 @@ const salesGrowthType = computed(() => {
 })
 
 // 创建树结构
-function addChildNode(
-  tree: RegionNode[],
-  newRegion: Region
-): boolean {
+function addChildNode(tree: RegionNode[], newRegion: Region): boolean {
   for (const node of tree) {
     if (node.name === newRegion.parentRegion) {
       if (!node.children) {
@@ -197,7 +194,7 @@ function addChildNode(
   const newNode: RegionNode = {
     id: newRegion.parentRegion,
     name: newRegion.parentRegion,
-    children: []
+    children: [],
   }
   tree.push(newNode)
 
@@ -235,7 +232,7 @@ const fetchRegionTree = async () => {
 
 const fetchRegionAnalysis = async () => {
   try {
-    const params = new URLSearchParams();
+    const params = new URLSearchParams()
     // 直传车型和预测周期参数
     params.append('regionName', selectedRegion.value.toString())
     params.append('months', forecastPeriod.value.toString())
@@ -253,13 +250,15 @@ const fetchRegionAnalysis = async () => {
 }
 
 const fetchRegionRank = async () => {
-    try {
-    const response = await axios.get(`/api/ranking/market-share`,{ params:{
-      startMonth: "2025-05",
-      endMonth: "2025-05",
-      region: selectedRegion.value,
-      top: "4"
-    }})
+  try {
+    const response = await axios.get(`/api/ranking/market-share`, {
+      params: {
+        startMonth: '2025-05',
+        endMonth: '2025-05',
+        region: selectedRegion.value,
+        top: '4',
+      },
+    })
     if (response.data.status === 200 && response.data.data) {
       console.log('获取地区分析数据:', response)
       return response.data.data
@@ -277,50 +276,50 @@ const fetchRegionRank = async () => {
 function calcSafetyStock(salesHistory: number[], serviceFactor = 1.65) {
   if (!salesHistory || salesHistory.length === 0) return 0
   const avg = salesHistory.reduce((a, b) => a + b, 0) / salesHistory.length
-  const std = Math.sqrt(salesHistory.reduce((sum, v) => sum + Math.pow(v - avg, 2), 0) / salesHistory.length)
+  const std = Math.sqrt(
+    salesHistory.reduce((sum, v) => sum + Math.pow(v - avg, 2), 0) / salesHistory.length,
+  )
   // 按月为单位，补货周期天数/30
   return Math.round(serviceFactor * std * Math.sqrt(30 / 30))
 }
 
 // 计算每月建议库存
 function InventoryByHistory(historySales: number[]) {
-
   // 计算推荐库存和需求指数
   let avgSales = Math.round(historySales.reduce((a, b) => a + b, 0) / historySales.length)
   const safety = calcSafetyStock(historySales)
 
-  let expectedSales = avgSales * (0.95 + Math.random() * 0.10)
+  let expectedSales = avgSales * (0.95 + Math.random() * 0.1)
 
   return {
     avgSales: avgSales,
     inventory: avgSales + safety,
     recommendedStock: Math.round(safety + expectedSales),
   }
-
 }
 
 function processResponseData(salesData: repsonseData[]): inventoryChartData[] {
   // 创建一个Map来按名称分组数据
-  const groupedData = new Map<string, { counts: number[]}>();
+  const groupedData = new Map<string, { counts: number[] }>()
 
   // 遍历所有销售记录
-  salesData.forEach(record => {
-    const key = record.regionName || '未知地区'; // 使用地区名称作为key，如果没有则使用默认值
-    
+  salesData.forEach((record) => {
+    const key = record.regionName || '未知地区' // 使用地区名称作为key，如果没有则使用默认值
+
     // 如果Map中还没有这个key，就初始化
     if (!groupedData.has(key)) {
-      groupedData.set(key, { counts: []});
+      groupedData.set(key, { counts: [] })
     }
-    
+
     // 获取当前分组
-    const group = groupedData.get(key)!;
-  
+    const group = groupedData.get(key)!
+
     // 添加销售数量
-    group.counts.push(record.saleCount);
-  });
+    group.counts.push(record.saleCount)
+  })
 
   // 将Map转换为目标数组
-  const result: inventoryChartData[] = [];
+  const result: inventoryChartData[] = []
   groupedData.forEach((value, key) => {
     let res = InventoryByHistory(value.counts)
     result.push({
@@ -329,15 +328,15 @@ function processResponseData(salesData: repsonseData[]): inventoryChartData[] {
       avgSales: res.avgSales,
       inventory: res.inventory,
       recommendedStock: res.recommendedStock,
-    });
-  });
+    })
+  })
 
-  return result;
+  return result
 }
 
 async function fetchCitiesData() {
-  try{
-    const params = new URLSearchParams();
+  try {
+    const params = new URLSearchParams()
     const selectedRegionNode = regionTree.value[selectedRegionIdx.value]
     if (selectedRegionNode && selectedRegionNode.children) {
       selectedRegionNode.children.forEach((region: RegionNode) => {
@@ -346,13 +345,13 @@ async function fetchCitiesData() {
     }
 
     const res = await axios.get(`/api/sale-records/multiple?${params.toString()}`)
-    if(res.data.status === 200){
+    if (res.data.status === 200) {
       return processResponseData(res.data.data)
-    }else{
+    } else {
       console.error('获取城市数据分析失败:', res.data.message)
       return generateMockRegionAnalysis()
     }
-  }catch(error){
+  } catch (error) {
     console.error('获取地区分析失败:', error)
     return generateMockRegionAnalysis()
   }
@@ -453,7 +452,6 @@ const generateMockRegionAnalysis = () => {
       recommendedLevel: 1400,
       adjustment: 16.7,
       adjustmentPercent: 16.7,
-
     },
     {
       region: '海淀区',
@@ -476,8 +474,7 @@ const generateMockRegionAnalysis = () => {
       adjustment: 15.6,
       adjustmentPercent: 15.6,
     },
-  ]
-  )
+  ])
 
   hasResults.value = true
 }
@@ -504,53 +501,51 @@ const handleDimensionChange = () => {
 function generateTimeSeries(baseTime: string, period: number): string[] {
   // 验证输入格式
   if (!/^\d{4}\/\d{2}$/.test(baseTime)) {
-    throw new Error('基准时间格式不正确，应为 "yyyy/mm"');
+    throw new Error('基准时间格式不正确，应为 "yyyy/mm"')
   }
 
-  const [yearStr, monthStr] = baseTime.split('/');
-  let year = parseInt(yearStr, 10);
-  let month = parseInt(monthStr, 10);
+  const [yearStr, monthStr] = baseTime.split('/')
+  let year = parseInt(yearStr, 10)
+  let month = parseInt(monthStr, 10)
 
   // 验证月份是否有效
   if (month < 1 || month > 12) {
-    throw new Error('月份必须在 1-12 之间');
+    throw new Error('月份必须在 1-12 之间')
   }
 
-  const result: string[] = [];
-  const direction = period > 0 ? 1 : -1;
-  const count = Math.abs(period);
+  const result: string[] = []
+  const direction = period > 0 ? 1 : -1
+  const count = Math.abs(period)
 
   for (let i = 0; i < count; i++) {
     // 计算当前月份和年份
-    let currentMonth = month;
-    let currentYear = year;
+    let currentMonth = month
+    let currentYear = year
 
     if (direction > 0) {
       // 正向计算
-      currentMonth += i;
-      currentYear += Math.floor((currentMonth - 1) / 12);
-      currentMonth = ((currentMonth - 1) % 12) + 1;
+      currentMonth += i
+      currentYear += Math.floor((currentMonth - 1) / 12)
+      currentMonth = ((currentMonth - 1) % 12) + 1
     } else {
       // 反向计算
-      currentMonth -= i;
+      currentMonth -= i
       // 处理跨年
       while (currentMonth < 1) {
-        currentMonth += 12;
-        currentYear -= 1;
+        currentMonth += 12
+        currentYear -= 1
       }
     }
 
     // 格式化月份为两位数
-    const formattedMonth = currentMonth.toString().padStart(2, '0');
-    result.push(`${currentYear}/${formattedMonth}`);
+    const formattedMonth = currentMonth.toString().padStart(2, '0')
+    result.push(`${currentYear}/${formattedMonth}`)
   }
-  if(direction > 0)
-    return result;
-  else
-    return result.reverse();
+  if (direction > 0) return result
+  else return result.reverse()
 }
 
-function computeAvgMonthlyGrowth(salesRecord: number[]){
+function computeAvgMonthlyGrowth(salesRecord: number[]) {
   let growth: number[] = []
   for (let i = 1; i < salesRecord.length; i++) {
     growth.push(((salesRecord[i] - salesRecord[i - 1]) / salesRecord[i - 1]) * 100)
@@ -573,7 +568,7 @@ const startAnalysis = async () => {
   try {
     const analysisData = await fetchRegionAnalysis()
 
-    historySales = analysisData.historicalData   
+    historySales = analysisData.historicalData
     historyPeriods = analysisData.historicalDataCount
     forecastPeriods = analysisData.forecastDataCount
     values = analysisData.forecastValues.map((v: number) => Math.round(v))
@@ -584,22 +579,26 @@ const startAnalysis = async () => {
 
     // 区域销售预测小字
     predictedSales.value = values[0]
-    salesGrowth.value = (values[0]-historySales[historySales.length - 1]) / historySales[historySales.length - 1] * 100
+    salesGrowth.value =
+      ((values[0] - historySales[historySales.length - 1]) /
+        historySales[historySales.length - 1]) *
+      100
     avgMonthlyGrowth.value = computeAvgMonthlyGrowth(historySales)
     confidenceLevel.value = analysisData.confidenceLevel || 85
     forecastAccuracy.value = analysisData.mape
 
     citiesData = (await fetchCitiesData()) || []
-    inventoryRecommendations.value = citiesData.map(city => ({
+    inventoryRecommendations.value = citiesData.map((city) => ({
       region: city.name,
       currentLevel: city.inventory || 0,
       recommendedLevel: city.recommendedStock || 0,
-      adjustment: ((city.recommendedStock || 0) - (city.inventory || 0)),
-      adjustmentPercent: ((city.recommendedStock || 0) - (city.inventory || 0)) / (city.inventory || 1) * 100,
+      adjustment: (city.recommendedStock || 0) - (city.inventory || 0),
+      adjustmentPercent:
+        (((city.recommendedStock || 0) - (city.inventory || 0)) / (city.inventory || 1)) * 100,
     }))
 
     let regionRankData: any[] = (await fetchRegionRank()) || []
-    regionalCompetition.value = regionRankData.map(item => ({
+    regionalCompetition.value = regionRankData.map((item) => ({
       modelName: item.modelFullName,
       marketShare: item.marketShare,
       growth: item.saleGrowthRate,
@@ -655,18 +654,14 @@ const exportReport = () => {
 
 // 图表初始化函数
 const initAllCharts = async () => {
-  await Promise.all([
-    initRegionTrendChart(),
-    initCompetitionChart(),
-    initInventoryChart(),
-  ])
+  await Promise.all([initRegionTrendChart(), initCompetitionChart(), initInventoryChart()])
 }
 
 const initRegionTrendChart = async () => {
   if (!regionTrendChart.value) {
     return
   }
-  
+
   await nextTick()
 
   if (regionTrendChartInstance) {
@@ -711,7 +706,8 @@ const initRegionTrendChart = async () => {
       type: 'value',
       name: '销量(台)',
       axisLabel: {
-        formatter: (value: number) => (value >= 1000 ? (value / 1000).toFixed(1) + 'k' : value.toString()),
+        formatter: (value: number) =>
+          value >= 1000 ? (value / 1000).toFixed(1) + 'k' : value.toString(),
       },
       splitLine: { lineStyle: { type: 'dashed', color: '#e0e6ed' } },
     },
@@ -721,9 +717,9 @@ const initRegionTrendChart = async () => {
         type: 'line',
         data: historySales,
         itemStyle: { color: '#409EFF' },
-        lineStyle: { 
-          width: 2, 
-          type: 'dashed' 
+        lineStyle: {
+          width: 2,
+          type: 'dashed',
         },
         symbol: 'circle',
         symbolSize: 4,
@@ -781,19 +777,18 @@ const initCompetitionChart = async () => {
     },
     tooltip: {
       trigger: 'axis',
-      axisPointer: { 
+      axisPointer: {
         type: 'shadow',
         shadowStyle: {
-          color: 'rgba(150, 150, 150, 0.1)'
-        }
+          color: 'rgba(150, 150, 150, 0.1)',
+        },
       },
       formatter: (params: any) => {
-        const item = params[0].data as RegionalCompetitor;
-        const growthColor = item.growth >= 0 ? '#28a745' : '#dc3545';
-        const marketShareColor = 
-          item.marketShare > 7 ? '#67c23a' : 
-          item.marketShare > 4 ? '#e6a23c' : '#f56c6c';
-        
+        const item = params[0].data as RegionalCompetitor
+        const growthColor = item.growth >= 0 ? '#28a745' : '#dc3545'
+        const marketShareColor =
+          item.marketShare > 7 ? '#67c23a' : item.marketShare > 4 ? '#e6a23c' : '#f56c6c'
+
         return `
           <div style="
             padding: 8px;
@@ -839,8 +834,8 @@ const initCompetitionChart = async () => {
               </tr>
             </table>
           </div>
-        `;
-      }
+        `
+      },
     },
     grid: {
       left: '3%',
@@ -1037,7 +1032,7 @@ onUnmounted(() => {
       </template>
 
       <div class="config-content">
-        <el-row :gutter="16" style="align-items: center;">
+        <el-row :gutter="16" style="align-items: center">
           <el-col :span="6">
             <el-form-item label="选择区域:">
               <el-select
@@ -1058,17 +1053,19 @@ onUnmounted(() => {
             </el-form-item>
           </el-col>
           <el-col :span="4">
-            <el-form-item label="预测周期:" >
-              <el-select v-model="forecastPeriod" @change="handlePeriodChange" style="--el-text-color-regular: black">
+            <el-form-item label="预测周期:">
+              <el-select
+                v-model="forecastPeriod"
+                @change="handlePeriodChange"
+                style="--el-text-color-regular: black"
+              >
                 <el-option label="3个月" value="3" />
                 <el-option label="6个月" value="6" />
                 <el-option label="12个月" value="12" />
               </el-select>
             </el-form-item>
           </el-col>
-          <el-col :span="4">
-
-          </el-col>
+          <el-col :span="4"> </el-col>
           <el-col :span="4">
             <el-button
               type="primary"
@@ -1166,7 +1163,7 @@ onUnmounted(() => {
             <div class="competition-analysis">
               <!-- 竞争格局图表 -->
               <div class="competition-chart">
-                <div ref="competitionChart" class="chart-container" style="height: 300px;"></div>
+                <div ref="competitionChart" class="chart-container" style="height: 300px"></div>
               </div>
             </div>
           </el-card>
@@ -1184,7 +1181,7 @@ onUnmounted(() => {
             <div class="inventory-optimization">
               <!-- 库存分布图表 -->
               <div class="inventory-chart">
-                <div ref="inventoryChart" class="chart-container" style="height: 250px;"></div>
+                <div ref="inventoryChart" class="chart-container" style="height: 250px"></div>
               </div>
 
               <!-- 库存优化建议 -->
@@ -1212,7 +1209,8 @@ onUnmounted(() => {
                   <el-table-column prop="adjustmentPercent" label="调整幅度" width="100">
                     <template #default="{ row }">
                       <span :class="row.adjustmentPercent >= 0 ? 'text-success' : 'text-danger'">
-                        {{ row.adjustmentPercent >= 0 ? '+' : '' }}{{ row.adjustmentPercent.toFixed(1) }}%
+                        {{ row.adjustmentPercent >= 0 ? '+' : ''
+                        }}{{ row.adjustmentPercent.toFixed(1) }}%
                       </span>
                     </template>
                   </el-table-column>
@@ -1225,11 +1223,7 @@ onUnmounted(() => {
     </div>
 
     <!-- 区域地图弹窗 -->
-    <el-dialog
-      v-model="showRegionMap"
-      title="区域销售地图"
-      width="85%"
-    >
+    <el-dialog v-model="showRegionMap" title="区域销售地图" width="85%">
       <div class="region-map-content">
         <div class="map-controls">
           <el-row :gutter="16">
@@ -1258,7 +1252,7 @@ onUnmounted(() => {
         </div>
 
         <div class="region-map">
-          <div ref="regionMapChart" class="chart-container" style="height: 500px;"></div>
+          <div ref="regionMapChart" class="chart-container" style="height: 500px"></div>
         </div>
       </div>
 

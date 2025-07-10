@@ -4,7 +4,6 @@ import * as echarts from 'echarts'
 import { ElMessage } from 'element-plus'
 import axios from 'axios'
 
-
 // 筛选模式类型
 const compareMode = ref<'region' | 'carModel' | 'none'>('carModel')
 
@@ -17,7 +16,7 @@ interface RegionNode {
   children?: RegionNode[]
 }
 
-interface Region{
+interface Region {
   id: string
   name: string
   parentRegion: string
@@ -36,7 +35,7 @@ const regionOptionsAllFake: regionOption[] = [
   { label: '上海市', value: '上海' },
   { label: '广东省', value: '广东' },
   { label: '浙江省', value: '浙江' },
-  { label: '山东省', value: '山东' }
+  { label: '山东省', value: '山东' },
 ]
 const regionOptionsNoAllFake = regionOptionsAllFake.slice(1) // 不含全国
 const regionOptions = ref<regionOption[]>([])
@@ -51,7 +50,7 @@ const carModelOptionsFake: carModelOption[] = [
   { label: '奔驰C200L', value: '2' },
   { label: '奥迪A4L', value: '3' },
   { label: '特斯拉Model 3', value: '4' },
-  { label: '比亚迪汉EV', value: '5' }
+  { label: '比亚迪汉EV', value: '5' },
 ]
 
 const carModelOptions = ref<carModelOption[]>([])
@@ -65,7 +64,7 @@ interface powerOption {
 const powerOptions: powerOption[] = [
   { label: '全部', value: 'all' },
   { label: '燃油', value: 'fuel' },
-  { label: '新能源', value: 'electric' }
+  { label: '新能源', value: 'electric' },
 ]
 
 const powerType = ref<string>('all')
@@ -73,33 +72,38 @@ const powerType = ref<string>('all')
 // 筛选条件
 const dateRangeType = ref<'month' | 'quarter' | 'year'>('month')
 const dateRange = ref<[string, string]>(['2023-01', '2025-05'])
-const regionSingle = ref<string>(''); 
-const regionArray = ref<string[]>([]);
-const carModelSingle = ref<string>(''); 
-const carModelArray = ref<string[]>([]);
+const regionSingle = ref<string>('')
+const regionArray = ref<string[]>([])
+const carModelSingle = ref<string>('')
+const carModelArray = ref<string[]>([])
 
 // 计算当前可选项和选择方式
-const carModelMultiple = computed(() => compareMode.value == 'carModel' || compareMode.value == 'none')
+const carModelMultiple = computed(
+  () => compareMode.value == 'carModel' || compareMode.value == 'none',
+)
 const regionMultiple = computed(() => compareMode.value == 'region' || compareMode.value == 'none')
 
 // 计算当前选择数组还是对象
 const carModelTargets = computed<any>({
   get() {
-    return carModelMultiple.value ? carModelArray.value : carModelSingle.value;
+    return carModelMultiple.value ? carModelArray.value : carModelSingle.value
   },
   set(newVal) {
     if (carModelMultiple.value) {
-      carModelArray.value = newVal;
+      carModelArray.value = newVal
     } else {
-      carModelSingle.value = newVal;
+      carModelSingle.value = newVal
     }
   },
-});
+})
 
 const disabledButton = computed(() => {
   // 如果没有选择地区或车型，则禁用按钮
-  return !((regionSingle.value || regionArray.value.length > 0) && (carModelSingle.value || carModelArray.value.length > 0));
-});
+  return !(
+    (regionSingle.value || regionArray.value.length > 0) &&
+    (carModelSingle.value || carModelArray.value.length > 0)
+  )
+})
 
 // 在<script setup>中添加
 // 构建el-cascader所需的options
@@ -108,19 +112,20 @@ const regionCascaderOptions = computed(() => {
   // 若regionTree为空可用regionOptionsAllFake等模拟
   if (regionTree.value.length > 0) {
     // 转换RegionNode为el-cascader格式
-    return regionTree.value.map(province => ({
+    return regionTree.value.map((province) => ({
       label: province.name,
       value: province.id,
-      children: province.children?.map(city => ({
-        label: city.name,
-        value: city.id
-      })) || []
+      children:
+        province.children?.map((city) => ({
+          label: city.name,
+          value: city.id,
+        })) || [],
     }))
   } else {
     // 用模拟数据
-    return regionOptionsNoAllFake.map(opt => ({
+    return regionOptionsNoAllFake.map((opt) => ({
       label: opt.label,
-      value: opt.value
+      value: opt.value,
     }))
   }
 })
@@ -128,42 +133,38 @@ const regionCascaderOptions = computed(() => {
 // el-cascader props
 const regionCascaderProp = {
   checkStrictly: false, // 只可选叶子节点
-  emitPath: false // 只返回选中节点的value
+  emitPath: false, // 只返回选中节点的value
 }
 const regionCascaderProps = {
   multiple: true,
   checkStrictly: false, // 只可选叶子节点
-  emitPath: false // 只返回选中节点的value
+  emitPath: false, // 只返回选中节点的value
 }
 
 const regionTargets = computed<any>({
   get() {
-    return regionMultiple.value ? regionArray.value : regionSingle.value;
+    return regionMultiple.value ? regionArray.value : regionSingle.value
   },
   set(newVal) {
     if (carModelMultiple) {
-      regionArray.value = newVal;
+      regionArray.value = newVal
     } else {
-      regionSingle.value = newVal;
+      regionSingle.value = newVal
     }
   },
-});
+})
 
 const getSafeRegionArray = () => {
-  return regionMultiple.value 
-    ? regionArray.value 
-    : regionSingle.value 
-      ? [regionSingle.value] 
-      : [];
-};
+  return regionMultiple.value ? regionArray.value : regionSingle.value ? [regionSingle.value] : []
+}
 
 const getSafeCarModelArray = () => {
-  return carModelMultiple.value 
-    ? carModelArray.value 
-    : carModelSingle.value 
-      ? [carModelSingle.value] 
-      : [];
-};
+  return carModelMultiple.value
+    ? carModelArray.value
+    : carModelSingle.value
+      ? [carModelSingle.value]
+      : []
+}
 
 // 图表实例
 const chartRef = ref<HTMLDivElement>()
@@ -172,39 +173,54 @@ let chartInstance: echarts.ECharts | null = null
 const barChartRef = ref<HTMLDivElement | null>(null)
 let barChartInstance: echarts.ECharts | null = null
 
-
 // 统计数据
-const statsList = ref<{ name: string, min: number, max: number, avg: number, data: number[], dateList: string[] }[]>([])
+const statsList = ref<
+  { name: string; min: number; max: number; avg: number; data: number[]; dateList: string[] }[]
+>([])
 const statsDetailVisible = ref(false)
-const currentStats = ref<{ name: string, min: number, max: number, avg: number, data: number[], dateList: string[] } | null>(null)
+const currentStats = ref<{
+  name: string
+  min: number
+  max: number
+  avg: number
+  data: number[]
+  dateList: string[]
+} | null>(null)
 
-function showStatsDetail(stats: { name: string, min: number, max: number, avg: number, data: number[], dateList: string[] }) {
+function showStatsDetail(stats: {
+  name: string
+  min: number
+  max: number
+  avg: number
+  data: number[]
+  dateList: string[]
+}) {
   currentStats.value = stats
   statsDetailVisible.value = true
 }
 
 // 选择筛选模式时自动修正选项
 watch(compareMode, (mode) => {
-  console.log('当前筛选模式:', regionMultiple.value, carModelMultiple.value)  
+  console.log('当前筛选模式:', regionMultiple.value, carModelMultiple.value)
   console.log('当前地区选项:', regionTargets.value, typeof regionArray.value, regionSingle.value)
   if (mode === 'region') {
     // 地区多选，车型单选，不包含全国
-    regionArray.value = [];
-    regionSingle.value = '';
-    carModelArray.value = [];
-    carModelSingle.value = ''; 
+    regionArray.value = []
+    regionSingle.value = ''
+    carModelArray.value = []
+    carModelSingle.value = ''
   } else if (mode === 'carModel') {
     // 车型多选，地区单选，包含全国
-    regionArray.value = [];
-    regionSingle.value = '';
-    carModelArray.value = [];
-    carModelSingle.value = ''; 
+    regionArray.value = []
+    regionSingle.value = ''
+    carModelArray.value = []
+    carModelSingle.value = ''
   } else {
     // 不限，地区多选不含全国，车型多选
-    regionArray.value = [];
-    regionSingle.value = '';
-    carModelArray.value = [];
-    carModelSingle.value = ''; 
+    regionArray.value = []
+    regionSingle.value = ''
+    carModelArray.value = []
+    carModelSingle.value = ''
   }
 })
 
@@ -220,21 +236,23 @@ watch(statsDetailVisible, async (visible) => {
         tooltip: { trigger: 'axis' },
         xAxis: { type: 'category', data: currentStats.value.dateList },
         yAxis: { type: 'value', name: '销量(台)' },
-        series: [{
-          type: 'bar',
-          data: currentStats.value.data,
-          animation: true, 
-          animationDuration: 1000, 
-          animationEasing: 'elasticOut', 
-          animationDelay: function (idx: number) { 
-            return idx * 100; 
+        series: [
+          {
+            type: 'bar',
+            data: currentStats.value.data,
+            animation: true,
+            animationDuration: 1000,
+            animationEasing: 'elasticOut',
+            animationDelay: function (idx: number) {
+              return idx * 100
+            },
+            label: {
+              show: true,
+              position: 'top',
+            },
+            itemStyle: { color: '#409EFF' },
           },
-          label: {
-            show: true,
-            position: 'top'
-          },
-          itemStyle: { color: '#409EFF' }
-        }]
+        ],
       })
       barChartInstance.resize()
     }
@@ -250,70 +268,75 @@ watch(statsDetailVisible, (visible) => {
 })
 
 interface repsonseData {
-  saleId: number;
-  carModelId: number;
-  carModelName: string;
-  regionId: number;
-  regionName: string;
-  saleMonth: string;
-  saleCount: number;
-  saleAmount: number;
+  saleId: number
+  carModelId: number
+  carModelName: string
+  regionId: number
+  regionName: string
+  saleMonth: string
+  saleCount: number
+  saleAmount: number
 }
 
 interface chartData {
-  name: string;
-  data: number[];
-  dateList: string[];
+  name: string
+  data: number[]
+  dateList: string[]
 }
 
 function processResponseData(salesData: repsonseData[]): chartData[] {
   // 创建一个Map来按名称分组数据
-  const groupedData = new Map<string, { counts: number[]; dates: string[] }>();
+  const groupedData = new Map<string, { counts: number[]; dates: string[] }>()
 
   // 遍历所有销售记录
-  salesData.forEach(record => {
-    const key = record.regionName ===  "全国"?`${record.carModelName}`:`${record.carModelName}--${record.regionName}`;
-    
+  salesData.forEach((record) => {
+    const key =
+      record.regionName === '全国'
+        ? `${record.carModelName}`
+        : `${record.carModelName}--${record.regionName}`
+
     // 如果Map中还没有这个key，就初始化
     if (!groupedData.has(key)) {
-      groupedData.set(key, { counts: [], dates: [] });
+      groupedData.set(key, { counts: [], dates: [] })
     }
-    
+
     // 获取当前分组
-    const group = groupedData.get(key)!;
-    
+    const group = groupedData.get(key)!
+
     // 添加销售数量和日期
-    group.counts.push(record.saleCount);
-    group.dates.push(record.saleMonth);
-  });
+    group.counts.push(record.saleCount)
+    group.dates.push(record.saleMonth)
+  })
 
   // 将Map转换为目标数组
-  const result: chartData[] = [];
+  const result: chartData[] = []
   groupedData.forEach((value, key) => {
     // 按日期排序（如果需要）
     const sortedIndices = value.dates
       .map((date, index) => ({ date, index }))
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-      .map(item => item.index);
-    
+      .map((item) => item.index)
+
     // 按日期顺序重新排列数据
-    const sortedData = sortedIndices.map(i => value.counts[i]);
-    const sortedDates = sortedIndices.map(i => value.dates[i]);
+    const sortedData = sortedIndices.map((i) => value.counts[i])
+    const sortedDates = sortedIndices.map((i) => value.dates[i])
 
     result.push({
       name: key,
       data: sortedData,
-      dateList: sortedDates
-    });
-  });
+      dateList: sortedDates,
+    })
+  })
 
-  return result;
+  return result
 }
 
 // API接口调用函数
-const fetchCarModels = async () => { 
+const fetchCarModels = async () => {
   try {
-    const response = await axios.get('/api/ranking/sales', { params: { startMonth: "2025-01", endMonth: "2025-05", region: "all", top: 30 } })
+    const response = await axios.get('/api/ranking/sales', {
+      params: { startMonth: '2025-01', endMonth: '2025-05', region: 'all', top: 30 },
+    })
     // const response = await axios.get('/api/car-models/page?page=370&size=30')
     console.log('获取车型列表:', response)
     if (response.data.status === 200) {
@@ -333,10 +356,7 @@ const fetchCarModels = async () => {
 }
 
 // 创建树结构
-function addChildNode(
-  tree: RegionNode[],
-  newRegion: Region
-): boolean {
+function addChildNode(tree: RegionNode[], newRegion: Region): boolean {
   for (const node of tree) {
     if (node.name === newRegion.parentRegion) {
       if (!node.children) {
@@ -356,7 +376,7 @@ function addChildNode(
   const newNode: RegionNode = {
     id: newRegion.parentRegion,
     name: newRegion.parentRegion,
-    children: []
+    children: [],
   }
   tree.push(newNode)
 
@@ -369,7 +389,6 @@ function addChildNode(
   lastNode.children!.push(newChild)
   return true // 成功添加新节点
 }
-
 
 const fetchRegions = async () => {
   try {
@@ -397,22 +416,22 @@ const fetchRegions = async () => {
 }
 
 async function fetchTrendData() {
-  const params = new URLSearchParams();
-  if(regionMultiple.value){
-    regionArray.value.forEach(item => {
-      params.append('regionIds', item.toString());
-    });
-  }else{
+  const params = new URLSearchParams()
+  if (regionMultiple.value) {
+    regionArray.value.forEach((item) => {
+      params.append('regionIds', item.toString())
+    })
+  } else {
     console.log(regionSingle.value)
-    params.append('regionIds', regionSingle.value.toString());
+    params.append('regionIds', regionSingle.value.toString())
   }
-  console.log('params:',params.toString())
-  if(carModelMultiple.value){
-    carModelArray.value.forEach(item => {
-      params.append('carModelIds', item.toString());
-    });
-  }else{
-    params.append('carModelIds', carModelSingle.value.toString());
+  console.log('params:', params.toString())
+  if (carModelMultiple.value) {
+    carModelArray.value.forEach((item) => {
+      params.append('carModelIds', item.toString())
+    })
+  } else {
+    params.append('carModelIds', carModelSingle.value.toString())
   }
   const res = await axios.get(`/api/sale-records/multiple?${params.toString()}`)
   return processResponseData(res.data.data)
@@ -433,7 +452,14 @@ async function fetchDataAndRender() {
 
   // 定义颜色数组
   const colorList = [
-    '#409EFF', '#67C23A', '#E6A23C', '#F56C6C', '#909399', '#1abc9c', '#9b59b6', '#e67e22'
+    '#409EFF',
+    '#67C23A',
+    '#E6A23C',
+    '#F56C6C',
+    '#909399',
+    '#1abc9c',
+    '#9b59b6',
+    '#e67e22',
   ]
 
   // 多条折线
@@ -441,27 +467,27 @@ async function fetchDataAndRender() {
     tooltip: {
       trigger: 'axis',
       axisPointer: {
-        type: 'line' // 可选：'line'、'shadow'、'cross'
+        type: 'line', // 可选：'line'、'shadow'、'cross'
       },
       formatter: function (params: any) {
-        let tooltipText = `${params[0].axisValue}<br/>`;
+        let tooltipText = `${params[0].axisValue}<br/>`
         params.forEach((item: any) => {
-          tooltipText += `${item.marker} ${item.seriesName}：${item.data}<br/>`;
-        });
-        return tooltipText;
-      }
+          tooltipText += `${item.marker} ${item.seriesName}：${item.data}<br/>`
+        })
+        return tooltipText
+      },
     },
     legend: {
-      data: seriesData.map((item: any) => item.name)
+      data: seriesData.map((item: any) => item.name),
     },
     xAxis: {
       type: 'category',
       data: seriesData[0]?.dateList || [],
-      boundaryGap: false
+      boundaryGap: false,
     },
     yAxis: {
       type: 'value',
-      name: '销量(台)'
+      name: '销量(台)',
     },
     series: seriesData.map((item: any, idx: number) => ({
       name: item.name,
@@ -474,17 +500,17 @@ async function fetchDataAndRender() {
       animationDuration: 1000,
       animationEasing: 'elasticOut',
       lineStyle: { width: 2 },
-      itemStyle: { 
+      itemStyle: {
         color: (params: any) => colorList[params.dataIndex % colorList.length],
       },
       markPoint: {
         data: [
           { type: 'max', name: '最大值' },
           { type: 'min', name: '最小值' },
-          { type: 'average', name: '平均值' }
-        ]
-      }
-    }))
+          { type: 'average', name: '平均值' },
+        ],
+      },
+    })),
   }
 
   await nextTick()
@@ -524,7 +550,7 @@ onMounted(() => {
             style="margin-left: 16px; max-width: 260px"
           />
         </div>
-        <br>
+        <br />
         <div class="filter-options">
           <!-- 主筛选类型选择 -->
           <el-radio-group v-model="compareMode">
@@ -540,7 +566,13 @@ onMounted(() => {
             collapse-tags
             collapse-tags-tooltip
             placeholder="选择车型"
-            style="margin-left: 16px; width: 220px; max-height: 32px; overflow: hidden;vertical-align: middle;"
+            style="
+              margin-left: 16px;
+              width: 220px;
+              max-height: 32px;
+              overflow: hidden;
+              vertical-align: middle;
+            "
           >
             <el-option
               v-for="item in carModelOptions"
@@ -551,7 +583,7 @@ onMounted(() => {
           </el-select>
           <!-- 地区选择 -->
           <el-cascader
-            v-if="regionMultiple==false"
+            v-if="regionMultiple == false"
             v-model="regionSingle"
             :options="regionCascaderOptions"
             :props="regionCascaderProp"
@@ -561,8 +593,12 @@ onMounted(() => {
             collapse-tags
             collapse-tags-tooltip
             placeholder="选择地区"
-            style="margin-left: 16px; width: 220px; vertical-align: middle;"
-            @change="(...args: any[]) => { console.log('el-cascader multiple:', regionMultiple, args) }"
+            style="margin-left: 16px; width: 220px; vertical-align: middle"
+            @change="
+              (...args: any[]) => {
+                console.log('el-cascader multiple:', regionMultiple, args)
+              }
+            "
           />
           <el-cascader
             v-else
@@ -571,16 +607,20 @@ onMounted(() => {
             :options="regionCascaderOptions"
             :props="regionCascaderProps"
             :show-all-levels="false"
-            multiple=true
+            multiple="true"
             filterable
             clearable
             collapse-tags
             collapse-tags-tooltip
             placeholder="选择地区"
-            style="margin-left: 16px; width: 220px; vertical-align: middle;"
-            @change="(...args: any[]) => { console.log('el-cascader multiple:', regionMultiple, args) }"
+            style="margin-left: 16px; width: 220px; vertical-align: middle"
+            @change="
+              (...args: any[]) => {
+                console.log('el-cascader multiple:', regionMultiple, args)
+              }
+            "
           />
-          
+
           <!-- <el-select
             v-model="regionTargets"
             :multiple="regionMultiple"
@@ -597,23 +637,24 @@ onMounted(() => {
               :value="item.value"
             />
           </el-select> -->
-          <el-button 
-          :disabled="disabledButton"
-          @click="fetchDataAndRender" 
-          style="margin-left: 30px;">
-          更新数据
+          <el-button
+            :disabled="disabledButton"
+            @click="fetchDataAndRender"
+            style="margin-left: 30px"
+          >
+            更新数据
           </el-button>
         </div>
       </div>
     </el-card>
 
-    <el-row :gutter="16" class="chart-summary-row" style="margin-top: 20px;">
+    <el-row :gutter="16" class="chart-summary-row" style="margin-top: 20px">
       <el-col :lg="19" :md="16" :sm="24" class="chart-col">
         <el-card class="chart-card" shadow="never">
           <template #header>
             <span>销量趋势对比</span>
           </template>
-          <div ref="chartRef" class="chart-container" style="height: 420px;"></div>
+          <div ref="chartRef" class="chart-container" style="height: 420px"></div>
         </el-card>
       </el-col>
       <el-col :lg="5" :md="8" :sm="24" class="summary-col">
@@ -639,7 +680,11 @@ onMounted(() => {
                 <p><b>最小值：</b>{{ currentStats.min }}</p>
                 <p><b>最大值：</b>{{ currentStats.max }}</p>
                 <p><b>平均值：</b>{{ currentStats.avg }}</p>
-                <div ref="barChartRef" class="chart-container" style="width:100%;height:360px;margin-top:16px;"></div>
+                <div
+                  ref="barChartRef"
+                  class="chart-container"
+                  style="width: 100%; height: 360px; margin-top: 16px"
+                ></div>
               </div>
             </el-dialog>
           </div>
@@ -658,13 +703,13 @@ onMounted(() => {
   padding-left: 30px;
 }
 
-.filter-time{
+.filter-time {
   display: flex;
   justify-content: flex-start;
   gap: 48px;
 }
 
-.filter-options .el-button{
+.filter-options .el-button {
   color: white;
   background: linear-gradient(135deg, #67c23a 0%, #85ce61 100%);
 }
@@ -675,12 +720,12 @@ onMounted(() => {
   margin-top: 10px;
 }
 
-.summary-col :deep(.el-card__header){
+.summary-col :deep(.el-card__header) {
   color: white;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   border-radius: 8px 8px 0px 0;
 }
-.chart-col :deep(.el-card__header){
+.chart-col :deep(.el-card__header) {
   color: white;
   background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
   border-radius: 8px 8px 0px 0;
@@ -688,7 +733,9 @@ onMounted(() => {
 
 .stats-item.clickable {
   cursor: pointer;
-  transition: box-shadow 0.2s, background 0.2s;
+  transition:
+    box-shadow 0.2s,
+    background 0.2s;
 }
 
 .stats-value {
@@ -737,19 +784,21 @@ onMounted(() => {
   align-items: flex-start;
   gap: 4px;
   width: 100%;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
   cursor: pointer;
-  transition: box-shadow 0.2s, background 0.2s;
+  transition:
+    box-shadow 0.2s,
+    background 0.2s;
 }
 
 .stats-item.clickable:hover {
   background: #98deff;
-  box-shadow: 0 2px 8px rgba(64,158,255,0.12);
+  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.12);
 }
 
 .stats-label {
   font-weight: bold;
-  color: #409EFF;
+  color: #409eff;
   margin-bottom: 2px;
 }
 

@@ -55,8 +55,8 @@ interface CarModel {
 
 interface SearchResult {
   id: number
-  name: string  // 实际存储modelFullName
-  brand: string  // 实际存储modelName
+  name: string // 实际存储modelFullName
+  brand: string // 实际存储modelName
   priceRange: string
 }
 
@@ -203,7 +203,10 @@ const calculateModelScore = (model: CarModel): number => {
   const weights = customWeights.value
   let topPrice = 50 // 评分价格上限设为50万
   let lowPrice = 10 // 评分价格下限设为0万
-  const normalizedPrice: number =Math.min(Math.max(0, 100 - (model.price - lowPrice)/(topPrice - lowPrice) * 100), 100) // 价格转换为评分 // 价格越低得分越高
+  const normalizedPrice: number = Math.min(
+    Math.max(0, 100 - ((model.price - lowPrice) / (topPrice - lowPrice)) * 100),
+    100,
+  ) // 价格转换为评分 // 价格越低得分越高
 
   return (
     normalizedPrice * weights.price +
@@ -242,10 +245,7 @@ const getRecommendationTagType = () => {
 }
 
 const getDimensionIcon = (dimension: string) => {
-  const icons: Record<
-    'price' | 'power' | 'control' | 'comfort' | 'appearance' | 'config',
-    any
-  > = {
+  const icons: Record<'price' | 'power' | 'control' | 'comfort' | 'appearance' | 'config', any> = {
     price: Money,
     power: Lightning,
     control: MagicStick,
@@ -281,7 +281,7 @@ const getParameterRawValue = (row: ComparisonTableRow, modelId: number): number 
   const model = selectedModels.value.find((m) => m.id === modelId)
   if (!model) return 0
 
-  const value = model[row.dimension as keyof typeof  model]
+  const value = model[row.dimension as keyof typeof model]
   return typeof value === 'number' ? value : 0
 }
 
@@ -325,7 +325,7 @@ const getTargetAudience = (modelId: number): string => {
   if (!model) return ''
 
   if (model.price > 500000) return '追求品质的高端用户'
-  if (model.comfort >= 85 ) return '注重舒适度的家庭用户'
+  if (model.comfort >= 85) return '注重舒适度的家庭用户'
   if (model.appearance >= 85) return '喜欢个性化的时尚用户'
   if (model.power >= 85) return '注重强大动力的性能用户'
   if (model.control >= 85) return '追求驾驶乐趣的年轻用户'
@@ -370,7 +370,7 @@ const getPremiumChoiceReason = (): string => {
 function debounce<T extends (...args: any[]) => any>(
   func: T,
   wait: number = 300,
-  immediate: boolean = false
+  immediate: boolean = false,
 ): (...args: Parameters<T>) => void {
   let timer: ReturnType<typeof setTimeout> | null = null
 
@@ -393,7 +393,7 @@ function debounce<T extends (...args: any[]) => any>(
 // 异步防抖
 function debounceAsync<T extends (...args: any[]) => Promise<any>>(
   fn: T,
-  delay = 300
+  delay = 300,
 ): (...args: Parameters<T>) => Promise<ReturnType<T>> {
   let timer: ReturnType<typeof setTimeout> | null = null
   let resolveList: ((value: any) => void)[] = []
@@ -412,7 +412,6 @@ function debounceAsync<T extends (...args: any[]) => Promise<any>>(
   }
 }
 
-
 // API 调用函数
 const searchModels = async (query: string) => {
   if (!query) {
@@ -422,7 +421,9 @@ const searchModels = async (query: string) => {
 
   searching.value = true
   try {
-    const response = await axios.get('/api/car-models/search', { params: { keyword: query, limit: 20 } })
+    const response = await axios.get('/api/car-models/search', {
+      params: { keyword: query, limit: 20 },
+    })
     if (response.data.status === 200 && response.data.data) {
       // searchResults.value = generateMockSearchResults(query)
       searchResults.value = response.data.data.map((item: any) => ({
@@ -450,7 +451,9 @@ const debounceSearchModels = debounceAsync(searchModels, 500)
 const fetchHotCarList = async () => {
   try {
     // 现在使用生成数据，时间定为2024-12到2025-05；真实数据库应当是2025-05到2025-05
-    const response = await axios.get('/api/ranking/sales', { params: { startMonth: "2025-05", endMonth: "2025-05", region: "all", top: 30 } })
+    const response = await axios.get('/api/ranking/sales', {
+      params: { startMonth: '2025-05', endMonth: '2025-05', region: 'all', top: 30 },
+    })
     if (response.data.status === 200 && response.data.data) {
       hotCarList.value = response.data.data.map((item: any) => ({
         id: item.carModelId,
@@ -467,7 +470,7 @@ const fetchHotCarList = async () => {
     }
   } catch (error) {
     console.error('获取热门车型失败:', error)
-        ElMessage.error('搜索热门车型数据失败')
+    ElMessage.error('搜索热门车型数据失败')
     hotCarList.value = generateMockHotCarList()
   }
 }
@@ -738,9 +741,7 @@ const initRadarChart = async () => {
 
   const dimensions = ['价格成本', '动力性能', '操控性', '空间舒适', '外观', '科技配置']
   const maxValues =
-    radarViewType.value === 'score'
-      ? [100, 100, 100, 100, 100, 100]
-      : [50, 5, 5, 5, 5, 5]
+    radarViewType.value === 'score' ? [100, 100, 100, 100, 100, 100] : [50, 5, 5, 5, 5, 5]
   let topPrice = 50 // 评分价格上限设为50万
   let lowPrice = 10 // 评分价格下限设为0万
 
@@ -749,7 +750,10 @@ const initRadarChart = async () => {
     const data =
       radarViewType.value === 'score'
         ? [
-            Math.min(Math.max(0, 100 - (model.price - lowPrice)/(topPrice - lowPrice) * 100), 100).toFixed(1), // 价格转换为评分
+            Math.min(
+              Math.max(0, 100 - ((model.price - lowPrice) / (topPrice - lowPrice)) * 100),
+              100,
+            ).toFixed(1), // 价格转换为评分
             model.power,
             model.control,
             model.comfort,
@@ -837,7 +841,9 @@ const initBarChart = async () => {
   // 有大量的类型索引问题，直接用类型断言 as keyof typeof 解决了，有安全隐患
   const dimension = dimensionMap[barChartDimension.value as keyof typeof dimensionMap]
   const xAxisData = selectedModels.value.map((m) => `${m.brand}\n${m.name}`)
-  const seriesData = selectedModels.value.map((m) => dimension.transform(m[dimension.field as keyof typeof m] as keyof typeof dimension.transform))
+  const seriesData = selectedModels.value.map((m) =>
+    dimension.transform(m[dimension.field as keyof typeof m] as keyof typeof dimension.transform),
+  )
 
   const option = {
     title: {
@@ -990,7 +996,6 @@ const shareToSocial = () => {
     ElMessage.info('您的浏览器不支持分享功能')
   }
 }
-
 
 const handleImageError = (event: Event) => {
   const img = event.target as HTMLImageElement
@@ -1160,7 +1165,7 @@ onUnmounted(() => {
               </div>
             </div>
             <div class="model-info">
-              <h4>{{ model.name}}</h4>
+              <h4>{{ model.name }}</h4>
               <p class="model-price">{{ model.priceRange }}万元</p>
               <div class="model-tags">
                 <el-tag size="small">{{ model.type }}</el-tag>
@@ -1209,9 +1214,7 @@ onUnmounted(() => {
               <div class="weight-label">
                 <el-icon><Lightning /></el-icon>
                 <span>动力性能</span>
-                <span class="weight-value"
-                  >{{ (customWeights.power * 100).toFixed(0) }}%</span
-                >
+                <span class="weight-value">{{ (customWeights.power * 100).toFixed(0) }}%</span>
               </div>
               <el-slider v-model="customWeights.power" :min="0" :max="1" :step="0.05" />
             </div>
@@ -1219,7 +1222,7 @@ onUnmounted(() => {
           <el-col :span="8">
             <div class="weight-item">
               <div class="weight-label">
-                <el-icon><MagicStick/></el-icon>
+                <el-icon><MagicStick /></el-icon>
                 <span>操控性</span>
                 <span class="weight-value">{{ (customWeights.control * 100).toFixed(0) }}%</span>
               </div>

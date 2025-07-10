@@ -61,105 +61,96 @@
             >
               <span class="option-label">{{ option.label }}</span>
               <span class="option-desc" v-if="option.desc">{{ option.desc }}</span>
-
+            </div>
           </div>
         </div>
       </div>
-    </div>
 
-        <!-- 车型类别 -->
-        <div class="filter-section">
-          <div class="section-label">
-            <el-icon><OfficeBuilding /></el-icon>
-            <span>车型类别</span>
-            <span class="required">*</span>
-          </div>
-          <div class="filter-options level-options">
-            <div
-              v-for="option in levelOptions"
-              :key="option.value"
-              class="filter-option"
-              :class="{ active: questionnaireData.level.includes(option.value) }"
-              @click="selectLevelType(option.value)"
-            >
-              <el-icon><component :is="option.icon" /></el-icon>
-              <span class="option-label">{{ option.label }}</span>
-              <span class="option-desc">{{ option.desc }}</span>
-
-            </div>
+      <!-- 车型类别 -->
+      <div class="filter-section">
+        <div class="section-label">
+          <el-icon><OfficeBuilding /></el-icon>
+          <span>车型类别</span>
+          <span class="required">*</span>
+        </div>
+        <div class="filter-options level-options">
+          <div
+            v-for="option in levelOptions"
+            :key="option.value"
+            class="filter-option"
+            :class="{ active: questionnaireData.level.includes(option.value) }"
+            @click="selectLevelType(option.value)"
+          >
+            <el-icon><component :is="option.icon" /></el-icon>
+            <span class="option-label">{{ option.label }}</span>
+            <span class="option-desc">{{ option.desc }}</span>
           </div>
         </div>
+      </div>
 
-        <!-- 能源类型 -->
-        <div class="filter-section">
-          <div class="section-label">
-            <el-icon><Lightning /></el-icon>
-            <span>能源类型</span>
-            <span class="required">*</span>
-          </div>
-          <div class="filter-options engine-type-options">
-            <div
-              v-for="option in engineTypeOptions"
-              :key="option.value"
-              class="filter-option"
-              :class="{ active: questionnaireData.engineType === option.value }"
-              @click="selectEngineType(option.value)"
-            >
-              <el-icon><component :is="option.icon" /></el-icon>
-              <span class="option-label">{{ option.label }}</span>
-              <span class="option-desc">{{ option.desc }}</span>
-
-            </div>
+      <!-- 能源类型 -->
+      <div class="filter-section">
+        <div class="section-label">
+          <el-icon><Lightning /></el-icon>
+          <span>能源类型</span>
+          <span class="required">*</span>
+        </div>
+        <div class="filter-options engine-type-options">
+          <div
+            v-for="option in engineTypeOptions"
+            :key="option.value"
+            class="filter-option"
+            :class="{ active: questionnaireData.engineType === option.value }"
+            @click="selectEngineType(option.value)"
+          >
+            <el-icon><component :is="option.icon" /></el-icon>
+            <span class="option-label">{{ option.label }}</span>
+            <span class="option-desc">{{ option.desc }}</span>
           </div>
         </div>
+      </div>
 
-        <!-- 乘坐人数 -->
-        <div class="filter-section">
-          <div class="section-label">
-            <el-icon><Star /></el-icon>
-            <span>乘坐人数</span>
-            <span class="required">*</span>
-          </div>
-          <div class="filter-options seat-num-options">
-            <div
-              v-for="option in passengerOptions"
-              :key="option.value"
-              class="filter-option"
-              :class="{ active: questionnaireData.seatNum === option.value }"
-              @click="selectSeatNum(option.value)"
-            >
-              <span class="option-label">{{ option.label }}</span>
-              <span class="option-desc">{{ option.desc }}</span>
-            </div>
+      <!-- 乘坐人数 -->
+      <div class="filter-section">
+        <div class="section-label">
+          <el-icon><Star /></el-icon>
+          <span>乘坐人数</span>
+          <span class="required">*</span>
+        </div>
+        <div class="filter-options seat-num-options">
+          <div
+            v-for="option in passengerOptions"
+            :key="option.value"
+            class="filter-option"
+            :class="{ active: questionnaireData.seatNum === option.value }"
+            @click="selectSeatNum(option.value)"
+          >
+            <span class="option-label">{{ option.label }}</span>
+            <span class="option-desc">{{ option.desc }}</span>
           </div>
         </div>
+      </div>
 
-        <!-- 主机厂偏好 -->
-<div class="filter-section">
-  <div class="section-label">
-    <el-icon><OfficeBuilding /></el-icon>
-    <span>主机厂偏好</span>
-  </div>
-  <el-select
-    v-model="questionnaireData.factory"
-    filterable
-    remote
-    reserve-keyword
-    placeholder="请输入主机厂名称"
-    :remote-method="fetchFactoryOptions"
-    :loading="factoryLoading"
-    style="width: 220px"
-    clearable
-  >
-    <el-option
-      v-for="opt in factoryOptions"
-      :key="opt.value"
-      :value="opt.value"
-    />
-  </el-select>
-</div>
-
-
+      <!-- 主机厂偏好 -->
+      <div class="filter-section">
+        <div class="section-label">
+          <el-icon><OfficeBuilding /></el-icon>
+          <span>主机厂偏好</span>
+        </div>
+        <el-select
+          v-model="questionnaireData.factory"
+          filterable
+          remote
+          reserve-keyword
+          placeholder="请输入主机厂名称"
+          :remote-method="fetchFactoryOptions"
+          :loading="factoryLoading"
+          style="width: 220px"
+          clearable
+        >
+          <el-option v-for="opt in factoryOptions" :key="opt.value" :value="opt.value" />
+        </el-select>
+      </div>
     </el-card>
 
     <!-- 推荐结果展示区 -->
@@ -250,7 +241,6 @@
                   >{{ recommendationResult.primaryRecommendation.seatNum }}座</el-tag
                 >
               </div>
-
 
               <!-- 匹配度雷达图 -->
               <div class="match-radar">
@@ -503,49 +493,53 @@
               </el-tab-pane>
             </el-tabs> -->
 
-             <div class="alternative-group">
-    <div
-      v-for="model in getSortedAlternatives(recommendationResult.alternatives.budget.concat(recommendationResult.alternatives.luxury, recommendationResult.alternatives.practical))"
-      :key="model.id"
-      class="alternative-item"
-    >
-      <img
-        :src="model.image"
-        :alt="model.name"
-        class="alternative-image"
-        @error="handleImageError"
-      />
-      <div class="alternative-info">
-        <h4>{{ model.brand }} {{ model.name }}</h4>
-        <p class="alternative-price">{{ model.priceRange }}</p>
-        <div class="alternative-specs">
-          <el-tag size="mini">{{ model.engine }}</el-tag>
-          <el-tag size="mini" type="info">{{ model.seatNum }}座</el-tag>
-        </div>
-        <div class="alternative-highlight">
-          <el-tag size="small" type="success">{{ model.highlight }}</el-tag>
-        </div>
-        <div class="alternative-metrics">
-          <div class="metric">
-            <span class="metric-label">匹配度</span>
-            <el-progress :percentage="model.matchScore" :show-text="false" />
-            <span class="metric-value">{{ model.matchScore }}%</span>
-          </div>
-        </div>
-      </div>
-      <div class="alternative-actions">
-        <!-- <el-button size="small" @click="viewModelDetails(model)">
+            <div class="alternative-group">
+              <div
+                v-for="model in getSortedAlternatives(
+                  recommendationResult.alternatives.budget.concat(
+                    recommendationResult.alternatives.luxury,
+                    recommendationResult.alternatives.practical,
+                  ),
+                )"
+                :key="model.id"
+                class="alternative-item"
+              >
+                <img
+                  :src="model.image"
+                  :alt="model.name"
+                  class="alternative-image"
+                  @error="handleImageError"
+                />
+                <div class="alternative-info">
+                  <h4>{{ model.brand }} {{ model.name }}</h4>
+                  <p class="alternative-price">{{ model.priceRange }}</p>
+                  <div class="alternative-specs">
+                    <el-tag size="mini">{{ model.engine }}</el-tag>
+                    <el-tag size="mini" type="info">{{ model.seatNum }}座</el-tag>
+                  </div>
+                  <div class="alternative-highlight">
+                    <el-tag size="small" type="success">{{ model.highlight }}</el-tag>
+                  </div>
+                  <div class="alternative-metrics">
+                    <div class="metric">
+                      <span class="metric-label">匹配度</span>
+                      <el-progress :percentage="model.matchScore" :show-text="false" />
+                      <span class="metric-value">{{ model.matchScore }}%</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="alternative-actions">
+                  <!-- <el-button size="small" @click="viewModelDetails(model)">
           <el-icon><Monitor /></el-icon>
           详情
         </el-button> -->
-        <el-button size="small" type="primary" @click="addToComparison(model)">
-          <el-icon><DataBoard /></el-icon>
-          对比
-        </el-button>
-      </div>
-    </div>
-  </div>
-
+                  <el-button size="small" type="primary" @click="addToComparison(model)">
+                    <el-icon><DataBoard /></el-icon>
+                    对比
+                  </el-button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </el-card>
@@ -672,8 +666,6 @@
               </div>
             </div>
 
-
-
             <!-- 购车清单 -->
             <div class="advice-section">
               <h4>📋 购车准备清单</h4>
@@ -734,7 +726,6 @@
             </div>
             <div class="detail-item">
               <span class="label">销量数据样本</span>
-
             </div>
             <div class="detail-item">
               <span class="label">用户评价样本</span>
@@ -963,18 +954,16 @@ const businessMetrics = ref<BusinessMetrics>({
 
 const questionnaireData = ref({
   budget: '',
-  level: '',           // 车型类别
-  engineType: '',      // 动力类型
-  seatNum: '',         // 乘坐人数
-  factory: '',         // 主机厂
+  level: '', // 车型类别
+  engineType: '', // 动力类型
+  seatNum: '', // 乘坐人数
+  factory: '', // 主机厂
 })
 
 const levelOptions = ref<string[]>([])
 const engineTypeOptions = ref<string[]>([])
 const factoryOptions = ref<{ value: string; label: string }[]>([])
 const factoryLoading = ref(false)
-
-
 
 // 推荐结果
 const recommendationResult = ref<RecommendationResult | null>(null)
@@ -1095,7 +1084,6 @@ const fetchFactoryOptions = async (keyword: string) => {
   }
 }
 
-
 // 新增推荐榜单API请求函数
 const fetchCarModelMatchScoreRanking = async (
   level: string = 'all',
@@ -1104,7 +1092,7 @@ const fetchCarModelMatchScoreRanking = async (
   engineType: string = 'all',
   seatNum?: number,
   factory: string = 'all',
-  top: number = 4
+  top: number = 4,
 ) => {
   try {
     const params: any = { level, engineType, factory, top }
@@ -1122,7 +1110,6 @@ const fetchCarModelMatchScoreRanking = async (
     return []
   }
 }
-
 
 const fetchRegions = async (): Promise<Region[]> => {
   try {
@@ -1183,7 +1170,6 @@ const loadAllBaseData = async () => {
     loadingProgress.value = 10
     const carModels = await fetchCarModels()
 
-
     currentLoadingStep.value = '正在获取地区信息...'
     loadingProgress.value = 50
     const [regions, topLevelRegions, nonTopLevelRegions] = await Promise.all([
@@ -1191,7 +1177,6 @@ const loadAllBaseData = async () => {
       fetchTopLevelRegions(),
       fetchNonTopLevelRegions(),
     ])
-
 
     currentLoadingStep.value = '正在处理数据...'
     loadingProgress.value = 90
@@ -1277,9 +1262,6 @@ const calculateBusinessMetrics = () => {
   console.log('业务指标计算完成:', businessMetrics.value)
 }
 
-
-
-
 // 推荐生成函数，直接用后端返回的数据
 const generateRecommendation = async () => {
   if (!isStep1Valid()) {
@@ -1294,23 +1276,25 @@ const generateRecommendation = async () => {
 
     // 组装参数
     let level = questionnaireData.value.level || 'all'
-  let minPrice: number | undefined, maxPrice: number | undefined
-  if (questionnaireData.value.budget && questionnaireData.value.budget !== 'unlimited') {
-    const budgetRanges = {
-      under10: [0, 10],
-      '10-20': [10, 20],
-      '20-30': [20, 30],
-      '30-50': [30, 50],
-      over50: [50, 200],
-      unlimited: [0, 200],
+    let minPrice: number | undefined, maxPrice: number | undefined
+    if (questionnaireData.value.budget && questionnaireData.value.budget !== 'unlimited') {
+      const budgetRanges = {
+        under10: [0, 10],
+        '10-20': [10, 20],
+        '20-30': [20, 30],
+        '30-50': [30, 50],
+        over50: [50, 200],
+        unlimited: [0, 200],
+      }
+      const [min, max] = budgetRanges[questionnaireData.value.budget]
+      minPrice = min
+      maxPrice = max
     }
-    const [min, max] = budgetRanges[questionnaireData.value.budget]
-    minPrice = min
-    maxPrice = max
-  }
-  let engineType = questionnaireData.value.engineType || 'all'
-  let seatNum = questionnaireData.value.seatNum ? parseInt(questionnaireData.value.seatNum) : undefined
-  let factory = questionnaireData.value.factory || 'all'
+    let engineType = questionnaireData.value.engineType || 'all'
+    let seatNum = questionnaireData.value.seatNum
+      ? parseInt(questionnaireData.value.seatNum)
+      : undefined
+    let factory = questionnaireData.value.factory || 'all'
 
     // 直接请求后端推荐榜单
     const data = await fetchCarModelMatchScoreRanking(
@@ -1320,7 +1304,7 @@ const generateRecommendation = async () => {
       engineType,
       seatNum,
       factory,
-      10
+      10,
     )
 
     // 适配后端返回结构
@@ -1328,9 +1312,7 @@ const generateRecommendation = async () => {
       id: item.carModelId,
       brand: item.brandName,
       name: item.modelName,
-      priceRange: item.officialPrice
-        ? `${(item.officialPrice ).toFixed(1)}万`
-        : '--',
+      priceRange: item.officialPrice ? `${item.officialPrice.toFixed(1)}万` : '--',
       type: item.level || '',
       engine: item.engineType,
       transmission: item.driveType,
@@ -1362,9 +1344,24 @@ const generateRecommendation = async () => {
       ...topCandidate,
       confidence: topCandidate.matchScore,
       reasons: [
-        { id: '1', text: `综合得分${topCandidate.matchScore}分，匹配度高`, category: '综合评分', type: 'success' },
-        { id: '2', text: `官方指导价${topCandidate.priceRange}，价格合理`, category: '预算', type: 'success' },
-        { id: '3', text: `座位数${topCandidate.seatNum}，空间充足`, category: '空间', type: 'success' },
+        {
+          id: '1',
+          text: `综合得分${topCandidate.matchScore}分，匹配度高`,
+          category: '综合评分',
+          type: 'success',
+        },
+        {
+          id: '2',
+          text: `官方指导价${topCandidate.priceRange}，价格合理`,
+          category: '预算',
+          type: 'success',
+        },
+        {
+          id: '3',
+          text: `座位数${topCandidate.seatNum}，空间充足`,
+          category: '空间',
+          type: 'success',
+        },
       ],
       advantages: [
         {
@@ -1412,7 +1409,7 @@ const generateRecommendation = async () => {
       },
       matchScore: Math.round(
         processedList.reduce((sum, car) => sum + car.matchScore, 0) /
-          Math.max(processedList.length, 1)
+          Math.max(processedList.length, 1),
       ),
       totalCandidates: processedList.length,
       analysisTime: Math.random() * 2 + 1,
@@ -1457,8 +1454,6 @@ const selectSeatNum = (seatNum: string) => {
   questionnaireData.value.seatNum = seatNum
 }
 
-
-
 // =============================================
 // 验证函数
 // =============================================
@@ -1475,7 +1470,6 @@ const isStep1Valid = (): boolean => {
 // =============================================
 // 智能提示函数
 // =============================================
-
 
 // =============================================
 // 数据获取函数
@@ -1519,7 +1513,6 @@ const isStep1Valid = (): boolean => {
 // =============================================
 //  UI辅助函数
 // =============================================
-
 
 const getAnalysisTime = () => {
   return recommendationResult.value?.analysisTime.toFixed(1) || '0.0'
@@ -1599,9 +1592,6 @@ const getRecommendedChannels = () => {
   ]
 }
 
-
-
-
 const enhancedPurchaseChecklist = [
   { id: 'budget', text: '确认购车预算和贷款方案', tip: '包含购置税、保险、上牌费用' },
   { id: 'test_drive', text: '预约试驾体验', tip: '亲身感受车辆性能和舒适度' },
@@ -1629,7 +1619,7 @@ const initPrimaryRadarChart = async () => {
     // 计算每个维度的最大值（可用主推荐分数的1.2倍，或所有推荐车型的最大分数）
     const getMax = (field: keyof ProcessedCarModel) => {
       const all = recommendationResult.value?.recommendations ?? []
-      const max = Math.max(...all.map(car => car[field] ?? 0), primaryCar[field] ?? 0)
+      const max = Math.max(...all.map((car) => car[field] ?? 0), primaryCar[field] ?? 0)
       return Math.max(10, Math.ceil(max * 1.2))
     }
 
@@ -1641,69 +1631,69 @@ const initPrimaryRadarChart = async () => {
       { name: '主机厂偏好', max: getMax('brandScore'), value: primaryCar.brandScore },
     ]
 
-   const option = {
-  // title: {
-  //   text: '综合评分雷达图',
-  //   left: 'center',
-  //   top: 8, // 上移标题，避免遮挡
-  //   textStyle: {
-  //     fontSize: 13,
-  //     fontWeight: 700,
-  //     color: '#222', // 更深的字体色
-  //   },
-  // },
-  radar: {
-    indicator: radarData.map((item) => ({ name: item.name, max: item.max })),
-    radius: '70%',
-    axisLine: { lineStyle: { color: '#b2b2b2', width: 1.5 } },
-    splitLine: { lineStyle: { color: '#b2b2b2', width: 1 } },
-    splitArea: {
-      areaStyle: {
-        color: [
-          'rgba(79,172,254,0.08)',
-          'rgba(79,172,254,0.04)',
-          'rgba(79,172,254,0.01)',
-          'rgba(255,255,255,0)',
-        ],
+    const option = {
+      // title: {
+      //   text: '综合评分雷达图',
+      //   left: 'center',
+      //   top: 8, // 上移标题，避免遮挡
+      //   textStyle: {
+      //     fontSize: 13,
+      //     fontWeight: 700,
+      //     color: '#222', // 更深的字体色
+      //   },
+      // },
+      radar: {
+        indicator: radarData.map((item) => ({ name: item.name, max: item.max })),
+        radius: '70%',
+        axisLine: { lineStyle: { color: '#b2b2b2', width: 1.5 } },
+        splitLine: { lineStyle: { color: '#b2b2b2', width: 1 } },
+        splitArea: {
+          areaStyle: {
+            color: [
+              'rgba(79,172,254,0.08)',
+              'rgba(79,172,254,0.04)',
+              'rgba(79,172,254,0.01)',
+              'rgba(255,255,255,0)',
+            ],
+          },
+        },
+        axisLabel: { color: '#333', fontSize: 11, fontWeight: 600 },
+        name: {
+          color: '#222',
+          fontSize: 13,
+          fontWeight: 600,
+          backgroundColor: 'rgba(255,255,255,0.7)',
+          padding: [2, 6],
+          borderRadius: 4,
+        },
       },
-    },
-    axisLabel: { color: '#333', fontSize: 11, fontWeight: 600 },
-    name: {
-      color: '#222',
-      fontSize: 13,
-      fontWeight: 600,
-      backgroundColor: 'rgba(255,255,255,0.7)',
-      padding: [2, 6],
-      borderRadius: 4,
-    },
-  },
-  series: [
-    {
-      type: 'radar',
-      data: [
+      series: [
         {
-          value: radarData.map((item) => item.value),
-          name: '综合评分',
-          symbol: 'circle',
-          symbolSize: 8,
-          lineStyle: { color: '#409EFF', width: 3 },
-          areaStyle: { color: 'rgba(64,158,255,0.25)' },
-          itemStyle: { color: '#409EFF', borderColor: '#fff', borderWidth: 2 },
+          type: 'radar',
+          data: [
+            {
+              value: radarData.map((item) => item.value),
+              name: '综合评分',
+              symbol: 'circle',
+              symbolSize: 8,
+              lineStyle: { color: '#409EFF', width: 3 },
+              areaStyle: { color: 'rgba(64,158,255,0.25)' },
+              itemStyle: { color: '#409EFF', borderColor: '#fff', borderWidth: 2 },
+            },
+          ],
+          label: {
+            show: true,
+            color: '#222',
+            fontWeight: 600,
+            fontSize: 12,
+            backgroundColor: 'rgba(255,255,255,0.8)',
+            borderRadius: 3,
+            padding: [2, 4],
+          },
         },
       ],
-      label: {
-        show: true,
-        color: '#222',
-        fontWeight: 600,
-        fontSize: 12,
-        backgroundColor: 'rgba(255,255,255,0.8)',
-        borderRadius: 3,
-        padding: [2, 4],
-      },
-    },
-  ],
-  grid: { left: 0, right: 0, top: 0, bottom: 0 }, 
-}
+      grid: { left: 0, right: 0, top: 0, bottom: 0 },
+    }
 
     primaryRadarChartInstance.setOption(option)
 
@@ -1902,9 +1892,9 @@ onMounted(async () => {
   ElMessage.success('欢迎使用智能购车推荐系统！')
 
   try {
-      await fetchLevelOptions()
-      await fetchEngineTypeOptions()
-  // 不主动加载factoryOptions，等用户输入再查
+    await fetchLevelOptions()
+    await fetchEngineTypeOptions()
+    // 不主动加载factoryOptions，等用户输入再查
     await loadAllBaseData()
   } catch (error) {
     console.error('页面初始化失败:', error)
