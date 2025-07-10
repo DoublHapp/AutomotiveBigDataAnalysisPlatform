@@ -780,67 +780,67 @@ const initCompetitionChart = async () => {
       textStyle: { fontSize: 14 },
     },
     tooltip: {
-      trigger: 'axis',
+      trigger: 'item',
       axisPointer: { 
         type: 'shadow',
         shadowStyle: {
           color: 'rgba(150, 150, 150, 0.1)'
         }
       },
-      formatter: (params: any) => {
-        const item = params[0].data as RegionalCompetitor;
-        const growthColor = item.growth >= 0 ? '#28a745' : '#dc3545';
-        const marketShareColor = 
-          item.marketShare > 7 ? '#67c23a' : 
-          item.marketShare > 4 ? '#e6a23c' : '#f56c6c';
+      // formatter: (params: any) => {
+      //   const item = params[0].data as RegionalCompetitor;
+      //   const growthColor = item.growth >= 0 ? '#28a745' : '#dc3545';
+      //   const marketShareColor = 
+      //     item.marketShare > 7 ? '#67c23a' : 
+      //     item.marketShare > 4 ? '#e6a23c' : '#f56c6c';
         
-        return `
-          <div style="
-            padding: 8px;
-            background: white;
-            border-radius: 4px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            border: 1px solid #eee;
-          ">
-            <div style="
-              font-size: 14px;
-              font-weight: bold;
-              color: #333;
-              margin-bottom: 8px;
-              padding-bottom: 4px;
-              border-bottom: 1px dashed #eee;
-            ">
-              ${item.modelName}
-            </div>
-            <table style="width: 100%; border-collapse: collapse;">
-              <tr>
-                <td style="padding: 4px 0; width: 80px; color: #666;">市场份额</td>
-                <td style="padding: 4px 0;">
-                  <span style="
-                    display: inline-block;
-                    width: 8px;
-                    height: 8px;
-                    border-radius: 50%;
-                    background: ${marketShareColor};
-                    margin-right: 6px;
-                  "></span>
-                  <span style="font-weight: bold;">${(item.marketShare ? item.marketShare : 6.15).toFixed(1)}%</span>
-                </td>
-              </tr>
-              <tr>
-                <td style="padding: 4px 0; color: #666;">同比增长</td>
-                <td style="padding: 4px 0; font-weight: bold; color: ${growthColor}">
-                  ${item.growth >= 0 ? '+' : ''}${(item.growth ? item.growth : 1.21).toFixed(1)}%
-                </td>
-              </tr>
-              <tr>
-                <td style="padding: 4px 0; color: #666;">销售数量</td>
-                <td style="padding: 4px 0; font-weight: bold;">${item.saleCount}</td>
-              </tr>
-            </table>
-          </div>
-        `;
-      }
+      //   return `
+      //     <div style="
+      //       padding: 8px;
+      //       background: white;
+      //       border-radius: 4px;
+      //       box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      //       border: 1px solid #eee;
+      //     ">
+      //       <div style="
+      //         font-size: 14px;
+      //         font-weight: bold;
+      //         color: #333;
+      //         margin-bottom: 8px;
+      //         padding-bottom: 4px;
+      //         border-bottom: 1px dashed #eee;
+      //       ">
+      //         ${item.modelName}
+      //       </div>
+      //       <table style="width: 100%; border-collapse: collapse;">
+      //         <tr>
+      //           <td style="padding: 4px 0; width: 80px; color: #666;">市场份额</td>
+      //           <td style="padding: 4px 0;">
+      //             <span style="
+      //               display: inline-block;
+      //               width: 8px;
+      //               height: 8px;
+      //               border-radius: 50%;
+      //               background: ${marketShareColor};
+      //               margin-right: 6px;
+      //             "></span>
+      //             <span style="font-weight: bold;">${(item.marketShare ? item.marketShare : 0.8).toFixed(1)}%</span>
+      //           </td>
+      //         </tr>
+      //         <tr>
+      //           <td style="padding: 4px 0; color: #666;">同比增长</td>
+      //           <td style="padding: 4px 0; font-weight: bold; color: ${growthColor}">
+      //             ${item.growth >= 0 ? '+' : ''}${(item.growth ? item.growth : 1.21).toFixed(1)}%
+      //           </td>
+      //         </tr>
+      //         <tr>
+      //           <td style="padding: 4px 0; color: #666;">销售数量</td>
+      //           <td style="padding: 4px 0; font-weight: bold;">${item.saleCount}</td>
+      //         </tr>
+      //       </table>
+      //     </div>
+      //   `;
+      // }
     },
     grid: {
       left: '3%',
@@ -864,7 +864,7 @@ const initCompetitionChart = async () => {
         data: regionalCompetition.value.map((item) => ({
           value: item.marketShare,
           itemStyle: {
-            color: item.marketShare > 7 ? '#67c23a' : item.marketShare > 4 ? '#e6a23c' : '#f56c6c',
+            color: item.marketShare > 0.8 ? '#67c23a' : item.marketShare > 0.4 ? '#e6a23c' : '#f56c6c',
           },
         })),
         barWidth: '60%',
@@ -1177,7 +1177,6 @@ onUnmounted(() => {
             <template #header>
               <div class="card-header">
                 <span>区域库存优化</span>
-                <el-button size="small" @click="generateInventoryPlan">生成库存计划</el-button>
               </div>
             </template>
 
